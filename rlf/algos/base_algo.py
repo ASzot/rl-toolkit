@@ -2,6 +2,7 @@ from rlf.storage.rollout_storage import RolloutStorage
 from dataclasses import dataclass
 from typing import Callable
 import numpy as np
+from rlf.rl.envs import get_vec_normalize
 
 @dataclass
 class AlgorithmSettings:
@@ -35,8 +36,19 @@ class BaseAlgo(object):
         self.policy = policy
         self.args = args
 
-    def set_env_ref(self, get_env_ob_filt, env_norm):
-        self.get_env_ob_filt = get_env_ob_filt
+    def set_env_ref(self, envs):
+        env_norm = get_vec_normalize(envs)
+        def get_vec_normalize_fn():
+            if env_norm is not None:
+                obfilt = get_vec_normalize(envs)._obfilt
+
+                def mod_env_ob_filt(state, update=True):
+                    state = obfilt(state, update)
+                    state = rutils.get_def_obs(state)
+                    return state
+                return mod_env_ob_filt
+            return None
+        self.get_env_ob_filt = get_vec_normalize_fn
 
     def pre_main(self, log, env_interface):
         pass

@@ -11,6 +11,7 @@ class TestRunSettings(RunSettings):
             return WbLogger()
 
     def get_config_file(self):
+        # Path to testing config
         config_dir = osp.dirname(osp.realpath(__file__))
         return osp.join(config_dir, 'config.yaml')
 

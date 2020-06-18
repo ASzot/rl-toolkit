@@ -1,17 +1,6 @@
 # Structure
 - Commands under `dev` are under development. 
 
-# Tests
-Desired tests to make sure the algorithms are working. Standard environments
-indicate "Hopper-v3+Atari".
-- PPO,Standard
-- A2C,Standard
-- REINFORCE,Hopper-v3
-- DQN,Atari
-- SARSA,Frozen-Lake
+# Running
+- PPO Hopper: `py -m rlf --cmd ppo/hopper --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False`
 
-- DDPG,Hopper-v3
-
-After they are done training, build an automated report with the training
-curves so I can verify the performance. Maybe assign a common group to all the
-runs in the report? 

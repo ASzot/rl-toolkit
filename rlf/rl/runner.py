@@ -10,14 +10,12 @@ import numpy as np
 
 
 class Runner:
-    def __init__(self, envs, storage, policy, log, start_update, num_updates,
-                 env_interface, checkpointer, args, updater):
+    def __init__(self, envs, storage, policy, log, env_interface, checkpointer,
+            args, updater):
         self.envs = envs
         self.storage = storage
         self.policy = policy
         self.log = log
-        self.start_update = start_update
-        self.end_update = num_updates
         self.env_interface = env_interface
         self.checkpointer = checkpointer
         self.args = args
@@ -61,68 +59,40 @@ class Runner:
         self.episode_count = 0
         self.train_eval_envs = None
         self.alg_env_settings = self.updater.get_env_settings(self.args)
-        self.updater.first_train(self.log, self.eval_policy)
+        # pre_main and first_train should be merged into one function
+        self.updater.pre_main(self.log, self.env_interface)
+        self.updater.first_train(self.log, self._eval_policy)
         if self.args.clip_actions:
             self.ac_tensor = utils.ac_space_to_tensor(self.policy.action_space)
 
-    def eval_policy(self, policy, total_num_steps, args):
+    def _eval_policy(self, policy, total_num_steps, args):
         return train_eval(self.envs, self.alg_env_settings, policy, args,
                           self.log, total_num_steps, self.env_interface,
                           self.train_eval_envs)
 
-    def should_log(self, update_iter):
-        return (update_iter+1) % self.args.log_interval == 0
+    def log_vals(self, updater_log_vals, update_iter):
+        total_num_steps = self.updater.get_completed_update_steps(update_iter+1)
+        return self.log.interval_log(update_iter, total_num_steps,
+                self.episode_count, updater_log_vals, self.args)
 
-    def log_vals(self, updater_log_vals, update_iter, should_print):
-        total_num_steps = self.updater.get_completed_update_steps(
-            update_iter+1)
-        return self.log.interval_log(update_iter, total_num_steps, self.episode_count,
-                         updater_log_vals, self.args, should_print)
+    def save(self, update_iter):
+        if ((self.episode_count > 0) or (self.args.num_steps == 0)) and self.checkpointer.should_save():
+            vec_norm = get_vec_normalize(self.envs)
+            if vec_norm is not None:
+                self.checkpointer.save_key('ob_rms', vec_norm.ob_rms_dict)
+            self.checkpointer.save_key('step', j)
 
-    def check_log(self, update_iter, updater_log_vals):
-        if self.should_log(update_iter):
-            self.log_vals(updater_log_vals, update_iter, True)
+            self.policy.save_to_checkpoint(self.checkpointer)
+            self.updater.save(self.checkpointer)
 
-    def check_save(self, update_iter):
+            self.checkpointer.flush(num_updates=j)
+            if self.args.sync:
+                self.log.backup(self.args, j + 1)
+
+    def eval(self, update_iter):
         if (self.episode_count > 0) or (self.args.num_steps == 0):
-            if self.checkpointer.should_save() and \
-                    (update_iter+1) % self.args.save_interval == 0:
-                save_agent(self.policy, self.envs, update_iter, self.updater,
-                           self.args, self.checkpointer, self.log)
-
-    def check_eval(self, update_iter):
-        if (self.episode_count > 0) or (self.args.num_steps == 0):
-            if (self.args.eval_interval > -1 and
-                    (update_iter+1) % self.args.eval_interval == 0):
-                total_num_steps = self.updater.get_completed_update_steps(
-                    update_iter+1)
-                self.train_eval_envs = self.eval_policy(self.policy,
-                                                        total_num_steps, self.args)
-
-    def final_check(self):
-        # Perform a final evaluation seeing the performance of the policy
-        if self.args.eval_interval != -1:
-            total_num_steps = self.updater.get_completed_update_steps(
-                self.end_update)
-            self.train_eval_envs = self.eval_policy(self.policy, total_num_steps,
-                                                    self.args)
-
-        if self.args.save_interval != -1:
-            save_agent(self.policy, self.envs, self.end_update, self.updater,
-                       self.args, self.checkpointer, self.log)
-
-    def full_train(self):
-        print('RL Training (%d/%d)' % (self.start_update, self.end_update))
-        self.total_num_steps = 0
-
-        # Initialize to 0 in case the loop does not run.
-        for j in range(self.start_update, self.end_update):
-            updater_log_vals = self.training_iter(j)
-            self.check_log(j, updater_log_vals)
-            self.check_save(j)
-            self.check_eval(j)
-        self.final_check()
-        self.close()
+            total_num_steps = self.updater.get_completed_update_steps( update_iter+1)
+            self.train_eval_envs = self._eval_policy(self.policy, total_num_steps, self.args)
 
     def close(self):
         self.log.close()
@@ -130,16 +100,27 @@ class Runner:
             self.train_eval_envs.close()
         self.envs.close()
 
+    def resume(self):
+        self.updater.load_resume(self.checkpointer)
+        self.policy.load_resume(self.checkpointer)
+        return self.checkpointer.get_key('step')
 
-def save_agent(policy, envs, j, updater, args, checkpointer, log):
-    vec_norm = get_vec_normalize(envs)
-    if vec_norm is not None:
-        checkpointer.save_key('ob_rms', vec_norm.ob_rms_dict)
-    checkpointer.save_key('step', j)
+    def should_load_from_checkpoint(self):
+        return self.checkpointer.should_load()
 
-    policy.save_to_checkpoint(checkpointer)
-    updater.save(checkpointer)
+    def full_eval(self):
+        return full_eval(envs, policy, log, checkpointer, env_interface, args,
+                alg_env_settings, self.create_traj_saver)
 
-    checkpointer.flush(num_updates=j)
-    if args.sync:
-        log.backup(args, j + 1)
+    def load_from_checkpoint(self):
+        self.policy.load_state_dict(self.checkpointer.get_key('policy'))
+
+        if self.checkpointer.has_load_key('ob_rms'):
+            ob_rms_dict = self.checkpointer.get_key('ob_rms')
+            vec_norm = get_vec_normalize(self.envs)
+            if vec_norm is not None:
+                # vec_norm.eval()
+                vec_norm.ob_rms_dict = ob_rms_dict
+        self.updater.load(self.checkpointer)
+
+

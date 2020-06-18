@@ -40,9 +40,6 @@ class WbLogger(BaseLogger):
         self.wandb = self._create_wandb(args)
 
     def log_vals(self, key_vals, step_count):
-        #print(f"Logging at step {step_count}")
-        #for k, v in key_vals.items():
-        #    print(f"    {k}: {v}")
         wandb.log(key_vals, step=step_count)
 
     def watch_model(self, model):

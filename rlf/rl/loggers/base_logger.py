@@ -142,8 +142,7 @@ class BaseLogger(object):
         - model (torch.nn.Module) the set of parameters to watch
         """
 
-    def interval_log(self, j, total_num_steps, episode_count, updater_log_vals,
-            args, log_vals=True):
+    def interval_log(self, j, total_num_steps, episode_count, updater_log_vals, args):
         end = time.time()
 
         fps = int(args.num_processes * args.num_steps / (end - self.start))
@@ -164,25 +163,24 @@ class BaseLogger(object):
                 **log_stat_vals,
             }
 
-        if log_vals:
-            if self.is_printing:
-                print(f"Updates {j}, Steps {total_num_steps}, Episodes {episode_count}, FPS {fps}")
-                if args.num_steps != 0:
-                    print(
-                        f"Over the last {num_eps} episodes:\n"
-                        f"mean/median reward {np.mean(rewards):.2f}/{np.median(rewards)}\n"
-                        f"min/max {np.min(rewards):.2f}/{np.max(rewards):.2f} \n"
-                    )
-                # Print log values from the updater if requested.
-                for k, v in updater_log_vals.items():
-                    if should_print(k):
-                        print(f"    - {k}: {v}")
+        if self.is_printing:
+            print(f"Updates {j}, Steps {total_num_steps}, Episodes {episode_count}, FPS {fps}")
+            if args.num_steps != 0:
+                print(
+                    f"Over the last {num_eps} episodes:\n"
+                    f"mean/median reward {np.mean(rewards):.2f}/{np.median(rewards)}\n"
+                    f"min/max {np.min(rewards):.2f}/{np.max(rewards):.2f} \n"
+                )
+            # Print log values from the updater if requested.
+            for k, v in updater_log_vals.items():
+                if should_print(k):
+                    print(f"    - {k}: {v}")
 
-                # Print a new line to separate loggin lines and keep things clean.
-                print('')
+            # Print a new line to separate loggin lines and keep things clean.
+            print('')
 
-            # Log all values
-            self.log_vals(log_dat, total_num_steps)
+        # Log all values
+        self.log_vals(log_dat, total_num_steps)
         return log_dat
 
     def close(self):
