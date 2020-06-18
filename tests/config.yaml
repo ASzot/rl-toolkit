@@ -1,0 +1,10 @@
+{
+  "conda_env": "rlf",
+
+  "cmds_loc": "tests/test_cmds/",
+  "proj_name": "andrew-random",
+
+  "sync_host": "lim-b.usc.edu",
+  "sync_user": "aszot",
+  "sync_port": 22, 
+}

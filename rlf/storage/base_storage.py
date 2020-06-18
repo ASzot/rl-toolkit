@@ -1,0 +1,82 @@
+import torch
+import rlf.rl.utils as rutils
+
+
+class BaseStorage(object):
+    def __init__(self):
+        self._add_info_keys = []
+        self.on_traj_done_fn = None
+
+    def set_traj_done_callback(self, on_traj_done_fn):
+        self._on_traj_done_fn = on_traj_done_fn
+
+    def init_storage(self, obs):
+        self.traj_storage = [[] for _ in range(rutils.get_def_obs(obs).shape[0])]
+
+    def get_obs(self, step):
+        pass
+
+    def get_recurrent_hidden_state(self, step):
+        pass
+
+    def get_masks(self, step):
+        pass
+
+    def insert(self, obs, next_obs, reward, done, info, ac_info):
+        done_trajs = []
+
+        for i in range(len(info)):
+            traj_trans = self.get_traj_info(
+                    rutils.obs_select(obs, i),
+                    ac_info.take_action[i], done[i], info[i], reward[i])
+            self.traj_storage[i].append(traj_trans)
+
+            if done[i]:
+                done_trajs.append(self.traj_storage[i])
+                self.traj_storage[i] = []
+        if len(done_trajs) > 0:
+            self._on_traj_done_fn(done_trajs)
+
+    def after_update(self):
+        pass
+
+    def to(self, device):
+        pass
+
+    def compute_masks(self, done, infos):
+        # If done then clean the history of observations.
+        masks = torch.FloatTensor(
+            [[0.0] if done_ else [1.0] for done_ in done])
+
+        bad_masks = torch.FloatTensor(
+            [[0.0] if 'bad_transition' in info.keys() else [1.0]
+             for info in infos])
+
+        return masks, bad_masks
+
+    def get_traj_info(self, obs, action, done, info, reward):
+        if done:
+            mask = 0.0
+        else:
+            mask = 1.0
+
+        ret_dict = {}
+        for k in self.get_extract_info_keys():
+            if k in info:
+                assign_val = torch.tensor(info[k]).to(self.args.device)
+                ret_dict[k] = assign_val
+
+        return obs, action, mask, ret_dict, reward
+
+    def add_info_key(self, key_name, data_size):
+        """
+        Defines a key from the info dictionary returned by the environment that
+        should be stored.
+        """
+        self._add_info_keys.append(key_name)
+
+    def get_extract_info_keys(self):
+        return self._add_info_keys
+
+    def get_add_info(self, key):
+        raise NotImplemented('No add info is implemented for this storage type')
