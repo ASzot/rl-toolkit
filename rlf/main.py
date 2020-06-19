@@ -51,7 +51,7 @@ def run_policy(run_settings):
         if args.save_interval > 0:
             runner.save()
 
-        self.runner.close()
+        runner.close()
         # WB prefix of the run so we can later fetch the data.
         return args.prefix
 

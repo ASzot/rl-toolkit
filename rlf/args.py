@@ -34,7 +34,7 @@ def add_args(parser):
     # RUN CONFIG
     #############################
     parser.add_argument('--env-log-dir',
-        default='/tmp/gym/',
+        default='~/tmp',
         help='directory to save agent logs (default: /tmp/gym)')
 
     parser.add_argument('--log-dir',
