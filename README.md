@@ -3,14 +3,13 @@
 # Still a work in progress.
 
 A framework to quickly and flexibly implement RL algorithms. Easily implement
-your own RL algorithms.  Key features
-that give you full control while allowing you to focus on only the important
-parts. You can do all of these things without touching the rest of the code!
+your own RL algorithms. Have control over the key features and only focus on
+the important parts. You can do all of these things without touching any of the code!
 - Custom policies. 
 - Custom update functions.
 - Configurable replay buffer or trajectory storage. Control how you collect
   agent experience. 
-- Custom extendable loggers. Default integration for TensorBoard and W&B.
+- Custom loggers. Default integration for TensorBoard and W&B.
 - Define environment wrappers. Use this to log custom environment statistics,
   define and pass command line arguments, and add wrappers. 
 - Environment multi-processing.
@@ -31,6 +30,8 @@ parts. You can do all of these things without touching the rest of the code!
   - Behavioral cloning
   - GAIL
   - BCO
+
+To see learning curves for all of these algorithms please visit: 
 
 Many more to be added soon! 
 
@@ -82,7 +83,4 @@ Several keys in the info dictionary are specially treated.
 ## Custom Runners
 ### Ray
 
-
-## Acknowledgements
-Started the codebase from: [ikostrikov's PyTorch RL algorithm implementations](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail).  The LICENSE from that repository is included.
 
