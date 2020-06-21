@@ -150,17 +150,18 @@ class CNNBase(BaseNet):
 
 class MLPBase(BaseNet):
     def __init__(self, num_inputs, recurrent, hidden_sizes,
-            weight_init=def_mlp_weight_init, activation=nn.Tanh):
+            weight_init=def_mlp_weight_init, get_activation=lambda: nn.Tanh()):
         super().__init__(recurrent, num_inputs, hidden_sizes[-1])
 
         assert len(hidden_sizes) > 0
 
-        layers = [weight_init(nn.Linear(num_inputs, hidden_sizes[0])), activation]
+        layers = [weight_init(nn.Linear(num_inputs, hidden_sizes[0])),
+                get_activation()]
         # Minus one for the input layer
         for i in range(len(hidden_sizes)-1):
             layers.extend([
                     weight_init(nn.Linear(hidden_sizes[i], hidden_sizes[i+1])),
-                    activation()
+                    get_activation()
                 ])
 
         self.net = nn.Sequential(*layers)
@@ -184,13 +185,14 @@ class MLPBasic(MLPBase):
                 weight_init)
 
 class TwoLayerMlpWithAction(BaseNet):
-    def __init__(self, num_inputs, hidden_sizes, action_dim, act_fn=F.tanh):
+    def __init__(self, num_inputs, hidden_sizes, action_dim,
+            weight_init=def_mlp_weight_init, act_fn=F.tanh):
         assert len(hidden_sizes) == 2, 'Only two hidden sizes'
         super().__init__(False, num_inputs, hidden_sizes[-1])
 
         self.act_fn=act_fn
-        self.fc1 = def_mlp_weight_init(nn.Linear(num_inputs + action_dim, hidden_sizes[0]))
-        self.fc2 = def_mlp_weight_init(nn.Linear(hidden_sizes[0], hidden_sizes[1]))
+        self.fc1 = weight_init(nn.Linear(num_inputs + action_dim, hidden_sizes[0]))
+        self.fc2 = weight_init(nn.Linear(hidden_sizes[0], hidden_sizes[1]))
 
         self.train()
 

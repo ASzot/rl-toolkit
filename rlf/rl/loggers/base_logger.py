@@ -144,7 +144,6 @@ class BaseLogger(object):
 
     def interval_log(self, j, total_num_steps, episode_count, updater_log_vals, args):
         end = time.time()
-        import ipdb; ipdb.set_trace()
 
         fps = int(args.num_processes * args.num_steps / (end - self.start))
         num_eps = len(self._step_log_info.get('r', []))

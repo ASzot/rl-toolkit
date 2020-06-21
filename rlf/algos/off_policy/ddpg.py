@@ -38,7 +38,7 @@ class DDPG(OffPolicy):
             return {}
 
         ns = self.get_completed_update_steps(self.update_i)
-        if ns < self.args.update_every or ns % self.args.update_every != 0:
+        if ns % self.args.update_every != 0:
             return {}
 
         avg_log_vals = defaultdict(list)

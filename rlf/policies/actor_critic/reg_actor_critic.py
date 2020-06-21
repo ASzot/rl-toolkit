@@ -20,6 +20,7 @@ class RegActorCritic(ActorCritic):
     """
 
     def __init__(self,
+            output_activation=lambda x: x,
             get_actor_head_fn=None,
             get_critic_head_fn=None,
             get_base_net_fn=None):
@@ -32,6 +33,7 @@ class RegActorCritic(ActorCritic):
 
         if get_critic_head_fn is None:
             get_critic_head_fn = putils.get_reg_ac_critic_head
+        self.output_activation = output_activation
 
         super().__init__(get_critic_head_fn, get_base_net_fn)
 
@@ -64,7 +66,7 @@ class RegActorCritic(ActorCritic):
         base_features, _ = self.base_net(state, rnn_hxs, masks)
         actor_features, _ = self.actor_net(base_features, rnn_hxs, masks)
         action = self.actor_output(actor_features)
-        return action
+        return self.output_activation(action)
 
 
     def get_action(self, state, add_state, rnn_hxs, masks, step_info):
@@ -83,8 +85,6 @@ class RegActorCritic(ActorCritic):
                 # Get the added noise.
                 noise = torch.FloatTensor([ng.sample(cur_step)
                     for ng in self.noise_gens]).to(self.args.device)
-                #TODO: Check noise is with std 1.0 always.
-                import ipdb; ipdb.set_trace()
                 action += noise
 
                 # Multi-dimensional clamp the action to the action space range.
