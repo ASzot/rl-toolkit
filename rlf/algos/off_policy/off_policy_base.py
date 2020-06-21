@@ -18,8 +18,7 @@ class OffPolicy(BaseNetAlgo):
                 'next_mask': masks,
                 'next_rnn_hxs': ac_info.rnn_hxs
             }
-        return TransitionStorage(args.trans_buffer_size, convert_to_trans_fn,
-                policy.get_requested_obs_keys())
+        return TransitionStorage(args.trans_buffer_size, convert_to_trans_fn)
 
     def _sample_transitions(self, storage):
         transitions = storage.sample(self.args.batch_size)

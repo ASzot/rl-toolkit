@@ -2,11 +2,10 @@ from rlf.storage.base_storage import BaseStorage
 import random
 import torch
 
-#TODO: Make work with multi-processing.
 
 class TransitionStorage(BaseStorage):
-    def __init__(self, capacity, create_transition_fn, policy_obs_keys):
-        super().__init__(policy_obs_keys)
+    def __init__(self, capacity, create_transition_fn):
+        super().__init__()
         self.capacity = capacity
         self.memory = []
         self.position = 0
@@ -32,7 +31,6 @@ class TransitionStorage(BaseStorage):
 
     def sample(self, batch_size):
         return random.sample(self.memory, batch_size)
-
 
     def __len__(self):
         return len(self.memory)

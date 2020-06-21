@@ -67,7 +67,7 @@ class RegActorCritic(ActorCritic):
         return action
 
 
-    def get_action(self, state, rnn_hxs, masks, step_info):
+    def get_action(self, state, add_state, rnn_hxs, masks, step_info):
         should_resets = [True if m == 0.0 else False for m in masks]
         # Reset the noise for the beginning of every episode.
         for should_reset, noise_gen in zip(should_resets, self.noise_gens):
@@ -83,6 +83,8 @@ class RegActorCritic(ActorCritic):
                 # Get the added noise.
                 noise = torch.FloatTensor([ng.sample(cur_step)
                     for ng in self.noise_gens]).to(self.args.device)
+                #TODO: Check noise is with std 1.0 always.
+                import ipdb; ipdb.set_trace()
                 action += noise
 
                 # Multi-dimensional clamp the action to the action space range.

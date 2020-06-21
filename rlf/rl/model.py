@@ -150,21 +150,20 @@ class CNNBase(BaseNet):
 
 class MLPBase(BaseNet):
     def __init__(self, num_inputs, recurrent, hidden_sizes,
-            weight_init=def_mlp_weight_init):
+            weight_init=def_mlp_weight_init, activation=nn.Tanh):
         super().__init__(recurrent, num_inputs, hidden_sizes[-1])
 
         assert len(hidden_sizes) > 0
 
-        layers = [weight_init(nn.Linear(num_inputs, hidden_sizes[0])), nn.Tanh()]
+        layers = [weight_init(nn.Linear(num_inputs, hidden_sizes[0])), activation]
         # Minus one for the input layer
         for i in range(len(hidden_sizes)-1):
             layers.extend([
                     weight_init(nn.Linear(hidden_sizes[i], hidden_sizes[i+1])),
-                    nn.Tanh()
+                    activation()
                 ])
 
         self.net = nn.Sequential(*layers)
-
         self.train()
 
     def forward(self, inputs, rnn_hxs, masks):
@@ -185,19 +184,19 @@ class MLPBasic(MLPBase):
                 weight_init)
 
 class TwoLayerMlpWithAction(BaseNet):
-    def __init__(self, num_inputs, hidden_sizes, action_dim):
+    def __init__(self, num_inputs, hidden_sizes, action_dim, act_fn=F.tanh):
         assert len(hidden_sizes) == 2, 'Only two hidden sizes'
         super().__init__(False, num_inputs, hidden_sizes[-1])
 
-        self.fc1 = def_mlp_weight_init(nn.Linear(num_inputs, hidden_sizes[0]))
-        self.fc2 = def_mlp_weight_init(nn.Linear(hidden_sizes[0] + action_dim, hidden_sizes[1]))
+        self.act_fn=act_fn
+        self.fc1 = def_mlp_weight_init(nn.Linear(num_inputs + action_dim, hidden_sizes[0]))
+        self.fc2 = def_mlp_weight_init(nn.Linear(hidden_sizes[0], hidden_sizes[1]))
 
         self.train()
 
     def forward(self, inputs, actions, rnn_hxs, masks):
-        x = F.tanh(self.fc1(inputs))
-
-        x = F.tanh(self.fc2(torch.cat([x, actions], dim=-1)))
+        x = self.act_fn(self.fc1(torch.cat([inputs, actions], dim=-1)))
+        x = self.act_fn(self.fc2(x))
         return x, rnn_hxs
 
 class InjectNet(nn.Module):

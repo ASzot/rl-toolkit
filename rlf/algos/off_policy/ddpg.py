@@ -60,8 +60,7 @@ class DDPG(OffPolicy):
         n_action = self.target_policy(n_state, **n_add_info)
         next_q = self.target_policy.get_value(n_state, n_action, **n_add_info)
         next_q *= n_masks
-        next_q = next_q.detach()
-        target = reward + (self.args.gamma * next_q)
+        target = (reward + (self.args.gamma * next_q)).detach()
 
         # Compute the critic loss. (Just a TD loss)
         q = self.policy.get_value(state, action, **add_info)
@@ -73,7 +72,8 @@ class DDPG(OffPolicy):
         actor_loss = -self.policy.get_value(state, choose_action, **add_info).mean()
         self._standard_step(actor_loss, 'actor_opt')
 
-        autils.soft_update(self.policy, self.target_policy, self.args.tau)
+        if self.update_i % self.args.target_delay == 0:
+            autils.soft_update(self.policy, self.target_policy, self.args.tau)
 
         return {
                 'actor_loss': actor_loss.item(),
@@ -106,6 +106,10 @@ class DDPG(OffPolicy):
             type=int,
             default=int(1000),
             help='Number of steps before any updates are applied')
+
+        parser.add_argument('--target-delay',
+            type=int,
+            default=1)
 
         parser.add_argument('--update-every',
             type=int,
