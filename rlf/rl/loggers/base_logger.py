@@ -31,6 +31,7 @@ class BaseLogger(object):
         else:
             print('In debug mode')
         self.is_printing = True
+        self.num_frames = 0
 
     def disable_print(self):
         self.is_printing = False
@@ -97,6 +98,7 @@ class BaseLogger(object):
         print('')
 
     def collect_step_info(self, step_log_info):
+        self.num_frames += 1
         for k in step_log_info:
             self._step_log_info[k].extend(step_log_info[k])
 
@@ -145,7 +147,8 @@ class BaseLogger(object):
     def interval_log(self, j, total_num_steps, episode_count, updater_log_vals, args):
         end = time.time()
 
-        fps = int(args.num_processes * args.num_steps / (end - self.start))
+        fps = int(self.num_frames * args.num_processes / (end - self.start))
+        self.num_frames = 0
         num_eps = len(self._step_log_info.get('r', []))
         rewards = self._step_log_info.get('r', [0])
 

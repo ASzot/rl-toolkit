@@ -16,19 +16,20 @@ class DistActorCritic(ActorCritic):
     """
 
     def __init__(self,
-                 get_actor_head_fn=None,
+                 get_actor_fn=None,
                  get_dist_fn=None,
+                 get_critic_fn=None,
                  get_critic_head_fn=None,
                  get_base_net_fn=None):
-        super().__init__(get_critic_head_fn, get_base_net_fn)
+        super().__init__(get_critic_fn, get_critic_head_fn, get_base_net_fn)
         """
-        - get_actor_head_fn: (obs_space : (int), input_shape : (int) ->
+        - get_actor_fn: (obs_space : (int), input_shape : (int) ->
           rlf.rl.model.BaseNet)
         """
 
-        if get_actor_head_fn is None:
-            get_actor_head_fn = putils.get_def_actor
-        self.get_actor_head_fn = get_actor_head_fn
+        if get_actor_fn is None:
+            get_actor_fn = putils.get_def_actor
+        self.get_actor_fn = get_actor_fn
 
         if get_dist_fn is None:
             get_dist_fn = putils.get_def_dist
@@ -36,7 +37,7 @@ class DistActorCritic(ActorCritic):
 
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
-        self.actor = self.get_actor_head_fn(
+        self.actor = self.get_actor_fn(
             rutils.get_obs_shape(obs_space), self.base_net.output_shape)
         self.dist = self.get_dist_fn(
             self.actor.output_shape, self.action_space)
@@ -76,6 +77,5 @@ class DistActorCritic(ActorCritic):
             'ent': dist_entropy,
         }
 
-    def watch(self, logger):
-        # Watching currently not supported by PPO
-        pass
+    def get_actor_params(self):
+        return super().get_actor_params() + list(self.dist.parameters())

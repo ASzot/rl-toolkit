@@ -186,20 +186,21 @@ class MLPBasic(MLPBase):
 
 class TwoLayerMlpWithAction(BaseNet):
     def __init__(self, num_inputs, hidden_sizes, action_dim,
-            weight_init=def_mlp_weight_init, act_fn=F.tanh):
+            weight_init=def_mlp_weight_init, get_activation=lambda: nn.Tanh()):
         assert len(hidden_sizes) == 2, 'Only two hidden sizes'
         super().__init__(False, num_inputs, hidden_sizes[-1])
 
-        self.act_fn=act_fn
-        self.fc1 = weight_init(nn.Linear(num_inputs + action_dim, hidden_sizes[0]))
-        self.fc2 = weight_init(nn.Linear(hidden_sizes[0], hidden_sizes[1]))
+        self.net = nn.Sequential(
+                weight_init(nn.Linear(num_inputs + action_dim, hidden_sizes[0])),
+                get_activation(),
+                weight_init(nn.Linear(hidden_sizes[0], hidden_sizes[1])),
+                get_activation(),
+                )
 
         self.train()
 
     def forward(self, inputs, actions, rnn_hxs, masks):
-        x = self.act_fn(self.fc1(torch.cat([inputs, actions], dim=-1)))
-        x = self.act_fn(self.fc2(x))
-        return x, rnn_hxs
+        return self.net(torch.cat([inputs, actions], dim=-1)), rnn_hxs
 
 class InjectNet(nn.Module):
     def __init__(self, base_net, head_net, base_net_out_dim,

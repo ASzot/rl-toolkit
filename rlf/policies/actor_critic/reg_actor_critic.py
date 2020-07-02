@@ -20,37 +20,40 @@ class RegActorCritic(ActorCritic):
     """
 
     def __init__(self,
-            output_activation=lambda x: x,
+            get_actor_fn=None,
             get_actor_head_fn=None,
+            get_critic_fn=None,
             get_critic_head_fn=None,
             get_base_net_fn=None):
         """
-        - get_actor_head_fn:
+        - get_actor_fn:
           type: (obs_shape: tuple(int), input_shape: tuple(int) -> rlf.rl.model.BaseNet)
           Returned network should output (N,hidden_size) where hidden_size is
           arbitrary
         """
 
-        if get_critic_head_fn is None:
-            get_critic_head_fn = putils.get_reg_ac_critic_head
-        self.output_activation = output_activation
+        if get_critic_fn is None:
+            get_critic_fn = putils.get_reg_ac_critic_head
 
-        super().__init__(get_critic_head_fn, get_base_net_fn)
+        super().__init__(get_critic_fn, get_critic_head_fn, get_base_net_fn)
 
+        if get_actor_fn is None:
+            get_actor_fn = putils.get_def_actor
         if get_actor_head_fn is None:
-            get_actor_head_fn = putils.get_def_actor
+            get_actor_head_fn = putils.get_def_actor_head
+        self.get_actor_fn = get_actor_fn
         self.get_actor_head_fn = get_actor_head_fn
 
 
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
 
-        # can't work with discrete actions!
+        # Can't work with discrete actions!
         assert self.action_space.__class__.__name__ == "Box"
 
-        self.actor_net = self.get_actor_head_fn(obs_space.shape, self.base_net.output_shape)
-        self.actor_output = def_mlp_weight_init(nn.Linear(
-            self.actor_net.output_shape[0], self.action_space.shape[0]))
+        self.actor_net = self.get_actor_fn(obs_space.shape, self.base_net.output_shape)
+        self.actor_head = self.get_actor_head_fn(self.actor_net.output_shape[0],
+                self.action_space.shape[0])
 
         noise_gen_class = NOISE_GENS[self.args.noise_type]
         self.ac_low_bound = torch.tensor(self.action_space.low).to(args.device)
@@ -65,9 +68,12 @@ class RegActorCritic(ActorCritic):
     def forward(self, state, rnn_hxs, masks):
         base_features, _ = self.base_net(state, rnn_hxs, masks)
         actor_features, _ = self.actor_net(base_features, rnn_hxs, masks)
-        action = self.actor_output(actor_features)
-        return self.output_activation(action)
+        return self.actor_head(actor_features)
 
+    def get_value(self, inputs, action, rnn_hxs, masks):
+        base_features, rnn_hxs = self.base_net(inputs, rnn_hxs, masks)
+        critic_features, rnn_hxs = self.critic(base_features, action, rnn_hxs, masks)
+        return self.critic_head(critic_features)
 
     def get_action(self, state, add_state, rnn_hxs, masks, step_info):
         should_resets = [True if m == 0.0 else False for m in masks]
@@ -95,12 +101,6 @@ class RegActorCritic(ActorCritic):
 
         return create_simple_action_data(action)
 
-    def get_value(self, state, action, rnn_hxs, masks):
-        base_features, rnn_hxs = self.base_net(state, rnn_hxs, masks)
-        value, _ = self.critic(base_features, action, rnn_hxs, masks)
-
-        return value
-
     def get_add_args(self, parser):
         super().get_add_args(parser)
         parser.add_argument('--noise-type', type=str, default='gaussian',
@@ -113,3 +113,7 @@ class RegActorCritic(ActorCritic):
                     ' value. Note that if -1 (default), no decay will occur.'
                     ))
         parser.add_argument('--n-rnd-steps', type=int, default=10000)
+
+    def get_actor_params(self):
+        return super().get_actor_params() + list(self.actor_head.parameters())
+
