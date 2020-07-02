@@ -80,7 +80,10 @@ Several keys in the info dictionary are specially treated.
   environment will pass the environment observation before any normalization in
   the `raw_obs` field. 
 
-## Custom Runners
-### Ray
+# Benchmarks
+### Hopper-v3
+Commit: `570d8c8d024cb86266610e72c5431ef17253c067`
+- PPO: `py -m rlf --cmd ppo/hopper --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
+![Hopper-v3](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/hopper.png)
 
 
