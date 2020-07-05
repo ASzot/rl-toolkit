@@ -15,9 +15,9 @@ class QLearning(OffPolicy):
         if len(storage) < self.args.batch_size:
             return {}
 
-        state, n_state, action, reward, mask, rnn_hxs, add_info, n_add_info = self._sample_transitions(storage)
+        state, n_state, action, reward, add_info, n_add_info = self._sample_transitions(storage)
 
-        next_q_vals = self.policy(n_state).max(1)[0].detach().unsqueeze(-1) * n_add_info['masks']
+        next_q_vals = self.policy(n_state, **n_add_info).max(1)[0].detach().unsqueeze(-1) * n_add_info['masks']
         target = reward + (next_q_vals * self.args.gamma)
         loss = autils.td_loss(target, self.policy, state, action, add_info)
 

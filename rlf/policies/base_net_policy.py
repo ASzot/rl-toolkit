@@ -28,6 +28,8 @@ class BaseNetPolicy(nn.Module, BasePolicy):
     def watch(self, logger):
         super().watch(logger)
         logger.watch_model(self)
+        print('Using policy network:')
+        print(self)
 
     def save_to_checkpoint(self, checkpointer):
         checkpointer.save_key('policy', self.state_dict())

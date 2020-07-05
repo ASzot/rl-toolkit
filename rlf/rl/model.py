@@ -180,9 +180,9 @@ class MLPBase(BaseNet):
 
 class MLPBasic(MLPBase):
     def __init__(self, num_inputs, hidden_size, num_layers,
-            weight_init=def_mlp_weight_init):
+            weight_init=def_mlp_weight_init, get_activation=lambda: nn.Tanh()):
         super().__init__(num_inputs, False, [hidden_size] * num_layers,
-                weight_init)
+                weight_init, get_activation)
 
 class TwoLayerMlpWithAction(BaseNet):
     def __init__(self, num_inputs, hidden_sizes, action_dim,

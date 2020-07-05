@@ -1,6 +1,7 @@
 from rlf.algos.base_algo import BaseAlgo
 from rlf.algos.on_policy.ppo import PPO
 from rlf.algos.off_policy.ddpg import DDPG
+from rlf.algos.off_policy.q_learning import QLearning
 from rlf.algos.il.gail import GAIL
 from rlf.algos.il.gail import GailDiscrim
 from rlf.algos.il.bc import BehavioralCloning
