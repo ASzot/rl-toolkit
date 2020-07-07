@@ -31,7 +31,7 @@ the important parts. You can do all of these things without touching any of the 
   - GAIL
   - BCO
 
-To see learning curves for all of these algorithms please visit: 
+See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks)
 
 Many more to be added soon! 
 
@@ -87,5 +87,10 @@ Commit: `570d8c8d024cb86266610e72c5431ef17253c067`
 - PPO: `py -m rlf --cmd ppo/hopper --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
 
 ![Hopper-v3](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/hopper.png)
+
+### Pendulum-v0
+Commit: `5c051769088b6582b0b31db9a145738a9ed68565`
+- DDPG: `py -m rlf --cmd ddpg/pendulum --cd 0 --cfg ./tests/config.yaml --seed "31,41" --sess-id 0 --cuda False` 
+![Pendulum-v0](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/pendulum.png)
 
 
