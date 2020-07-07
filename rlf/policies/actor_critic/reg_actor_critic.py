@@ -30,6 +30,7 @@ class RegActorCritic(ActorCritic):
           type: (obs_shape: tuple(int), input_shape: tuple(int) -> rlf.rl.model.BaseNet)
           Returned network should output (N,hidden_size) where hidden_size is
           arbitrary
+        The actor output is scaled by the size of the action space.
         """
 
         if get_critic_fn is None:
@@ -63,12 +64,14 @@ class RegActorCritic(ActorCritic):
                     self.args.noise_decay_end,
                     self.args.noise_decay_step))
                 for _ in range(self.args.num_processes)]
+        if self.action_space.high != -1.0 * self.action_space.low:
+            raise ValueError("Asynmetric action space bounds currently not supported")
 
 
     def forward(self, state, rnn_hxs, masks):
         base_features, _ = self.base_net(state, rnn_hxs, masks)
         actor_features, _ = self.actor_net(base_features, rnn_hxs, masks)
-        return self.actor_head(actor_features)
+        return self.actor_head(actor_features) * self.action_space.high[0]
 
     def get_value(self, inputs, action, rnn_hxs, masks):
         base_features, rnn_hxs = self.base_net(inputs, rnn_hxs, masks)

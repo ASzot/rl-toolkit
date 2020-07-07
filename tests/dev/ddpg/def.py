@@ -18,7 +18,10 @@ def get_actor_head(hidden_dim, action_dim):
 
 class DDPGRunSettings(TestRunSettings):
     def get_policy(self):
-        hidden_size = 256
+        if 'Pendulum' in self.base_args.env_name:
+            hidden_size = 128
+        else:
+            hidden_size = 256
         return RegActorCritic(
                 get_actor_fn=lambda _, i_shape: MLPBase(
                     i_shape[0], False, (hidden_size, hidden_size),
