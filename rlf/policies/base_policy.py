@@ -13,6 +13,9 @@ def create_simple_action_data(action):
             torch.zeros([*action.shape[:-1], 1]),
             torch.tensor([0]), {}, 0)
 
+def create_np_action_data(action):
+    return create_simple_action_data(torch.tensor([[action]]))
+
 class ActionData(object):
     """
     Object returned on every get_action. Note that you don't need to fill out

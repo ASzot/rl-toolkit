@@ -2,12 +2,13 @@ from rlf.storage.transition_storage import TransitionStorage
 import torch
 from rlf.algos.base_net_algo import BaseNetAlgo
 
+class ExperienceSampler(object):
+    def init(self, args):
+        self.args = args
 
-class OffPolicy(BaseNetAlgo):
-    def get_storage_buffer(self, policy, envs, args):
-        def convert_to_trans_fn(obs, next_obs, reward, done, masks, bad_masks,
-                                ac_info, last_seen):
-            return {
+    def convert_to_trans_fn(self, obs, next_obs, reward, done, masks, bad_masks,
+                            ac_info, last_seen):
+        return {
                 'action': ac_info.action,
                 'state': obs,
                 'mask': last_seen['masks'],
@@ -18,10 +19,9 @@ class OffPolicy(BaseNetAlgo):
                 'next_mask': masks,
                 'next_rnn_hxs': ac_info.rnn_hxs
             }
-        return TransitionStorage(args.trans_buffer_size, convert_to_trans_fn)
 
-    def _sample_transitions(self, storage):
-        transitions = storage.sample(self.args.batch_size)
+    def sample_transitions(self, sample_size):
+        transitions = storage.sample()
         states = torch.cat([x['state'] for x in transitions])
         actions = torch.cat([x['action'] for x in transitions])
         masks = torch.cat([x['mask'] for x in transitions])
@@ -45,8 +45,33 @@ class OffPolicy(BaseNetAlgo):
         return states, next_states, actions, rewards, cur_add, next_add
 
     def get_add_args(self, parser):
-        super().get_add_args(parser)
+        pass
 
+
+
+class OffPolicy(BaseNetAlgo):
+    def __init__(self, exp_sampler=ExperienceSampler()):
+        super().__init__()
+        self.exp_sampler = exp_sampler
+
+    def set_exp_sampler(self, exp_sampler):
+        """
+        exp_sampler: (ExperienceSampler)
+        """
+        self.exp_sampler = exp_sampler
+
+    def init(self, policy, args):
+        self.exp_sampler.init(args)
+
+    def get_storage_buffer(self, policy, envs, args):
+        return TransitionStorage(args.trans_buffer_size,
+                self.exp_sampler.convert_to_trans_fn)
+
+    def _sample_transitions(self, storage):
+        return self.exp_sampler.sample_transitions(self.args.batch_size)
+
+    def get_add_args(self, parser):
+        super().get_add_args(parser)
         #########################################
         # Overrides
         parser.add_argument('--num-processes', type=int, default=1)
@@ -64,6 +89,6 @@ class OffPolicy(BaseNetAlgo):
         # New args
         parser.add_argument('--trans-buffer-size', type=int, default=10000)
         parser.add_argument('--batch-size', type=int, default=128)
-
+        self.exp_sampler.get_add_args(parser)
 
 

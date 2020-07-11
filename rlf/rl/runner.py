@@ -42,6 +42,7 @@ class Runner:
                     ac_info.clip_action(*self.ac_tensor)
 
             next_obs, reward, done, infos = self.envs.step(ac_info.take_action)
+            import ipdb; ipdb.set_trace()
             reward += ac_info.add_reward
 
             step_log_vals = utils.agg_ep_log_stats(infos, ac_info.extra)
@@ -119,7 +120,6 @@ class Runner:
             ob_rms_dict = self.checkpointer.get_key('ob_rms')
             vec_norm = get_vec_normalize(self.envs)
             if vec_norm is not None:
-                # vec_norm.eval()
                 vec_norm.ob_rms_dict = ob_rms_dict
         self.updater.load(self.checkpointer)
 
