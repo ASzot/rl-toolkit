@@ -1,41 +1,49 @@
-from rlf.algos.off_policy.off_policy_base import ExperienceSampler
+from rlf.storage.transition_storage import TransitionStorage
 import torch
+import rlf.rl.utils as rutils
 
-class HerSampler(ExperienceSampler):
-    def convert_to_trans_fn(self, obs, next_obs, reward, done, masks, bad_masks,
-                            ac_info, last_seen):
-        return {
-                'action': ac_info.action,
-                'state': obs,
-                'mask': last_seen['masks'],
-                'rnn_hxs': last_seen['rnn_hxs'],
-                'reward': reward,
-
-                'next_state': next_obs,
-                'next_mask': masks,
-                'next_rnn_hxs': ac_info.rnn_hxs
-            }
-
-    def sample_transitions(self, sample_size):
-        transitions = storage.sample()
-        states = torch.cat([x['state'] for x in transitions])
-        actions = torch.cat([x['action'] for x in transitions])
-        masks = torch.cat([x['mask'] for x in transitions])
-        rnn_hxs = torch.cat([x['rnn_hxs'] for x in transitions])
-        rewards = torch.cat([x['reward'] for x in transitions])
-
-        next_states = torch.cat([x['next_state'] for x in transitions])
-        next_masks = torch.cat([x['next_mask'] for x in transitions])
-        next_rnn_hxs = torch.cat([x['next_rnn_hxs'] for x in transitions])
-        if self.args.cuda:
-            masks = masks.cuda()
-            rewards = rewards.cuda()
-        cur_add = {
-            'rnn_hxs': rnn_hxs,
-            'masks': masks
+class HerStorage(TransitionStorage):
+    """
+    Uses the "final" HER strategy which uses the state achieved at the end of
+    the trajectory.
+    Observation should have format:
+        {
+        "achieved_goal": tensor
+        "desired_goal": tensor
+        "observation": tensor
         }
-        next_add = {
-            'rnn_hxs': next_rnn_hxs,
-            'masks': next_masks
-        }
-        return states, next_states, actions, rewards, cur_add, next_add
+    """
+
+    def _on_traj_done(self, done_trajs):
+        return
+        #for done_traj in done_trajs:
+        #    # augment the trajectory HER style.
+        #    final_goal = done_traj[-1][0]['achieved_goal']
+
+        #    for i in range(len(done_traj)):
+        #        state = done_traj[i][0]
+        #        state['desired_goal'] = final_goal
+
+        #        # Is this the final frame?
+        #        if i < len(done_traj) - 1:
+        #            next_state = done_traj[i+1][0]
+        #        else:
+        #            # Just an invalid state
+        #            next_state = state
+
+        #        # Is this the first frame?
+        #        if i == 0:
+        #            mask = 1.0
+        #        else:
+        #            mask = done_traj[i-1][2]
+
+        #        self._push_transition({
+        #                'action': done_traj[i][1],
+        #                'state': state,
+        #                'mask': torch.tensor([mask]),
+        #                'rnn_hxs': torch.tensor([0]),
+        #                'reward': torch.tensor([done_traj[i][4]]),
+        #                'next_state': next_state,
+        #                'next_mask': torch.tensor([done_traj[i][2]]),
+        #                'next_rnn_hxs': torch.tensor([0]),
+        #                })

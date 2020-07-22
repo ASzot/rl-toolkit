@@ -8,6 +8,7 @@ from rlf.policies.base_policy import BasePolicy
 
 class BaseNetPolicy(nn.Module, BasePolicy):
     def __init__(self,
+            use_goal=False,
             get_base_net_fn=None):
         """
         - get_base_fn: (tuple(int) -> rlf.rl.model.BaseNet)
@@ -20,10 +21,27 @@ class BaseNetPolicy(nn.Module, BasePolicy):
             get_base_net_fn = putils.def_get_hidden_net
 
         self.get_base_net_fn = get_base_net_fn
+        self.use_goal = use_goal
 
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
-        self.base_net = self.get_base_net_fn(rutils.get_obs_shape(obs_space))
+        if self.use_goal:
+            use_obs_shape = rutils.get_obs_shape(obs_space)
+            if len(use_obs_shape) != 1:
+                raise ValueError(('Goal conditioning only ',
+                    'works with flat state representation'))
+            use_obs_shape = (use_obs_shape[0] + obs_space['desired_goal'].shape[0],)
+        else:
+            use_obs_shape = rutils.get_obs_shape(obs_space)
+        self.base_net = self.get_base_net_fn(use_obs_shape)
+
+    def _apply_base_net(self, state, add_state, rnn_hxs, masks):
+        if self.use_goal:
+            # Combine the goal and the state
+            combined_state = torch.cat([state, add_state['desired_goal']], dim=-1)
+            return self.base_net(combined_state, rnn_hxs, masks)
+        else:
+            return self.base_net(state, rnn_hxs, masks)
 
     def watch(self, logger):
         super().watch(logger)

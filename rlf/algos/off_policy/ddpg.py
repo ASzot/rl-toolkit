@@ -10,6 +10,8 @@ from collections import defaultdict
 
 class DDPG(OffPolicy):
     def init(self, policy, args):
+        if args.updates_per_batch is None:
+            args.updates_per_batch = args.update_every
         super().init(policy, args)
         self.target_policy = self._copy_policy()
 
@@ -42,7 +44,7 @@ class DDPG(OffPolicy):
             return {}
 
         avg_log_vals = defaultdict(list)
-        for i in range(self.args.update_every):
+        for i in range(self.args.updates_per_batch):
             log_vals = self._optimize(*self._sample_transitions(storage))
             for k,v in log_vals.items():
                 avg_log_vals[k].append(v)
@@ -115,3 +117,8 @@ class DDPG(OffPolicy):
             type=int,
             default=int(50),
             help='How many environment steps to do every update')
+
+        parser.add_argument('--updates-per-batch',
+            type=int,
+            default=None,
+            help='Defaults to --update-every')

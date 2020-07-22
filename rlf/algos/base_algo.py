@@ -118,9 +118,6 @@ class BaseAlgo(object):
     def update(self, storage):
         self.update_i += 1
 
-    def get_storage_buffer(self, policy, envs, args):
-        pass
-
     def on_traj_finished(self, traj):
         pass
 

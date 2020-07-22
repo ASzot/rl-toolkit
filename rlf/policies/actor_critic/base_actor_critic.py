@@ -14,6 +14,7 @@ class ActorCritic(BaseNetPolicy):
     def __init__(self,
                  get_critic_fn=None,
                  get_critic_head_fn=None,
+                 use_goal=False,
                  get_base_net_fn=None):
         """
         - get_critic_fn: (obs_shape: (int), input_shape: (int),
@@ -27,7 +28,7 @@ class ActorCritic(BaseNetPolicy):
         if get_base_net_fn is None:
             get_base_net_fn = putils.get_img_encoder
 
-        super().__init__(get_base_net_fn)
+        super().__init__(use_goal, get_base_net_fn)
 
         if get_critic_fn is None:
             get_critic_fn = putils.get_def_critic

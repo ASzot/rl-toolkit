@@ -42,7 +42,6 @@ class Runner:
                     ac_info.clip_action(*self.ac_tensor)
 
             next_obs, reward, done, infos = self.envs.step(ac_info.take_action)
-            import ipdb; ipdb.set_trace()
             reward += ac_info.add_reward
 
             step_log_vals = utils.agg_ep_log_stats(infos, ac_info.extra)

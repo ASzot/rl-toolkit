@@ -8,7 +8,14 @@ class BaseStorage(object):
         self.on_traj_done_fn = None
 
     def set_traj_done_callback(self, on_traj_done_fn):
-        self._on_traj_done_fn = on_traj_done_fn
+        self._on_traj_done_callback = on_traj_done_fn
+
+    def _on_traj_done(self, done_trajs):
+        """
+        done_trajs: A list of trajectory where each trajectory is a tuple of form:
+            (state,action,mask,info_dict,reward)
+        """
+        pass
 
     def init_storage(self, obs):
         self.traj_storage = [[] for _ in range(rutils.get_def_obs(obs).shape[0])]
@@ -35,7 +42,8 @@ class BaseStorage(object):
                 done_trajs.append(self.traj_storage[i])
                 self.traj_storage[i] = []
         if len(done_trajs) > 0:
-            self._on_traj_done_fn(done_trajs)
+            self._on_traj_done_callback(done_trajs)
+            self._on_traj_done(done_trajs)
 
     def after_update(self):
         pass

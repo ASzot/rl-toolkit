@@ -15,9 +15,10 @@ class DQN(BaseNetPolicy):
     """
 
     def __init__(self,
-            get_base_net_fn=None,
-            get_actor_head_fn=None):
-        super().__init__(get_base_net_fn)
+            get_actor_head_fn=None,
+            use_goal=False,
+            get_base_net_fn=None):
+        super().__init__(use_goal, get_base_net_fn)
         if get_actor_head_fn is None:
             get_actor_head_fn = putils.get_def_actor_head
         self.get_actor_head_fn = get_actor_head_fn
@@ -28,8 +29,8 @@ class DQN(BaseNetPolicy):
         self.head = self.get_actor_head_fn(self.base_net.output_shape[0],
                 action_space.n)
 
-    def forward(self, state, rnn_hxs, masks):
-        base_features, _ = self.base_net(state, rnn_hxs, masks)
+    def forward(self, state, add_state, rnn_hxs, masks):
+        base_features, _ = self._apply_base_net(state, add_state, rnn_hxs, masks)
         return self.head(base_features)
 
     def get_action(self, state, add_state, rnn_hxs, masks, step_info):
@@ -43,7 +44,7 @@ class DQN(BaseNetPolicy):
 
         sample = random.random()
         if sample > eps_threshold:
-            q_vals = self.forward(state, rnn_hxs, masks)
+            q_vals = self.forward(state, add_state, rnn_hxs, masks)
             ret_action = q_vals.max(1)[1].unsqueeze(-1)
         else:
             # Take a random action.

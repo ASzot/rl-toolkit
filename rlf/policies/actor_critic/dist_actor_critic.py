@@ -20,8 +20,9 @@ class DistActorCritic(ActorCritic):
                  get_dist_fn=None,
                  get_critic_fn=None,
                  get_critic_head_fn=None,
+                 use_goal=False,
                  get_base_net_fn=None):
-        super().__init__(get_critic_fn, get_critic_head_fn, get_base_net_fn)
+        super().__init__(get_critic_fn, get_critic_head_fn, use_goal, get_base_net_fn)
         """
         - get_actor_fn: (obs_space : (int), input_shape : (int) ->
           rlf.rl.model.BaseNet)
@@ -43,7 +44,7 @@ class DistActorCritic(ActorCritic):
             self.actor.output_shape, self.action_space)
 
     def get_action(self, state, add_state, rnn_hxs, masks, step_info):
-        dist, value, rnn_hxs = self.forward(state, rnn_hxs, masks)
+        dist, value, rnn_hxs = self.forward(state, add_state, rnn_hxs, masks)
         if self.args.deterministic_policy:
             action = dist.mode()
         else:
@@ -56,8 +57,10 @@ class DistActorCritic(ActorCritic):
             'dist_entropy': dist_entropy
         })
 
-    def forward(self, inputs, rnn_hxs, masks):
-        base_features, rnn_hxs = self.base_net(inputs, rnn_hxs, masks)
+    def forward(self, state, add_state, rnn_hxs, masks):
+        if state is None and self.use_goal:
+            raise ValueError('Using goal is not supported in PPO yet')
+        base_features, rnn_hxs = self._apply_base_net(state, add_state, rnn_hxs, masks)
 
         value = self._get_value_from_features(base_features, rnn_hxs, masks)
 
@@ -66,8 +69,8 @@ class DistActorCritic(ActorCritic):
 
         return dist, value, rnn_hxs
 
-    def evaluate_actions(self, inputs, rnn_hxs, masks, action):
-        dist, value, rnn_hxs = self.forward(inputs, rnn_hxs, masks)
+    def evaluate_actions(self, state, rnn_hxs, masks, action):
+        dist, value, rnn_hxs = self.forward(state, None, rnn_hxs, masks)
 
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy()

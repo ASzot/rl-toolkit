@@ -24,6 +24,7 @@ class RegActorCritic(ActorCritic):
             get_actor_head_fn=None,
             get_critic_fn=None,
             get_critic_head_fn=None,
+            use_goal=False,
             get_base_net_fn=None):
         """
         - get_actor_fn:
@@ -36,7 +37,7 @@ class RegActorCritic(ActorCritic):
         if get_critic_fn is None:
             get_critic_fn = putils.get_reg_ac_critic_head
 
-        super().__init__(get_critic_fn, get_critic_head_fn, get_base_net_fn)
+        super().__init__(get_critic_fn, get_critic_head_fn, use_goal, get_base_net_fn)
 
         if get_actor_fn is None:
             get_actor_fn = putils.get_def_actor
@@ -64,17 +65,17 @@ class RegActorCritic(ActorCritic):
                     self.args.noise_decay_end,
                     self.args.noise_decay_step))
                 for _ in range(self.args.num_processes)]
-        if self.action_space.high != -1.0 * self.action_space.low:
+        if (self.action_space.high != -1.0 * self.action_space.low).any():
             raise ValueError("Asynmetric action space bounds currently not supported")
 
 
-    def forward(self, state, rnn_hxs, masks):
-        base_features, _ = self.base_net(state, rnn_hxs, masks)
+    def forward(self, state, add_state, rnn_hxs, masks):
+        base_features, _ = self._apply_base_net(state, add_state, rnn_hxs, masks)
         actor_features, _ = self.actor_net(base_features, rnn_hxs, masks)
         return self.actor_head(actor_features) * self.action_space.high[0]
 
-    def get_value(self, inputs, action, rnn_hxs, masks):
-        base_features, rnn_hxs = self.base_net(inputs, rnn_hxs, masks)
+    def get_value(self, state, action, add_state, rnn_hxs, masks):
+        base_features, rnn_hxs = self._apply_base_net(state, add_state, rnn_hxs, masks)
         critic_features, rnn_hxs = self.critic(base_features, action, rnn_hxs, masks)
         return self.critic_head(critic_features)
 
@@ -87,7 +88,7 @@ class RegActorCritic(ActorCritic):
 
         n_procs = state.shape[0]
 
-        action = self.forward(state, rnn_hxs, masks)
+        action = self.forward(state, add_state, rnn_hxs, masks)
         if not step_info.is_eval:
             cur_step = step_info.cur_num_steps
             if cur_step > self.args.n_rnd_steps:
