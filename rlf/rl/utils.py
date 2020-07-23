@@ -292,11 +292,11 @@ def agg_ep_log_stats(env_infos, alg_info):
     - alg_info (dict) returns everything starting with 'alg_add_'
     """
 
+    all_log_stats = defaultdict(list)
     for k in alg_info:
         if k.startswith('alg_add_'):
-            all_log_stats[k].append(inf[k])
+            all_log_stats[k].append(alg_info[k])
 
-    all_log_stats = defaultdict(list)
     for inf in env_infos:
         if 'episode' in inf:
             # Only log at the end of the episode

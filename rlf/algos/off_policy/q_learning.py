@@ -37,13 +37,9 @@ class QLearning(OffPolicy):
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
-        parser.add_argument('--tau',
-            type=float,
-            default=1e-3,
+        parser.add_argument('--tau', type=float, default=1e-3,
             help=("Mixture for the target network weight update. ",
                 "If non-zero this is DDQN"))
 
-        parser.add_argument('--updates-per-batch',
-            type=int,
-            default=1,
+        parser.add_argument('--updates-per-batch', type=int, default=1,
             help='Number of updates to perform in each call to update')

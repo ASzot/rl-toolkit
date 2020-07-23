@@ -46,7 +46,11 @@ class BitFlipEnv(gym.Env):
 
         if self.n_steps >= self.n:
             done = True
-        return obs, reward, done, {}
+
+        info = {}
+        if done:
+            info['ep_success'] = float(np.array_equal(self.state, self.goal))
+        return obs, reward, done, info
 
     def render(self):
         print("\rstate :", np.array_str(self.state), end=' '*10)

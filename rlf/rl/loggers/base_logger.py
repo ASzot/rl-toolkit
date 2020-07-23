@@ -159,7 +159,7 @@ class BaseLogger(object):
             log_stat_vals['max_' + k] = np.max(v)
 
         def should_print(x):
-            return x.startswith('pr_')
+            return '_pr_' in x
 
         log_dat = {
                 **updater_log_vals,
@@ -172,14 +172,16 @@ class BaseLogger(object):
                 print(
                     f"Over the last {num_eps} episodes:\n"
                     f"mean/median reward {np.mean(rewards):.2f}/{np.median(rewards)}\n"
-                    f"min/max {np.min(rewards):.2f}/{np.max(rewards):.2f} \n"
+                    f"min/max {np.min(rewards):.2f}/{np.max(rewards):.2f}"
                 )
+
             # Print log values from the updater if requested.
-            for k, v in updater_log_vals.items():
+            for k, v in log_dat.items():
                 if should_print(k):
                     print(f"    - {k}: {v}")
 
             # Print a new line to separate loggin lines and keep things clean.
+            print('')
             print('')
 
         # Log all values

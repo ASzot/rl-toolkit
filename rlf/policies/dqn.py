@@ -53,7 +53,9 @@ class DQN(BaseNetPolicy):
             if self.args.cuda:
                 ret_action = ret_action.cuda()
 
-        return create_simple_action_data(ret_action)
+        return create_simple_action_data(ret_action, {
+            'alg_add_eps': eps_threshold
+            })
 
     def get_add_args(self, parser):
         super().get_add_args(parser)

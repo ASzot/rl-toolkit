@@ -11,7 +11,7 @@ class OffPolicy(BaseNetAlgo):
         super().__init__()
 
         if get_storage_fn is None:
-            get_storage_fn = lambda buff_size: TransitionStorage(buff_size)
+            get_storage_fn = lambda buff_size, args: TransitionStorage(buff_size, args)
         self.get_storage_fn = get_storage_fn
 
 
@@ -19,7 +19,7 @@ class OffPolicy(BaseNetAlgo):
         super().init(policy, args)
 
     def get_storage_buffer(self, policy, envs, args):
-        return self.get_storage_fn(args.trans_buffer_size)
+        return self.get_storage_fn(args.trans_buffer_size, args)
 
     def _sample_transitions(self, storage):
         return storage.sample_tensors(self.args.batch_size)
@@ -44,4 +44,8 @@ class OffPolicy(BaseNetAlgo):
         parser.add_argument('--trans-buffer-size', type=int, default=10000)
         parser.add_argument('--batch-size', type=int, default=128)
 
-
+        # HER related. Ideally they would be in the `HerStorage` object. This is
+        # a temporally place for them.
+        parser.add_argument('--her-K', type=int, default=3)
+        parser.add_argument('--her-strat', type=str, default='future',
+                help="Valid options are ['future', 'final']")

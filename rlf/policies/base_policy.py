@@ -4,14 +4,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import rlf.rl.utils as rutils
 
-def create_simple_action_data(action):
+def create_simple_action_data(action, extra={}):
     """
     Create some policy output that consists of just the action. This means no
     need to also return teh value, action_log_probs, etc.
     """
     return ActionData(torch.tensor(0.0), action,
             torch.zeros([*action.shape[:-1], 1]),
-            torch.tensor([0]), {}, 0)
+            torch.tensor([0]), extra, 0)
 
 def create_np_action_data(action):
     return create_simple_action_data(torch.tensor([[action]]))

@@ -47,11 +47,14 @@ class HerRunSettings(TestRunSettings):
                     )
 
     def get_algo(self):
+        pass_kwargs = {}
+        if self.base_args.her:
+            pass_kwargs['get_storage_fn'] = lambda buff_size, args: \
+                HerStorage(buff_size, args)
         if 'BitFlip' in self.base_args.env_name:
-            #return QLearning(get_storage_fn = lambda buff_size: HerStorage(buff_size))
-            return QLearning()
+            return QLearning(**pass_kwargs)
         else:
-            return DDPG(get_storage_fn = lambda buff_size: HerStorage(buff_size))
+            return DDPG(**pass_kwargs)
 
 if __name__ == "__main__":
     run_policy(HerRunSettings())

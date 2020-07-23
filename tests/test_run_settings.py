@@ -3,6 +3,7 @@ from rlf.rl.loggers.wb_logger import WbLogger
 from rlf.rl.loggers.tb_logger import TbLogger
 from rlf.rl.loggers.base_logger import BaseLogger
 import os.path as osp
+from rlf.args import str2bool
 
 class TestRunSettings(RunSettings):
     def get_logger(self):
@@ -21,5 +22,6 @@ class TestRunSettings(RunSettings):
     def get_add_args(self, parser):
         parser.add_argument('--no-wb', default=False, action='store_true')
         parser.add_argument('--tb', default=False, action='store_true')
+        parser.add_argument('--her', default=True, type=str2bool)
         parser.add_argument('--env-name')
 

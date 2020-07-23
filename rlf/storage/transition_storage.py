@@ -6,8 +6,9 @@ from collections import defaultdict
 
 
 class TransitionStorage(BaseStorage):
-    def __init__(self, capacity):
+    def __init__(self, capacity, args):
         super().__init__()
+        self.args = args
         self.capacity = capacity
         self.memory = []
         self.position = 0

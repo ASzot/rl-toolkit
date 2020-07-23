@@ -95,7 +95,8 @@ def add_args(parser):
     parser.add_argument('--eval-only', action='store_true', default=False)
     parser.add_argument('--render-metric', action='store_true', default=False)
     parser.add_argument('--num-eval', type=int, default=5)
-    parser.add_argument('--log-smooth-len', type=int, default=100)
+    parser.add_argument('--log-smooth-len', type=int, default=100,
+            help="Smoothing window for all logged statistics")
     parser.add_argument('--num-render', type=int, default=None,
             help='None places no limit')
     parser.add_argument('--resume',
