@@ -12,7 +12,7 @@ class BaseStorage(object):
 
     def _on_traj_done(self, done_trajs):
         """
-        done_trajs: A list of trajectory where each trajectory is a tuple of form:
+        done_trajs: A list of transitions where each transition is a tuple of form:
             (state,action,mask,info_dict,reward)
         """
         pass

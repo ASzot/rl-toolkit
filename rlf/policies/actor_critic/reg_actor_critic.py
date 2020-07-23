@@ -91,7 +91,7 @@ class RegActorCritic(ActorCritic):
         action = self.forward(state, add_state, rnn_hxs, masks)
         if not step_info.is_eval:
             cur_step = step_info.cur_num_steps
-            if cur_step > self.args.n_rnd_steps:
+            if (cur_step >= self.args.n_rnd_steps) and (np.random.rand() >= self.args.rnd_prob):
                 # Get the added noise.
                 noise = torch.FloatTensor([ng.sample(cur_step)
                     for ng in self.noise_gens]).to(self.args.device)
@@ -117,6 +117,7 @@ class RegActorCritic(ActorCritic):
                     ' value. Note that if -1 (default), no decay will occur.'
                     ))
         parser.add_argument('--n-rnd-steps', type=int, default=10000)
+        parser.add_argument('--rnd-prob', type=float, default=0.0)
 
     def get_actor_params(self):
         return super().get_actor_params() + list(self.actor_head.parameters())

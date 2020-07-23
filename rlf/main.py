@@ -3,6 +3,7 @@ import numpy as np
 def run_policy(run_settings):
     runner = run_settings.create_runner()
     end_update = runner.updater.get_num_updates()
+
     if run_settings.args.ray:
         from ray import tune
         import ray
@@ -47,9 +48,9 @@ def run_policy(run_settings):
                 runner.eval(j)
 
         if args.eval_interval > 0:
-            runner.eval()
+            runner.eval(j+1)
         if args.save_interval > 0:
-            runner.save()
+            runner.save(j+1)
 
         runner.close()
         # WB prefix of the run so we can later fetch the data.

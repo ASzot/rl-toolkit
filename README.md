@@ -80,6 +80,9 @@ Several keys in the info dictionary are specially treated.
   environment will pass the environment observation before any normalization in
   the `raw_obs` field. 
 
+Also included are some common environments which otherwise might be hard to configure. 
+* `BitFlip-v0`
+
 # Benchmarks
 ### Hopper-v3
 Commit: `570d8c8d024cb86266610e72c5431ef17253c067`

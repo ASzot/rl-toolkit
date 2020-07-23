@@ -14,6 +14,7 @@ from rlf.rl.runner import Runner
 import numpy as np
 import random
 import os.path as osp
+from gym.spaces import Box
 
 
 def init_seeds(args):
@@ -141,6 +142,13 @@ class RunSettings(object):
                              args.gamma, args.env_log_dir, args.device,
                              False, env_interface, args,
                              alg_env_settings)
+
+        rutils.pstart_sep()
+        print('Action space:', envs.action_space)
+        if isinstance(envs.action_space, Box):
+            print('Action range:', (envs.action_space.low, envs.action_space.high))
+        print('Observation space', envs.observation_space)
+        rutils.pend_sep()
 
         # Setup policy
         policy_args = (envs.observation_space, envs.action_space, args)
