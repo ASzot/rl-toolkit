@@ -10,6 +10,7 @@ from rlf.policies import DQN
 from rlf.rl.model import MLPBase, TwoLayerMlpWithAction
 import torch.nn as nn
 import torch.nn.functional as F
+from rlf.args import str2bool
 
 
 def reg_init(m):
@@ -48,13 +49,17 @@ class HerRunSettings(TestRunSettings):
 
     def get_algo(self):
         pass_kwargs = {}
-        if self.base_args.her:
+        if self.base_args.use_her:
             pass_kwargs['get_storage_fn'] = lambda buff_size, args: \
                 HerStorage(buff_size, args)
         if 'BitFlip' in self.base_args.env_name:
             return QLearning(**pass_kwargs)
         else:
             return DDPG(**pass_kwargs)
+
+    def get_add_args(self, parser):
+        super().get_add_args(parser)
+        parser.add_argument('--use-her', default=True, type=str2bool)
 
 if __name__ == "__main__":
     run_policy(HerRunSettings())

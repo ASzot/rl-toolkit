@@ -20,19 +20,32 @@ class HerStorage(TransitionStorage):
         for done_traj in done_trajs:
             for t in range(len(done_traj) - 1):
                 state = done_traj[t][0].copy()
-
-                # Is this the final frame?
-                if t < len(done_traj) - 1:
-                    next_state = done_traj[t+1][0].copy()
-                else:
-                    # Yes, this is the final frame, there is no next state.
-                    # Just an invalid state
-                    next_state = state.copy()
+                next_state = done_traj[t+1][0].copy()
 
                 if t == 0:
                     mask = 1.0
                 else:
                     mask = done_traj[t-1][2]
+
+                def push_trans(state, next_state):
+                    if torch.allclose(next_state['desired_goal'],
+                            next_state['achieved_goal'], 0.0001):
+                        reward = 1.0
+                        next_mask = 0.0
+                    else:
+                        reward = done_traj[t][4]
+                        next_mask = done_traj[t][2]
+
+                    self._push_transition({
+                        'action': done_traj[t][1],
+                        'state': state,
+                        'mask': torch.tensor([mask]),
+                        'rnn_hxs': torch.tensor([0]),
+                        'reward': torch.tensor([reward]),
+                        'next_state': next_state,
+                        'next_mask': torch.tensor([next_mask]),
+                        'next_rnn_hxs': torch.tensor([0]),
+                        })
 
                 # Augment with the HER style goal.
                 if self.args.her_strat == 'future':
@@ -43,30 +56,11 @@ class HerStorage(TransitionStorage):
 
                         state['desired_goal'] = future_goal
                         next_state['desired_goal'] = future_goal
-
-                        self._push_transition({
-                            'action': done_traj[t][1],
-                            'state': state,
-                            'mask': torch.tensor([mask]),
-                            'rnn_hxs': torch.tensor([0]),
-                            'reward': torch.tensor([done_traj[t][4]]),
-                            'next_state': next_state,
-                            'next_mask': torch.tensor([done_traj[t][2]]),
-                            'next_rnn_hxs': torch.tensor([0]),
-                            })
+                        push_trans(state, next_state)
                 elif self.args.her_strat == 'final':
                     final_goal = done_traj[-1][0]['achieved_goal']
                     state['desired_goal'] = final_goal
                     next_state['desired_goal'] = final_goal
-                    self._push_transition({
-                            'action': done_traj[t][1],
-                            'state': state,
-                            'mask': torch.tensor([mask]),
-                            'rnn_hxs': torch.tensor([0]),
-                            'reward': torch.tensor([done_traj[t][4]]),
-                            'next_state': next_state,
-                            'next_mask': torch.tensor([done_traj[t][2]]),
-                            'next_rnn_hxs': torch.tensor([0]),
-                            })
+                    push_trans(state, next_state)
                 else:
                     raise ValueError(f"Invalid HER strategy {self.args.her_strat}")

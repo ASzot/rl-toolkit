@@ -22,6 +22,5 @@ class TestRunSettings(RunSettings):
     def get_add_args(self, parser):
         parser.add_argument('--no-wb', default=False, action='store_true')
         parser.add_argument('--tb', default=False, action='store_true')
-        parser.add_argument('--her', default=True, type=str2bool)
         parser.add_argument('--env-name')
 
