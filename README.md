@@ -98,5 +98,5 @@ Commit: `5c051769088b6582b0b31db9a145738a9ed68565`
 
 ### HER
 Commit: `95bb3a7d0bf1945e414a0e77de8a749bd79dc554`
-`py -m rlf --cmd her/bit_flip --cfg ./tests/config.yaml --cuda False --sess-id 0`
+- BitFlip: `py -m rlf --cmd her/bit_flip --cfg ./tests/config.yaml --cuda False --sess-id 0`
 ![HER](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/her.png)
