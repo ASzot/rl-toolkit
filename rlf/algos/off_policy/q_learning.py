@@ -22,7 +22,7 @@ class QLearning(OffPolicy):
         for update_i in range(self.args.updates_per_batch):
             state, n_state, action, reward, add_info, n_add_info = self._sample_transitions(storage)
 
-            next_q_vals = self.policy(n_state, **n_add_info).max(1)[0].detach().unsqueeze(-1) * n_add_info['masks']
+            next_q_vals = self.target_policy(n_state, **n_add_info).max(1)[0].detach().unsqueeze(-1) * n_add_info['masks']
             target = reward + (next_q_vals * self.args.gamma)
             loss = autils.td_loss(target, self.policy, state, action, add_info)
 

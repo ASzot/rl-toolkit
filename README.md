@@ -80,7 +80,7 @@ Several keys in the info dictionary are specially treated.
   environment will pass the environment observation before any normalization in
   the `raw_obs` field. 
 
-Also included are some common environments which otherwise might be hard to configure. 
+Also included are some common 3rd party RL environments.
 * `BitFlip-v0`
 
 # Benchmarks
@@ -96,4 +96,7 @@ Commit: `5c051769088b6582b0b31db9a145738a9ed68565`
 - DDPG: `py -m rlf --cmd ddpg/pendulum --cd 0 --cfg ./tests/config.yaml --seed "31,41" --sess-id 0 --cuda False` 
 ![Pendulum-v0](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/pendulum.png)
 
-
+### BitFlip-v0
+Commit: `95bb3a7d0bf1945e414a0e77de8a749bd79dc554`
+- HER: `py -m rlf --cmd her/bit_flip --cfg ./tests/config.yaml --cuda False --sess-id 0`
+![BitFlip-v0]()

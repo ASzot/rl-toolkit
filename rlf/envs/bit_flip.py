@@ -6,6 +6,10 @@ import numpy as np
 BIT_FLIP_ID = 'BitFlip-v0'
 
 class BitFlipEnv(gym.Env):
+    """
+    From https://gist.github.com/MishaLaskin/f2e76ba1d6171ecdecbe7f6a5431e0a8
+    """
+
     def __init__(self, n=5, reward_type='sparse'):
         self.n = n # number of bits
         self.reward_type = reward_type
