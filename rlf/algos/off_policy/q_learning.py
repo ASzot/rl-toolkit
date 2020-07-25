@@ -37,7 +37,7 @@ class QLearning(OffPolicy):
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
-        parser.add_argument('--tau', type=float, default=1e-3,
+        parser.add_argument('--tau', type=float, default=0.0,
             help=("Mixture for the target network weight update. ",
                 "If non-zero this is DDQN"))
 
