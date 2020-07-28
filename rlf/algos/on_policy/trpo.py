@@ -13,7 +13,7 @@ from rlf.algos.base_policy import td_loss
 
 class TRPO(OnPolicy):
 
-    def update_critic(self, states, rnn_hxs, masks, returns):
+    def update_critic(self, states, hxs, masks, returns):
         critic_params = self.policy.get_critic_params()
 
         # First fit the value function.
@@ -21,7 +21,7 @@ class TRPO(OnPolicy):
             putils.set_flat_params_to(critic_params, flat_params)
             self.policy.zero_grad()
 
-            pred = self.policy.get_value(states, rnn_hxs, masks)
+            pred = self.policy.get_value(states, hxs, masks)
 
             value_loss = F.mse_loss(pred, returns)
             for param in critic_params:
@@ -43,7 +43,7 @@ class TRPO(OnPolicy):
 
     def update_actor(self, sample, advantages):
         ac_eval = self.policy.evaluate_actions(sample['state'],
-                        sample['rnn_hxs'], sample['mask'],
+                        sample['hxs'], sample['mask'],
                         sample['action'])
         action_loss = -advantages * torch.exp(ac_eval['log_prob'] - sample['prev_log_prob'])
         action_loss = action_loss.mean()

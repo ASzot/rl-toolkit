@@ -16,6 +16,10 @@ import random
 import os.path as osp
 from gym.spaces import Box
 
+# Import the env interfaces
+#TODO: import the other env interfaces as well?
+import rlf.envs.minigrid_interface
+import rlf.envs.bit_flip
 
 def init_seeds(args):
     # Set all seeds

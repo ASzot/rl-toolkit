@@ -47,13 +47,13 @@ class ActorCritic(BaseNetPolicy):
                                               self.base_net.output_shape, action_space)
         self.critic_head = self.get_critic_head_fn(self.critic.output_shape[0])
 
-    def _get_value_from_features(self, base_features, rnn_hxs, masks):
-        critic_features, rnn_hxs = self.critic(base_features, rnn_hxs, masks)
+    def _get_value_from_features(self, base_features, hxs, masks):
+        critic_features, hxs = self.critic(base_features, hxs, masks)
         return self.critic_head(critic_features)
 
-    def get_value(self, inputs, rnn_hxs, masks):
-        base_features, rnn_hxs = self.base_net(inputs, rnn_hxs, masks)
-        return self._get_value_from_features(base_features, rnn_hxs, masks)
+    def get_value(self, inputs, hxs, masks):
+        base_features, hxs = self.base_net(inputs, hxs, masks)
+        return self._get_value_from_features(base_features, hxs, masks)
 
     def get_critic_params(self):
         return list(self.base_net.parameters()) + \

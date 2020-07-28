@@ -6,7 +6,7 @@ from collections import defaultdict
 
 
 class TransitionStorage(BaseStorage):
-    def __init__(self, capacity, args):
+    def __init__(self, capacity, args, hidden_states={}):
         super().__init__()
         self.args = args
         self.capacity = capacity
@@ -14,6 +14,7 @@ class TransitionStorage(BaseStorage):
         self.position = 0
         self.last_seen = None
         self.set_device = None
+        self.hidden_state_dims = hidden_states
 
     def _push_transition(self, transition):
         if len(self.memory) < self.capacity:
@@ -33,18 +34,17 @@ class TransitionStorage(BaseStorage):
                     'action': ac_info.action[i],
                     'state': rutils.obs_select(obs, i),
                     'mask': self.last_seen['masks'][i],
-                    #'rnn_hxs': rutils.safe_select(self.last_seen['rnn_hxs'], i),
+                    'hxs': rutils.deep_dict_select(self.last_seen['hxs'], i),
                     'reward': reward[i],
                     'next_state': rutils.obs_select(next_obs, i),
                     'next_mask': masks[i],
-                    #'next_rnn_hxs': rutils.safe_select(ac_info.rnn_hxs, i),
+                    'next_hxs': rutils.deep_dict_select(ac_info.hxs, i),
                     })
-
 
         self.last_seen = {
                 'obs': next_obs,
                 'masks': masks,
-                'rnn_hxs': ac_info.rnn_hxs,
+                'hxs': ac_info.hxs,
                 }
 
     def sample(self, batch_size):
@@ -57,13 +57,13 @@ class TransitionStorage(BaseStorage):
         add_states = defaultdict(list)
         actions = []
         masks = []
-        #rnn_hxs = []
+        hxs = defaultdict(list)
         rewards = []
 
         next_states = []
         next_add_states = defaultdict(list)
         next_masks = []
-        #next_rnn_hxs = []
+        next_hxs = defaultdict(list)
 
         for x in transitions:
             states.append(rutils.get_def_obs(x['state']))
@@ -71,41 +71,44 @@ class TransitionStorage(BaseStorage):
                 add_states[k].append(v)
             actions.append(x['action'])
             masks.append(x['mask'])
-            #rnn_hxs.append(x['rnn_hxs'])
+            for k, v in x['hxs'].items():
+                hxs[k].append(x['hxs'][k])
             rewards.append(x['reward'])
 
             next_states.append(rutils.get_def_obs(x['next_state']))
             for k, v in rutils.get_other_obs(x['next_state']).items():
                 next_add_states[k].append(v)
             next_masks.append(x['next_mask'])
-            #next_rnn_hxs.append(x['next_rnn_hxs'])
+            for k, v in x['next_hxs'].items():
+                next_hxs[k].append(x['next_hxs'][k])
 
         states = torch.stack(states)
         for k,v in add_states.items():
             add_states[k] = torch.stack(v)
         actions = torch.stack(actions)
         masks = torch.stack(masks)
-        #rnn_hxs = torch.stack(rnn_hxs)
+        for k,v in hxs.items():
+            hxs[k] = torch.stack(hxs[k])
         rewards = torch.stack(rewards)
+
         next_states = torch.stack(next_states)
         for k,v in next_add_states.items():
             next_add_states[k] = torch.stack(v)
         next_masks = torch.stack(next_masks)
-        #next_rnn_hxs = torch.stack(next_rnn_hxs)
+        for k,v in next_hxs.items():
+            next_hxs[k] = torch.stack(next_hxs[k])
 
         if self.set_device is not None:
             masks = masks.to(self.set_device)
             rewards = rewards.to(self.set_device)
 
         cur_add = {
-            #'rnn_hxs': rnn_hxs,
-            'rnn_hxs': None,
+            'hxs': hxs,
             'masks': masks,
             'add_state': add_states,
         }
         next_add = {
-            #'rnn_hxs': next_rnn_hxs,
-            'rnn_hxs': None,
+            'hxs': next_hxs,
             'masks': next_masks,
             'add_state': next_add_states,
         }
@@ -117,12 +120,15 @@ class TransitionStorage(BaseStorage):
     def init_storage(self, obs):
         super().init_storage(obs)
         batch_size = rutils.get_def_obs(obs).shape[0]
+        hxs = {}
+        for k, dim in self.hidden_state_dims.items():
+            hxs[k] = torch.zeros(batch_size, dim)
         self.last_seen = {
                 'obs': obs,
                 # Start with saying we are done since this is the start of the
                 # first episode
-                'masks': torch.tensor([[0.0] for _ in range(batch_size)]),
-                'rnn_hxs': torch.tensor([[0] for _ in range(batch_size)])
+                'masks': torch.zeros(batch_size, 1),
+                'hxs': hxs,
                 }
 
     def get_obs(self, step):
@@ -132,8 +138,8 @@ class TransitionStorage(BaseStorage):
                 ret_obs[k] = v.to(self.set_device)
         return ret_obs
 
-    def get_recurrent_hidden_state(self, step):
-        return self.last_seen['rnn_hxs']
+    def get_hidden_state(self, step):
+        return self.last_seen['hxs']
 
     def get_masks(self, step):
         return self.last_seen['masks']

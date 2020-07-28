@@ -29,14 +29,11 @@ class Runner:
             obs = self.storage.get_obs(step)
 
             step_info = get_step_info(update_iter, step, self.episode_count, self.args)
-            rnn_hxs = None
-            if self.args.recurrent_policy:
-                rnn_hxs = self.storage.get_recurrent_hidden_states(step)
             with torch.no_grad():
                 ac_info = self.policy.get_action(
                         utils.get_def_obs(obs),
                         utils.get_other_obs(obs),
-                        rnn_hxs,
+                        self.storage.get_hidden_state(step)
                         self.storage.get_masks(step), step_info)
                 if self.args.clip_actions:
                     ac_info.clip_action(*self.ac_tensor)

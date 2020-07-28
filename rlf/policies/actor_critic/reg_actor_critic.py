@@ -69,17 +69,17 @@ class RegActorCritic(ActorCritic):
             raise ValueError("Asynmetric action space bounds currently not supported")
 
 
-    def forward(self, state, add_state, rnn_hxs, masks):
-        base_features, _ = self._apply_base_net(state, add_state, rnn_hxs, masks)
-        actor_features, _ = self.actor_net(base_features, rnn_hxs, masks)
+    def forward(self, state, add_state, hxs, masks):
+        base_features, _ = self._apply_base_net(state, add_state, hxs, masks)
+        actor_features, _ = self.actor_net(base_features, hxs, masks)
         return self.actor_head(actor_features) * self.action_space.high[0]
 
-    def get_value(self, state, action, add_state, rnn_hxs, masks):
-        base_features, rnn_hxs = self._apply_base_net(state, add_state, rnn_hxs, masks)
-        critic_features, rnn_hxs = self.critic(base_features, action, rnn_hxs, masks)
+    def get_value(self, state, action, add_state, hxs, masks):
+        base_features, hxs = self._apply_base_net(state, add_state, hxs, masks)
+        critic_features, hxs = self.critic(base_features, action, hxs, masks)
         return self.critic_head(critic_features)
 
-    def get_action(self, state, add_state, rnn_hxs, masks, step_info):
+    def get_action(self, state, add_state, hxs, masks, step_info):
         should_resets = [True if m == 0.0 else False for m in masks]
         # Reset the noise for the beginning of every episode.
         for should_reset, noise_gen in zip(should_resets, self.noise_gens):
@@ -88,7 +88,7 @@ class RegActorCritic(ActorCritic):
 
         n_procs = state.shape[0]
 
-        action = self.forward(state, add_state, rnn_hxs, masks)
+        action = self.forward(state, add_state, hxs, masks)
         if not step_info.is_eval:
             cur_step = step_info.cur_num_steps
             if (cur_step >= self.args.n_rnd_steps) and (np.random.rand() >= self.args.rnd_prob):
@@ -103,7 +103,7 @@ class RegActorCritic(ActorCritic):
                 action = torch.tensor([self.action_space.sample()
                     for _ in range(n_procs)]).to(self.args.device)
 
-        return create_simple_action_data(action)
+        return create_simple_action_data(action, hxs)
 
     def get_add_args(self, parser):
         super().get_add_args(parser)

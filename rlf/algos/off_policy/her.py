@@ -40,11 +40,11 @@ class HerStorage(TransitionStorage):
                         'action': done_traj[t][1],
                         'state': state,
                         'mask': torch.tensor([mask]),
-                        'rnn_hxs': torch.tensor([0]),
+                        'hxs': {},
                         'reward': torch.tensor([reward]),
                         'next_state': next_state,
                         'next_mask': torch.tensor([next_mask]),
-                        'next_rnn_hxs': torch.tensor([0]),
+                        'next_hxs': {},
                         })
 
                 # Augment with the HER style goal.

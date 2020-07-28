@@ -9,7 +9,7 @@ class A2C(OnPolicy):
         sample = rollouts.get_rollout_data()
 
         ac_eval = self.policy.evaluate_actions(sample['state'],
-                sample['rnn_hxs'], sample['mask'],
+                sample['hxs'], sample['mask'],
                 sample['action'])
 
         advantages = (sample['return'] - ac_eval['value']).detach()

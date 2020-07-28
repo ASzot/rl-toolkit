@@ -9,7 +9,7 @@ class ActionValuePolicy(BasePolicy):
         super().init(obs_space, action_space, args)
         self.Q = np.array([args.q_init for _ in range(action_space.n)])
 
-    def get_action(self, state, add_state, rnn_hxs, masks, step_info):
+    def get_action(self, state, add_state, hxs, masks, step_info):
         if random.random() > self.args.eps:
             a = np.argmax(self.Q)
         else:

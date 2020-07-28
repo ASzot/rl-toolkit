@@ -28,11 +28,11 @@ class BasicPolicy(BaseNetPolicy):
         ac_dim = rutils.get_ac_dim(action_space)
         self.head = nn.Linear(self.base_net.output_shape[0], ac_dim)
 
-    def forward(self, state, rnn_hxs, mask):
-        base_features, _ = self.base_net(state, rnn_hxs, mask)
+    def forward(self, state, hxs, mask):
+        base_features, _ = self.base_net(state, hxs, mask)
         return self.head(base_features), None, None
 
-    def get_action(self, state, add_state, rnn_hxs, mask, step_info):
-        ret_action, _, _ = self.forward(state, rnn_hxs, mask)
+    def get_action(self, state, add_state, hxs, mask, step_info):
+        ret_action, _, _ = self.forward(state, hxs, mask)
         ret_action = rutils.get_ac_compact(self.action_space, ret_action)
         return create_simple_action_data(ret_action)

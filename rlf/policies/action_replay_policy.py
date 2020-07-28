@@ -23,7 +23,7 @@ class ActionReplayPolicy(BaseNetPolicy):
                 False: 0,
                 }
 
-    def get_action(self, state, rnn_hxs, mask, step_info):
+    def get_action(self, state, hxs, mask, step_info):
         is_eval = step_info.is_eval
 
         if mask[0][0] == 0:

@@ -26,7 +26,7 @@ class BaseStorage(object):
     def get_obs(self, step):
         pass
 
-    def get_recurrent_hidden_state(self, step):
+    def get_hidden_state(self, step):
         pass
 
     def get_masks(self, step):

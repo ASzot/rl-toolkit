@@ -83,8 +83,7 @@ def evaluate(args, alg_env_settings, policy, true_vec_norm, env_interface,
 
     obs = eval_envs.reset()
 
-    eval_recurrent_hidden_states = torch.zeros(
-        num_processes, 1, device=args.device)
+    hidden_states = {}
     eval_masks = torch.zeros(num_processes, 1, device=args.device)
 
     frames = []
@@ -110,10 +109,10 @@ def evaluate(args, alg_env_settings, policy, true_vec_norm, env_interface,
 
             ac_info = policy.get_action(utils.get_def_obs(act_obs),
                                         utils.get_other_obs(obs),
-                                        eval_recurrent_hidden_states,
+                                        hidden_states,
                                         eval_masks, step_info)
 
-            eval_recurrent_hidden_states = ac_info.rnn_hxs
+            hidden_states = ac_info.hxs
 
         # Observe reward and next obs
         next_obs, _, done, infos = eval_envs.step(ac_info.take_action)

@@ -91,10 +91,11 @@ def pend_sep():
     print('-' * 10)
     print('')
 
-def safe_select(arr, idx):
-    if arr is None or len(arr) <= idx:
-        return arr
-    return arr[idx]
+def deep_dict_select(d, idx):
+    ret_dict = {}
+    for k in d:
+        ret_dict[k] = d[k][idx]
+    return ret_dict
 
 def flatten_obs_dict(ob_shape, keep_keys):
     total_dim = 0

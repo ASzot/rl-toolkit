@@ -44,6 +44,7 @@ class OffPolicy(BaseNetAlgo):
         parser.add_argument('--trans-buffer-size', type=int, default=10000)
         parser.add_argument('--batch-size', type=int, default=128)
 
+        #########################################
         # HER related. Ideally they would be in the `HerStorage` object. This is
         # a temporally place for them.
         parser.add_argument('--her-K', type=int, default=3)

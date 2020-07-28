@@ -4,7 +4,6 @@ import re
 from collections import OrderedDict
 import gym
 
-
 class EnvInterface(object):
     def __init__(self, args):
         self.args = args

@@ -21,7 +21,7 @@ class PPO(OnPolicy):
             for sample in data_generator:
                 # Get all the data from our batch sample
                 ac_eval = self.policy.evaluate_actions(sample['state'],
-                        sample['rnn_hxs'], sample['mask'],
+                        sample['hxs'], sample['mask'],
                         sample['action'])
 
                 ratio = torch.exp(ac_eval['log_prob'] - sample['prev_log_prob'])

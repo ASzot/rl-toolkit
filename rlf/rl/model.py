@@ -12,6 +12,10 @@ def weight_init(module, weight_init, bias_init, gain=1):
 def def_mlp_weight_init(m):
     return weight_init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), np.sqrt(2))
 
+def reg_mlp_weight_init(m):
+    # Just return the default pytorch init
+    return m
+
 
 class Flatten(nn.Module):
     def forward(self, x):
@@ -121,7 +125,7 @@ class IdentityBase(BaseNet):
     def output_shape(self):
         return self.input_shape
 
-    def forward(self, inputs, rnn_hxs, masks):
+    def forward(self, inputs, hxs, masks):
         return inputs, None
 
 
@@ -140,13 +144,13 @@ class CNNBase(BaseNet):
 
         self.train()
 
-    def forward(self, inputs, rnn_hxs, masks):
+    def forward(self, inputs, hxs, masks):
         x = self.net(inputs / 255.0)
 
         if self.is_recurrent:
-            x, rnn_hxs = self._forward_gru(x, rnn_hxs, masks)
+            x, hxs = self._forward_gru(x, hxs, masks)
 
-        return x, rnn_hxs
+        return x, hxs
 
 class MLPBase(BaseNet):
     def __init__(self, num_inputs, recurrent, hidden_sizes,
@@ -167,15 +171,15 @@ class MLPBase(BaseNet):
         self.net = nn.Sequential(*layers)
         self.train()
 
-    def forward(self, inputs, rnn_hxs, masks):
+    def forward(self, inputs, hxs, masks):
         x = inputs
 
         if self.is_recurrent:
-            x, rnn_hxs = self._forward_gru(x, rnn_hxs, masks)
+            x, hxs = self._forward_gru(x, hxs, masks)
 
         hidden_actor = self.net(x)
 
-        return hidden_actor, rnn_hxs
+        return hidden_actor, hxs
 
 
 class MLPBasic(MLPBase):
@@ -199,8 +203,8 @@ class TwoLayerMlpWithAction(BaseNet):
 
         self.train()
 
-    def forward(self, inputs, actions, rnn_hxs, masks):
-        return self.net(torch.cat([inputs, actions], dim=-1)), rnn_hxs
+    def forward(self, inputs, actions, hxs, masks):
+        return self.net(torch.cat([inputs, actions], dim=-1)), hxs
 
 class InjectNet(nn.Module):
     def __init__(self, base_net, head_net, base_net_out_dim,

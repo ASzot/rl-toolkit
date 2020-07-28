@@ -4,14 +4,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import rlf.rl.utils as rutils
 
-def create_simple_action_data(action, extra={}):
+def create_simple_action_data(action, hxs, extra={}):
     """
     Create some policy output that consists of just the action. This means no
-    need to also return teh value, action_log_probs, etc.
+    need to also return the value, action_log_probs, etc.
     """
     return ActionData(torch.tensor(0.0), action,
             torch.zeros([*action.shape[:-1], 1]),
-            torch.tensor([0]), extra, 0)
+            hxs, extra, 0)
 
 def create_np_action_data(action):
     return create_simple_action_data(torch.tensor([[action]]))
@@ -21,11 +21,11 @@ class ActionData(object):
     Object returned on every get_action. Note that you don't need to fill out
     every field, see `create_simple_action_data` for more.
     """
-    def __init__(self, value, action, action_log_probs, rnn_hxs, extra, add_reward=0):
+    def __init__(self, value, action, action_log_probs, hxs, extra, add_reward=0):
         self.value = value
         self.action = action
         self.action_log_probs = action_log_probs
-        self.rnn_hxs = rnn_hxs
+        self.hxs = hxs
         self.add_reward = add_reward
         self.extra = extra
         self.take_action = torch.tensor(action.cpu().numpy())
@@ -82,7 +82,7 @@ class BasePolicy(ABC):
         pass
 
     @abstractmethod
-    def get_action(self, state, add_state, rnn_hxs, masks, step_info):
+    def get_action(self, state, add_state, hxs, masks, step_info):
         """
         - step_info: Dictionary consisting of keys
           {

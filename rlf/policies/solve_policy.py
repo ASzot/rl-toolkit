@@ -23,7 +23,7 @@ class SolvePolicy(BasePolicy, ABC):
     def _solve_env(self, state):
         pass
 
-    def get_action(self, state, rnn_hxs, masks, step_info):
+    def get_action(self, state, hxs, masks, step_info):
         if self.is_first:
             masks = torch.zeros(masks.shape)
 

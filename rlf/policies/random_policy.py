@@ -4,7 +4,7 @@ import rlf.rl.utils as rutils
 from gym import spaces
 
 class RandomPolicy(BasePolicy):
-    def get_action(self, state, add_state, rnn_hxs, masks, step_info):
+    def get_action(self, state, add_state, hxs, masks, step_info):
         n_procs = rutils.get_def_obs(state).shape[0]
         action = torch.tensor([self.action_space.sample()
             for _ in range(n_procs)]).to(self.args.device)

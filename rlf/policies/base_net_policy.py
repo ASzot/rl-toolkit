@@ -7,6 +7,12 @@ from rlf.policies.base_policy import BasePolicy
 
 
 class BaseNetPolicy(nn.Module, BasePolicy):
+    """
+    The starting point for all neural network policies. Includes an easy way to
+    goal condition policies. Defines a base neural network transformation that
+    outputs a hidden representation.
+    """
+
     def __init__(self,
             use_goal=False,
             get_base_net_fn=None):
@@ -35,13 +41,13 @@ class BaseNetPolicy(nn.Module, BasePolicy):
             use_obs_shape = rutils.get_obs_shape(obs_space)
         self.base_net = self.get_base_net_fn(use_obs_shape)
 
-    def _apply_base_net(self, state, add_state, rnn_hxs, masks):
+    def _apply_base_net(self, state, add_state, hxs, masks):
         if self.use_goal:
             # Combine the goal and the state
             combined_state = torch.cat([state, add_state['desired_goal']], dim=-1)
-            return self.base_net(combined_state, rnn_hxs, masks)
+            return self.base_net(combined_state, hxs, masks)
         else:
-            return self.base_net(state, rnn_hxs, masks)
+            return self.base_net(state, hxs, masks)
 
     def watch(self, logger):
         super().watch(logger)

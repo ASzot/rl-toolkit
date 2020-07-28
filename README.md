@@ -42,17 +42,6 @@ Requires Python 3.7. With conda:
 - `source activate rlf`
 - `pip install -r requirements.txt`.
 
-Some additional environments you can install:
-- `dm_control`: 
-  - `pip install dm_control` 
-  - `export MJLIB_PATH=/home/aszot/.mujoco/mujoco200/bin/libmujoco200.so` (or
-    wherever your MuJoCo install is).
-  - To run these environments use format `--env-name dm.domain.task`
-- `robosuite`
-  - `pip install robosuite`
-- `gym-minigrid`
-  - `pip install install gym-minigrid`
-
 ## Run Tests
 The most important principle in this code is **working RL algorithms**.
 Automated benchmarking scripts are included under `tests/test_cmds` so you can
@@ -80,7 +69,15 @@ Several keys in the info dictionary are specially treated.
   environment will pass the environment observation before any normalization in
   the `raw_obs` field. 
 
-Also included are some common 3rd party RL environments.
+
+And adapters for popular 3rd party RL environments.
+* OpenAI Gym Fetch: 
+  * `--gf-dense` whether the reward should be dense or sparse. 
+* Gym Minigrid
+  * `--gw-flatten`: If True flattens the observation and ignores the mission
+    string. 
+
+Also directly include 3rd party environments. 
 * `BitFlip-v0`
 
 # Benchmarks

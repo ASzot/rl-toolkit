@@ -31,7 +31,7 @@ def to_double(inp):
 
 class RolloutStorage(BaseStorage):
     def __init__(self, num_steps, num_processes, obs_space, action_space,
-            args, value_dim=1):
+            args, value_dim=1, hidden_states={}):
         super().__init__()
         self.value_dim = value_dim
         self.args = args
@@ -55,13 +55,9 @@ class RolloutStorage(BaseStorage):
         self.action_log_probs = torch.zeros(num_steps, num_processes,
                                             self.value_dim)
 
-        if self.args.recurrent_policy:
-            self.recurrent_hidden_states = torch.zeros(num_steps + 1, num_processes,
-                                                       args.state_encoder_hidden_size)
-        else:
-            self.recurrent_hidden_states = None
-
-        self.dummy_rnn_hs = None
+        self.hidden_states = {}
+        for k, dim in hidden_states.items():
+            self.hidden_states[k] = torch.zeros(num_steps + 1, num_processes, dim)
 
         action_shape = get_shape_for_ac(action_space)
 
@@ -117,9 +113,9 @@ class RolloutStorage(BaseStorage):
         self.bad_masks = self.bad_masks.to(device)
         for k, d in self.add_data.items():
             self.add_data[k] = d.to(device)
-        if self.args.recurrent_policy:
-            self.recurrent_hidden_states = self.recurrent_hidden_states.to(
-                device)
+
+        for k, d in self.hidden_states.items():
+            self.hidden_states[k] = d.to(device)
 
 
     def insert(self, obs, next_obs, rewards, done, info, ac_info):
@@ -147,9 +143,8 @@ class RolloutStorage(BaseStorage):
         self.rewards[self.step].copy_(rewards)
         self.masks[self.step + 1].copy_(masks)
         self.bad_masks[self.step + 1].copy_(bad_masks)
-        if self.args.recurrent_policy:
-            self.recurrent_hidden_states[self.step +
-                                         1].copy_(ac_info.rnn_hxs)
+        for k in self.hidden_states:
+            self.hidden_states[self.step + 1].copy_(ac_info.hxs[k])
 
         self.step = (self.step + 1) % self.num_steps
 
@@ -166,9 +161,8 @@ class RolloutStorage(BaseStorage):
         for k in self.add_data:
             self.add_data[k][0].copy_(self.add_data[k][-1])
 
-        if self.args.recurrent_policy:
-            self.recurrent_hidden_states[0].copy_(
-                self.recurrent_hidden_states[-1])
+        for k in self.hidden_states:
+            self.hidden_states[k][0].copy_(self.hidden_states[k][-1])
 
     def compute_returns(self, next_value):
         exp_rewards = self.rewards.repeat(1, 1, self.value_dim)
@@ -284,11 +278,11 @@ class RolloutStorage(BaseStorage):
             actions_batch = self.actions.view(-1,
                                               self.actions.size(-1))[indices]
             rewards_batch = self.rewards.view(-1, 1)[indices]
-            if self.args.recurrent_policy:
-                recurrent_hidden_states_batch = self.recurrent_hidden_states[:-1].view(
-                    -1, self.recurrent_hidden_states.size(-1))[indices]
-            else:
-                recurrent_hidden_states_batch = None
+
+            hidden_states_batch = {}
+            for k in self.hidden_states:
+                hidden_states_batch[k] = self.hidden_states[k][:-1].view(-1,
+                        self.hidden_states[k].size(-1))[indices]
 
             value_preds_batch = self.value_preds[:-
                                                  1].view(-1, self.value_dim)[indices]
@@ -305,7 +299,7 @@ class RolloutStorage(BaseStorage):
                     'state': obs_batch,
                     'other_state': other_obs_batch,
                     'reward': rewards_batch,
-                    'rnn_hxs': recurrent_hidden_states_batch,
+                    'hxs': hidden_states_batch,
                     'action': actions_batch,
                     'value': value_preds_batch,
                     'return': return_batch,
@@ -314,9 +308,8 @@ class RolloutStorage(BaseStorage):
                     'adv': adv_targ,
                     }
 
-    # Only called if args.recurrent_policy is True
-
     def recurrent_generator(self, advantages, num_mini_batch):
+        # Only called if args.recurrent_policy is True
         num_processes = self.rewards.size(1)
         assert num_processes >= num_mini_batch, (
             "PPO requires the number of processes ({}) "
@@ -394,8 +387,8 @@ class RolloutStorage(BaseStorage):
 
         return obs
 
-    def get_recurrent_hidden_state(self, step):
-        return self.recurrent_hidden_states[step]
+    def get_hidden_state(self, step):
+        return rutils.deep_dict_select(self.hidden_states, step)
 
     def get_masks(self, step):
         return self.masks[step]

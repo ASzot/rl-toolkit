@@ -1,7 +1,7 @@
 {
   "conda_env": "rlf",
 
-  "cmds_loc": "tests/test_cmds/",
+  "cmds_loc": "tests/dev/",
   "proj_name": "andrew-random",
 
   "sync_host": "lim-b.usc.edu",
