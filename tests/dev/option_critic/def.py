@@ -1,23 +1,17 @@
 import sys
 sys.path.insert(0, './')
 
-from rlf.algos import QLearning
+from rlf.algos.hier.option_critic import OptionCritic
 from rlf import run_policy
 from tests.test_run_settings import TestRunSettings
-from rlf.policies import DQN
-import torch.nn as nn
-import torch.nn.functional as F
-from rlf.rl.model import MLPBasic
+from rlf.policies.options_policy import OptionsPolicy
 
 class OptionCriticRunSettings(TestRunSettings):
     def get_policy(self):
-        return DQN(lambda in_shape: MLPBasic(
-            in_shape[0], 64, 2,
-            get_activation=lambda: nn.ReLU())
-            )
+        return OptionsPolicy()
 
     def get_algo(self):
-        return QLearning()
+        return OptionCritic()
 
 if __name__ == "__main__":
     run_policy(OptionCriticRunSettings())

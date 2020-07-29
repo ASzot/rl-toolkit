@@ -1,1 +1,1 @@
-python tests/dev/dqn/def.py --prefix 'option-critic-test' --env-name MiniGrid-SimpleCrossingS9N2-v0 --eval-interval -1 --log-smooth-len 10 --save-interval -1 --linear-lr-decay False --max-grad-norm -1 --batch-size 64 --lr 0.001
+python tests/dev/option_critic/def.py --prefix 'option-critic-test' --env-name MiniGrid-Empty-5x5-v0 --eval-interval -1 --log-smooth-len 10 --save-interval -1 --linear-lr-decay False --max-grad-norm -1 --batch-size 64 --lr 0.001 --normalize-env False

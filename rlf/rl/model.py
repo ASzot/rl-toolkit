@@ -154,7 +154,8 @@ class CNNBase(BaseNet):
 
 class MLPBase(BaseNet):
     def __init__(self, num_inputs, recurrent, hidden_sizes,
-            weight_init=def_mlp_weight_init, get_activation=lambda: nn.Tanh()):
+            weight_init=def_mlp_weight_init, get_activation=lambda: nn.Tanh(),
+            no_last_act=False):
         super().__init__(recurrent, num_inputs, hidden_sizes[-1])
 
         assert len(hidden_sizes) > 0
@@ -163,10 +164,9 @@ class MLPBase(BaseNet):
                 get_activation()]
         # Minus one for the input layer
         for i in range(len(hidden_sizes)-1):
-            layers.extend([
-                    weight_init(nn.Linear(hidden_sizes[i], hidden_sizes[i+1])),
-                    get_activation()
-                ])
+            layers.append(weight_init(nn.Linear(hidden_sizes[i], hidden_sizes[i+1])))
+            if not (no_last_act and i == len(hidden_sizes) - 2):
+                layers.append(get_activation())
 
         self.net = nn.Sequential(*layers)
         self.train()

@@ -20,16 +20,19 @@ the important parts. You can do all of these things without touching any of the 
 
 ## Algorithms
 - On policy:
-  - PPO
   - REINFORCE
-  - A2C 
+  - Actor Critic (A2C)
+  - Proximal Policy Optimization (PPO)
 - Off policy:
-  - DQN
-  - DDPG
+  - Deep Q-Networks (DQN)
+  - Deep Deterministic Policy Gradients (DDPG)
+  - Hindsight Experience Replay (HER)
+- Hierarchical RL: 
+  - Option Critic
 - Imitation learning:
-  - Behavioral cloning
-  - GAIL
-  - BCO
+  - Behavioral Cloning (BC)
+  - Generative Adversarial Imitation Learning (GAIL)
+  - Behavioral Cloning from Observations (BCO)
 
 See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks)
 

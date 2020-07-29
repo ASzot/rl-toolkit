@@ -1,8 +1,8 @@
-
+from rlf.storage.base_storage import BaseStorage
 
 class NestedStorage(BaseStorage):
     def __init__(self, child_dict, main_key):
-        super().__init__(self)
+        super().__init__()
         self.child_dict = child_dict
         self.main_key = main_key
 

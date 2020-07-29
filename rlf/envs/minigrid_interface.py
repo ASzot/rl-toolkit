@@ -1,6 +1,7 @@
 from rlf.envs.env_interface import EnvInterface, register_env_interface
 import gym
 import numpy as np
+from rlf.args import str2bool
 
 try:
     import gym_minigrid

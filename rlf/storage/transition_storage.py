@@ -30,6 +30,7 @@ class TransitionStorage(BaseStorage):
 
         batch_size = rutils.get_def_obs(obs).shape[0]
         for i in range(batch_size):
+            #print('Pushing', rutils.deep_dict_select(ac_info.hxs, i))
             self._push_transition({
                     'action': ac_info.action[i],
                     'state': rutils.obs_select(obs, i),
@@ -72,7 +73,7 @@ class TransitionStorage(BaseStorage):
             actions.append(x['action'])
             masks.append(x['mask'])
             for k, v in x['hxs'].items():
-                hxs[k].append(x['hxs'][k])
+                hxs[k].append(x['hxs'][k].float())
             rewards.append(x['reward'])
 
             next_states.append(rutils.get_def_obs(x['next_state']))
@@ -125,8 +126,6 @@ class TransitionStorage(BaseStorage):
             hxs[k] = torch.zeros(batch_size, dim)
         self.last_seen = {
                 'obs': obs,
-                # Start with saying we are done since this is the start of the
-                # first episode
                 'masks': torch.zeros(batch_size, 1),
                 'hxs': hxs,
                 }

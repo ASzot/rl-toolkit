@@ -1,8 +1,12 @@
-from rlf.policies.base_net_policy import OptionCriticPolicy
+from rlf.policies.base_net_policy import BaseNetPolicy
 import rlf.policies.utils as putils
 from torch.distributions import Categorical, Bernoulli
 import torch.nn as nn
 from rlf.policies.base_policy import ActionData
+import gym.spaces as spaces
+import math
+import numpy as np
+import torch
 
 class OptionsPolicy(BaseNetPolicy):
     def __init__(self,
@@ -18,7 +22,7 @@ class OptionsPolicy(BaseNetPolicy):
             get_base_net_fn = putils.get_img_encoder
 
         if get_critic_fn is None:
-            get_critic_fn = putils.get_mlp_net_fn((64, 64, 1))
+            get_critic_fn = putils.get_mlp_net_var_out_fn((64, 64))
         if get_term_fn is None:
             get_term_fn = putils.get_mlp_net_var_out_fn((64, 64))
         if get_option_fn is None:
@@ -35,11 +39,11 @@ class OptionsPolicy(BaseNetPolicy):
 
         if not isinstance(action_space, spaces.Discrete):
             raise ValueError(("Currently option critic only supports discrete",
-                    "action space environments. The change to make it work with
+                    "action space environments. The change to make it work with",
                     "continuous action space envrionments is actually very",
                     "easy, so it won't be hard to add."))
 
-        self.critic_net = self.get_critic_fn(in_shape)
+        self.critic_net = self.get_critic_fn(in_shape, self.args.n_options)
         self.term_net = self.get_term_fn(in_shape, self.args.n_options)
 
         self.option_nets = nn.ModuleList([
@@ -47,13 +51,21 @@ class OptionsPolicy(BaseNetPolicy):
             for _ in range(self.args.n_options)
             ])
 
-    def _sel_option(self, state, add_state, rnn_hxs, masks, eps_threshold):
+    def _sel_option(self, state, add_state, hxs, masks, eps_threshold):
         if np.random.rand() < eps_threshold:
-            return torch.LongTensor([np.random.choice(self.args.num_options)
+            return torch.LongTensor([np.random.choice(self.args.n_options)
                 for i in range(state.shape[0])])
         else:
-            return self.critic_net(state, add_state, rnn_hxs,
-                    masks).argmax(dim=-1)
+            values = self.get_value(state, hxs, masks)
+            return values.argmax(-1)
+
+    def get_value(self, state, hxs, masks):
+        return self.critic_net(state, hxs, masks)[0]
+
+    def get_term_prob(self, state, hxs, masks):
+        term_logits, _ = self.term_net(state, hxs, masks)
+        term_logits = term_logits.sigmoid()
+        return term_logits
 
     def get_action(self, state, add_state, hxs, masks, step_info):
         num_steps = step_info.cur_num_steps
@@ -61,44 +73,51 @@ class OptionsPolicy(BaseNetPolicy):
                 (self.args.eps_start - self.args.eps_end) * \
                 math.exp(-1.0 * num_steps / self.args.eps_decay)
 
-        if 'option' in hxs:
-            prev_option = hxs['option']
-            term = hxs['term']
-        elif not (masks == 0).all():
-            raise ValueError(("Hidden state not set, not sure which",
-                "option to use"))
+        prev_option = hxs['option'].long()
+        term = hxs['term']
 
         # If the mask is 0, the episode is over and we must decide a new
         # option.
-        new_option_sel = self._sel_option(state, add_state, rnn_hxs, masks,
+        new_option_sel = self._sel_option(state, add_state, hxs, masks,
                 eps_threshold)
+        new_option_sel = new_option_sel.unsqueeze(-1)
 
-        cur_option = torch.zeros(len(self.args.num_options))
+        batch_size = len(masks)
+        use_options = torch.zeros(batch_size,1).long()
 
-        for i, mask in enumerate(masks):
-            if mask[i] == 0 or term[i] == 1.0:
-                cur_option[i] = new_option_sel[i]
+        for i in range(batch_size):
+            if masks[i] == 0 or term[i] == 1.0:
+                use_option = new_option_sel[i]
             else:
-                cur_option[i] = prev_option[i]
+                use_option = prev_option[i]
+            use_options[i] = use_option
 
-        logits = self.option_nets[cur_option](state, add_state, rnn_hxs, masks)
-        action_dist = Categorical(logits)
+        action, action_log_probs, dist_entropy = self.get_actions(state, hxs,
+                masks, use_options)
 
-        action = action_dist.sample()
-        action_log_probs = action_dist.log_probs(action)
-        dist_entropy = action_dist.entropy()
-
-        term_logit = self.term_net(state, add_state, rnn_hxs, masks)[cur_option]
-        term = Bernoulli(term_logit).sample()
+        term_logits = self.get_term_prob(state, hxs, masks)
+        sel_logits = term_logits.gather(1, use_options)
+        term = Bernoulli(sel_logits).sample()
 
         hxs = {
-                'option': cur_option,
+                'option': use_options,
                 'term': term,
                 }
 
-        return ActionData(value, action, action_log_probs, hxs, {
-            'dist_entropy': dist_entropy
-        })
+        return ActionData(torch.zeros(batch_size,1), action, action_log_probs, hxs, {})
+
+    def get_actions(self, state, hxs, masks, use_options):
+        logits = []
+        for i in range(state.shape[0]):
+            logits.append(
+                    self.option_nets[use_options[i]](state[i], hxs, masks)[0]
+                    )
+        logits = torch.stack(logits).softmax(dim=-1)
+        action_dist = Categorical(logits)
+        action = action_dist.sample()
+        action_log_probs = action_dist.log_probs(action)
+        dist_entropy = action_dist.entropy()
+        return action, action_log_probs, dist_entropy
 
     def get_add_args(self, parser):
         super().get_add_args(parser)

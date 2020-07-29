@@ -66,7 +66,7 @@ class RolloutStorage(BaseStorage):
         if action_space.__class__.__name__ == 'Discrete':
             self.actions = self.actions.long()
 
-        self.masks = torch.ones(num_steps + 1, num_processes, 1)
+        self.masks = torch.zeros(num_steps + 1, num_processes, 1)
 
         # Masks that indicate whether it's a true terminal state
         # or time limit end state
@@ -144,7 +144,7 @@ class RolloutStorage(BaseStorage):
         self.masks[self.step + 1].copy_(masks)
         self.bad_masks[self.step + 1].copy_(bad_masks)
         for k in self.hidden_states:
-            self.hidden_states[self.step + 1].copy_(ac_info.hxs[k])
+            self.hidden_states[k][self.step + 1].copy_(ac_info.hxs[k])
 
         self.step = (self.step + 1) % self.num_steps
 

@@ -33,7 +33,7 @@ class Runner:
                 ac_info = self.policy.get_action(
                         utils.get_def_obs(obs),
                         utils.get_other_obs(obs),
-                        self.storage.get_hidden_state(step)
+                        self.storage.get_hidden_state(step),
                         self.storage.get_masks(step), step_info)
                 if self.args.clip_actions:
                     ac_info.clip_action(*self.ac_tensor)
