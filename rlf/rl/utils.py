@@ -21,13 +21,26 @@ try:
 except:
     pass
 
-def plot_line(plot_vals, save_name, args, to_wb, update_iter=None):
+def plot_line(plot_vals, save_name, args, to_wb, update_iter=None, x_vals=None,
+        x_name=None, y_name=None, title=None):
     """
     Plot a simple rough line.
     """
+    if x_vals is None:
+        x_vals = np.arange(len(plot_vals))
     save_path = osp.join(args.save_dir, args.env_name, args.prefix, save_name)
-    plt.title(save_name)
-    plt.plot(np.arange(len(plot_vals)), plot_vals)
+    if title is None:
+        plt.title(save_name)
+    else:
+        plt.title(title)
+
+    if x_name is not None:
+        plt.xlabel(x_name)
+    if y_name is not None:
+        plt.ylabel(y_name)
+
+    plt.plot(x_vals, plot_vals)
+    plt.grid(b=True, which='major', color='lightgray', linestyle='--')
     plt_save(save_path)
 
     kwargs = {}

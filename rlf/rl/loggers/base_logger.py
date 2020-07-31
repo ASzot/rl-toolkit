@@ -134,6 +134,7 @@ class BaseLogger(object):
         """
         Log key value pairs to whatever interface.
         """
+        pass
 
     def log_video(self, video_file, step_count, fps):
         pass
@@ -142,6 +143,7 @@ class BaseLogger(object):
         """
         - model (torch.nn.Module) the set of parameters to watch
         """
+        pass
 
     def interval_log(self, j, total_num_steps, episode_count, updater_log_vals, args):
         end = time.time()
