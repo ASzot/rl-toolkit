@@ -2,6 +2,7 @@ from rlf.algos.base_net_algo import BaseNetAlgo
 from rlf.storage.transition_storage import TransitionStorage
 from rlf.storage.rollout_storage import RolloutStorage
 from rlf.storage.nested_storage import NestedStorage
+import rlf.algos.utils as autils
 
 class OptionCritic(BaseNetAlgo):
     def init(self, policy, args):
@@ -90,6 +91,7 @@ class OptionCritic(BaseNetAlgo):
     def update(self, storage):
         actor_log_vals = self.update_actor(storage)
         critic_log_vals = self.update_critic(storage)
+        autils.soft_update(self.policy, self.target_policy, self.args.tau)
         return {**actor_log_vals, **critic_log_vals}
 
     def get_add_args(self, parser):
@@ -100,6 +102,9 @@ class OptionCritic(BaseNetAlgo):
         #########################################
         # New args
         parser.add_argument('--trans-buffer-size', type=int, default=10000)
-        parser.add_argument('--batch-size', type=int, default=128)
-        parser.add_argument('--term-reg', type=float, default=0.01)
+        parser.add_argument('--batch-size', type=int, default=32)
+        parser.add_argument('--term-reg', type=float, default=0.01,
+                help=("Bias added to the advantage calculation to discourage",
+                    "option termination"))
         parser.add_argument('--entropy-reg', type=float, default=0.01)
+        parser.add_argument('--tau', type=float, default=0.05)

@@ -112,8 +112,9 @@ class OptionsPolicy(BaseNetPolicy):
             logits.append(
                     self.option_nets[use_options[i]](state[i], hxs, masks)[0]
                     )
-        logits = torch.stack(logits).softmax(dim=-1)
-        action_dist = Categorical(logits)
+        logits = torch.stack(logits)
+        probs = (logits / self.args.temp).softmax(dim=-1)
+        action_dist = Categorical(probs)
         action = action_dist.sample()
         action_log_probs = action_dist.log_probs(action)
         dist_entropy = action_dist.entropy()
@@ -123,6 +124,7 @@ class OptionsPolicy(BaseNetPolicy):
         super().get_add_args(parser)
         parser.add_argument("--n-options", type=int, default=3,
             help="Number of option sub-policies")
-        parser.add_argument('--eps-start', type=float, default=0.9)
-        parser.add_argument('--eps-end', type=float, default=0.05)
-        parser.add_argument('--eps-decay', type=float, default=200)
+        parser.add_argument('--eps-start', type=float, default=1.0)
+        parser.add_argument('--eps-end', type=float, default=0.1)
+        parser.add_argument('--eps-decay', type=float, default=20000)
+        parser.add_argument('--temp', type=float, default=0.001)
