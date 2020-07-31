@@ -69,6 +69,8 @@ class BaseAlgo(object):
         loop.Setting this is useful if an algorithm should
         dynamically calculate how many steps to take.
         """
+        if self.args.num_steps == 0:
+            return 0
         return int(self.args.num_env_steps) // self.args.num_steps // self.args.num_processes
 
     def get_completed_update_steps(self, num_updates):

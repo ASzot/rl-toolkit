@@ -67,6 +67,8 @@ class OptionCritic(BaseNetAlgo):
                 }
 
     def update_critic(self, storage):
+        if len(storage.child_dict['replay_buffer']) < self.args.batch_size:
+            return {}
         state, n_state, _, rewards, _, n_add = storage.child_dict['replay_buffer'].sample_tensors(self.args.batch_size)
         hxs = n_add['hxs']
         sel_option = hxs['option']

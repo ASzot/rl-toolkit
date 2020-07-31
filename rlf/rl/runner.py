@@ -87,7 +87,7 @@ class Runner:
                 self.log.backup(self.args, j + 1)
 
     def eval(self, update_iter):
-        if (self.episode_count > 0) or (self.args.num_steps == 0):
+        if (self.episode_count > 0) or (self.args.num_steps <= 1):
             total_num_steps = self.updater.get_completed_update_steps( update_iter+1)
             self.train_eval_envs = self._eval_policy(self.policy, total_num_steps, self.args)
 

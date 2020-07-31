@@ -14,7 +14,7 @@ def create_simple_action_data(action, hxs, extra={}):
             hxs, extra, 0)
 
 def create_np_action_data(action):
-    return create_simple_action_data(torch.tensor([[action]]))
+    return create_simple_action_data(torch.tensor([[action]]), {})
 
 class ActionData(object):
     """

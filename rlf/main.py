@@ -38,6 +38,8 @@ def run_policy(run_settings):
         runner.setup()
         print('RL Training (%d/%d)' % (start_update, end_update))
 
+        # Initialize outside the loop just in case there are no updates.
+        j = 0
         for j in range(start_update, end_update):
             updater_log_vals = runner.training_iter(j)
             if args.log_interval > 0 and (j+1) % args.log_interval == 0:

@@ -104,7 +104,12 @@ class OptionsPolicy(BaseNetPolicy):
                 'term': term,
                 }
 
-        return ActionData(torch.zeros(batch_size,1), action, action_log_probs, hxs, {})
+        return ActionData(torch.zeros(batch_size,1), action, action_log_probs, hxs, {
+            'alg_add_termination': term.mean().item(),
+            'alg_add_termination_std': term.std().item(),
+            'alg_add_option': use_options.float().mean().item(),
+            'alg_add_option_std': use_options.float().mean().std(),
+            })
 
     def get_actions(self, state, hxs, masks, use_options):
         logits = []
