@@ -215,7 +215,8 @@ class BehavioralCloningFromObs(BehavioralCloning):
         if self.args.bco_inv_load is None or self.update_i > 0:
             infer_ac_losses = self._train_inv_func(train_trans_sampler, dataset)
             rutils.plot_line(infer_ac_losses, f"ac_inv_loss_{self.update_i}.png",
-                             self.args, not self.args.no_wb, self.update_i)
+                             self.args, not self.args.no_wb,
+                             self.get_completed_update_steps(self.update_i))
             if self.update_i == 0:
                 # Only save the inverse model on the first epoch for debugging
                 # purposes

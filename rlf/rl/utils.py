@@ -297,6 +297,14 @@ def get_ac_dim(ac):
     else:
         raise ValueError('Invalid action space type')
 
+def is_discrete(ac):
+    if ac.__class__.__name__ == "Discrete":
+        return True
+    elif ac.__class__.__name__ == "Box":
+        return False
+    else:
+        raise ValueError("Action space {ac} not supported")
+
 def agg_ep_log_stats(env_infos, alg_info):
     """
     Combine the values we want to log into one dictionary for logging.

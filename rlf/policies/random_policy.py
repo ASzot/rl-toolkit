@@ -11,4 +11,4 @@ class RandomPolicy(BasePolicy):
         if isinstance(self.action_space, spaces.Discrete):
             action = action.unsqueeze(-1)
 
-        return create_simple_action_data(action)
+        return create_simple_action_data(action, hxs)

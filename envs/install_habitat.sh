@@ -1,7 +1,8 @@
+# Run with `source envs/install_habitat.sh`
 # Habitat Sim
-conda create -n hab python=3.6 cmake=3.14.0
-source activate hab
-git clone --branch stable https://github.com/facebookresearch/habitat-sim.git ~/habitat-sim
+#conda create -n hab python=3.6 cmake=3.14.0
+#source activate hab
+git clone --branch articulated-objects-prototype https://github.com/facebookresearch/habitat-sim.git ~/habitat-sim
 cd ~/habitat-sim
 pip install -r requirements.txt
 #sudo apt-get install -y --no-install-recommends \

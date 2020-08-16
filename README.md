@@ -45,6 +45,8 @@ Requires Python 3.7. With conda:
 - `source activate rlf`
 - `pip install -r requirements.txt`.
 
+If you want to install MuJoCo as well: `mujoco-py==2.0.2.5` 
+
 ## Run Tests
 The most important principle in this code is **working RL algorithms**.
 Automated benchmarking scripts are included under `tests/test_cmds` so you can
@@ -59,8 +61,6 @@ Easily run templated commands. Start by defining a `.cmd` file.
 - Add additional arguments to specified command. 
 - Specify which GPU to use via a flag. 
 - Choose to log to W&B. 
-
-TODO
 
 ## Custom Environments
 Several keys in the info dictionary are specially treated. 
@@ -87,16 +87,17 @@ Also directly include 3rd party environments.
 ### Hopper-v3
 Commit: `570d8c8d024cb86266610e72c5431ef17253c067`
 
-- PPO: `py -m rlf --cmd ppo/hopper --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
-
+- PPO: `python -m rlf --cmd ppo/hopper --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
 ![Hopper-v3](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/hopper.png)
+
+### HalfCheetah-v0
 
 ### Pendulum-v0
 Commit: `5c051769088b6582b0b31db9a145738a9ed68565`
-- DDPG: `py -m rlf --cmd ddpg/pendulum --cd 0 --cfg ./tests/config.yaml --seed "31,41" --sess-id 0 --cuda False` 
+- DDPG: `python -m rlf --cmd ddpg/pendulum --cd 0 --cfg ./tests/config.yaml --seed "31,41" --sess-id 0 --cuda False` 
 ![Pendulum-v0](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/pendulum.png)
 
 ### HER
 Commit: `95bb3a7d0bf1945e414a0e77de8a749bd79dc554`
-- BitFlip: `py -m rlf --cmd her/bit_flip --cfg ./tests/config.yaml --cuda False --sess-id 0`
+- BitFlip: `python -m rlf --cmd her/bit_flip --cfg ./tests/config.yaml --cuda False --sess-id 0`
 ![HER](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/her.png)

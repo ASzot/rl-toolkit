@@ -1,3 +1,10 @@
+Instructions on how the full process of first training a policy to get
+demonstrations and then performing IL.
+
+## HalfCheetah Steps
+Steps: 
+1. Train expert `python -m rlf --cmd ppo/halfcheetah --cd 0 --cfg ./tests/config.yaml --cuda False --save-interval 10000000 --sess-id 0 --seed "31"`
+
 ## CartPole Steps
 Steps: 
 1. Train expert `py -m rlf --cfg tests/config.yaml --cuda False --cmd ppo/cartpole  --seed "31"  --sess-id 0 --save-interval 10000000`

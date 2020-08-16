@@ -21,6 +21,17 @@ class Flatten(nn.Module):
     def forward(self, x):
         return x.view(x.size(0), -1)
 
+class ConcatLayer(nn.Module):
+    def __init__(self, concat_dim):
+        super().__init__()
+        self.concat_dim = concat_dim
+
+    def forward(self, ab):
+        a, b = ab
+        return torch.cat([a, b], dim=self.concat_dim)
+
+
+
 
 class BaseNet(nn.Module):
     def __init__(self, recurrent, recurrent_input_size, hidden_size):

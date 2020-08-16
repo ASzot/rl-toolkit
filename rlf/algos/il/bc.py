@@ -64,7 +64,8 @@ class BehavioralCloning(BaseILAlgo):
                 prev_num = self.num_epochs
 
         rutils.plot_line(action_loss, f"action_loss_{update_iter}.png",
-                         self.args, not self.args.no_wb, update_iter)
+                         self.args, not self.args.no_wb,
+                         self.get_completed_update_steps(self.update_i))
         self.num_epochs = 0
 
     def pre_update(self, cur_update):

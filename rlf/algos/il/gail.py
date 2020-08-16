@@ -2,7 +2,7 @@ from rlf.algos.il.base_irl import BaseIRLAlgo
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from rlf.rl import utils
+import rlf.rl.utils as rutils
 from rlf.rl.model import InjectNet
 from collections import defaultdict
 from rlf.baselines.common.running_mean_std import RunningMeanStd
@@ -12,35 +12,50 @@ from rlf.args import str2bool
 import torch.optim as optim
 from torch import autograd
 import numpy as np
+from rlf.rl.model import ConcatLayer
 
 
-def get_default_discrim(hidden_dim=64):
-    return nn.Sequential(
-        nn.Linear(hidden_dim, hidden_dim), nn.Tanh(),
-        nn.Linear(hidden_dim, 1)), hidden_dim
-
+def get_default_discrim(in_shape, ac_dim):
+    """
+    - ac_dim: int will be 0 if no action are used.
+    Returns: (nn.Module) Should take state AND actions as input if ac_dim
+    != 0. If ac_dim = 0 (discriminator does not use actions) then ONLY take
+    state as input.
+    """
+    if len(in_shape) == 1:
+        raise ValueError("""
+                Default discriminator only supports 1D state spaces. Create your
+                own discriminator if you want to do this.
+                """)
+    hidden_dim = 64
+    layers = [
+            nn.Linear(in_shape[0] + ac_dim, hidden_dim), nn.Tanh(),
+            nn.Linear(hidden_dim, hidden_dim), nn.Tanh(),
+            nn.Linear(hidden_dim, 1)
+            ]
+    if ac_dim != 0:
+        layers.insert(0, ConcatLayer(-1))
+    return nn.Sequential(*layers)
 
 class GAIL(NestedAlgo):
     def __init__(self, agent_updater=PPO(), get_discrim=None):
         super().__init__([GailDiscrim(get_discrim), agent_updater], 1)
-
 
 class GailDiscrim(BaseIRLAlgo):
     def __init__(self, get_discrim=None):
         super().__init__()
         if get_discrim is None:
             get_discrim = get_default_discrim
-        self.get_base_discrim = get_discrim
+        self.get_discrim = get_discrim
 
     def _create_discrim(self):
-        state_enc = self.policy.get_base_net_fn(
-            utils.get_obs_shape(self.policy.obs_space))
-        discrim_head, in_dim = self.get_base_discrim()
-
-        return InjectNet(state_enc.net, discrim_head,
-                                     state_enc.output_shape[0], in_dim,
-                                     utils.get_ac_dim(self.action_space),
-                                     self.args.action_input).to(self.args.device)
+        ob_space = rutils.get_obs_shape(self.policy.obs_space)
+        if self.args.action_input:
+            ac_dim = rutils.get_ac_dim(self.action_space)
+        else:
+            ac_dim = 0
+        discrim_head = self.get_discrim(ob_space, ac_dim)
+        return discrim_head.to(self.args.device)
 
     def init(self, policy, args):
         super().init(policy, args)
@@ -78,41 +93,24 @@ class GailDiscrim(BaseIRLAlgo):
         agent_states = agent_batch['state']
         agent_actions = agent_batch['action']
 
-        agent_actions = utils.get_ac_repr(
+        agent_actions = rutils.get_ac_repr(
             self.action_space, agent_actions)
-        expert_actions = utils.get_ac_repr(
+        expert_actions = rutils.get_ac_repr(
             self.action_space, expert_actions)
 
-        expert_d = self.discrim_net(expert_states, expert_actions)
-        agent_d = self.discrim_net(agent_states, agent_actions)
+        expert_d = self._compute_disc_val(expert_states, expert_actions)
+        agent_d = self._compute_disc_val(agent_states, agent_actions)
 
         grad_pen = self.compute_grad_pen(expert_states, expert_actions,
                                          agent_states, agent_actions, self.args.gail_grad_pen)
 
         return expert_d, agent_d, grad_pen
 
-    def get_env_settings(self, args):
-        settings = super().get_env_settings(args)
-        def mod_render_frames(frame, obs, next_obs, info, action, next_mask, **kwargs):
-            with torch.no_grad():
-                use_obs = utils.get_def_obs(obs).unsqueeze(0)
-                if next_mask.item() == 0:
-                    use_next_obs = torch.FloatTensor(info['final_obs']).unsqueeze(0)
-                else:
-                    use_next_obs = utils.get_def_obs(next_obs).unsqueeze(0)
-                d_val = self._compute_disc_val(use_obs, use_next_obs, action)
-                frame = utils.render_text(frame, "Discrim %.3f" % d_val.item(), 0)
-
-                s = torch.sigmoid(d_val)
-                eps = 1e-20
-                reward = (s + eps).log() - (1 - s + eps).log()
-                frame = utils.render_text(frame, "Reward %.3f" % reward.item(), 1)
-            return frame
-        settings.mod_render_frames_fn = mod_render_frames
-        return settings
-
-    def _compute_disc_val(self, state, next_state, action):
-        return self.discrim_net(state, action)
+    def _compute_disc_val(self, state, action):
+        if self.args.action_input:
+            return self.discrim_net(state, action)
+        else:
+            return self.discrim_net(state)
 
     def _update_reward_func(self, storage):
         self.discrim_net.train()
@@ -134,8 +132,6 @@ class GailDiscrim(BaseIRLAlgo):
                                                                  torch.ones(expert_d.shape).to(d))
                 agent_loss = F.binary_cross_entropy_with_logits(agent_d,
                                                                 torch.zeros(agent_d.shape).to(d))
-                # expert_loss = F.mse_loss(torch.sigmoid(expert_d), torch.ones(expert_d.shape).to(d))
-                # agent_loss = F.mse_loss(torch.sigmoid(agent_d), torch.zeros(agent_d.shape).to(d))
                 discrim_loss = expert_loss + agent_loss
 
                 if self.args.gail_grad_pen != 0.0:
@@ -158,13 +154,20 @@ class GailDiscrim(BaseIRLAlgo):
         return log_vals
 
     def _compute_discrim_reward(self, storage, step, add_info):
-        state = utils.get_def_obs(storage.get_obs(step))
+        state = rutils.get_def_obs(storage.get_obs(step))
         action = storage.actions[step]
-        action = utils.get_ac_repr(self.action_space, action)
-        d_val = self.discrim_net(state, action)
+        action = rutils.get_ac_repr(self.action_space, action)
+        d_val = self._compute_disc_val(state, action)
         s = torch.sigmoid(d_val)
         eps = 1e-20
-        reward = (s + eps).log() - (1 - s + eps).log()
+        if self.args.reward_type == 'airl':
+            reward = (s + eps).log() - (1 - s + eps).log()
+        elif self.args.reward_type == 'gail':
+            reward = (s + eps).log()
+        elif self.args.reward_type == 'raw':
+            reward = d_val
+        else:
+            raise ValueError(f"Unrecognized reward type {self.args.reward_type}")
         return reward
 
     def _get_reward(self, step, storage, add_info):
@@ -204,7 +207,7 @@ class GailDiscrim(BaseIRLAlgo):
             (1 - alpha_action) * policy_action
         mixup_data_action.requires_grad = True
 
-        disc = self.discrim_net(mixup_data_state, mixup_data_action)
+        disc = self._compute_disc_val(mixup_data_state, mixup_data_action)
         ones = torch.ones(disc.size()).to(disc.device)
 
         inputs = [mixup_data_state]
@@ -234,6 +237,10 @@ class GailDiscrim(BaseIRLAlgo):
         parser.add_argument('--disc-lr', type=float, default=0.0001)
         parser.add_argument('--gail-grad-pen', type=float, default=0.0)
         parser.add_argument('--n-gail-epochs', type=int, default=1)
+        parser.add_argument('--reward-type', type=str, default='airl', help="""
+                One of [airl, raw, gail]. Changes the reward computation. Does
+                not change training.
+                """)
 
     def load_resume(self, checkpointer):
         super().load_resume(checkpointer)

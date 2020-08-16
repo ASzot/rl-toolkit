@@ -42,21 +42,22 @@ class BehavioralCloningPretrain(NestedAlgo):
         #settings.state_fn = self.bc_env_settings.state_fn
         return settings
 
-    def set_env_ref(self, get_env_ob_filt, env_norm):
-        super().set_env_ref(get_env_ob_filt, env_norm)
+    def set_env_ref(self, envs):
+        super().set_env_ref(envs)
 
-        if env_norm is not None and self.bc_env_settings.state_fn is not None \
-                and env_norm.ob_rms_dict is not None:
-            # Set the normalization of the environment for further RL training.
-            #state_stats = self.bc.expert_stats['state']
-            if None in env_norm.ob_rms_dict:
-                ob_rms = env_norm.ob_rms_dict[None]
-            else:
-                ob_rms = env_norm.ob_rms_dict['observation']
-            ob_rms.mean = self.bc.norm_mean.cpu().float().numpy()
-            # Conversion from std to var
-            ob_rms.var = self.bc.norm_var.cpu().float().numpy()
-            ob_rms.count += len(self.bc.expert_dataset)
+        raise ValueError("Env ref code is depricated, please see for how to fix")
+        #if env_norm is not None and self.bc_env_settings.state_fn is not None \
+        #        and env_norm.ob_rms_dict is not None:
+        #    # Set the normalization of the environment for further RL training.
+        #    #state_stats = self.bc.expert_stats['state']
+        #    if None in env_norm.ob_rms_dict:
+        #        ob_rms = env_norm.ob_rms_dict[None]
+        #    else:
+        #        ob_rms = env_norm.ob_rms_dict['observation']
+        #    ob_rms.mean = self.bc.norm_mean.cpu().float().numpy()
+        #    # Conversion from std to var
+        #    ob_rms.var = self.bc.norm_var.cpu().float().numpy()
+        #    ob_rms.count += len(self.bc.expert_dataset)
 
     def update(self, storage):
         return super().update(storage)

@@ -77,18 +77,18 @@ class Runner:
             vec_norm = get_vec_normalize(self.envs)
             if vec_norm is not None:
                 self.checkpointer.save_key('ob_rms', vec_norm.ob_rms_dict)
-            self.checkpointer.save_key('step', j)
+            self.checkpointer.save_key('step', update_iter)
 
             self.policy.save_to_checkpoint(self.checkpointer)
             self.updater.save(self.checkpointer)
 
-            self.checkpointer.flush(num_updates=j)
+            self.checkpointer.flush(num_updates=update_iter)
             if self.args.sync:
-                self.log.backup(self.args, j + 1)
+                self.log.backup(self.args, update_iter + 1)
 
     def eval(self, update_iter):
         if (self.episode_count > 0) or (self.args.num_steps <= 1):
-            total_num_steps = self.updater.get_completed_update_steps( update_iter+1)
+            total_num_steps = self.updater.get_completed_update_steps(update_iter+1)
             self.train_eval_envs = self._eval_policy(self.policy, total_num_steps, self.args)
 
     def close(self):

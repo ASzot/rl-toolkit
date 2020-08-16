@@ -9,13 +9,15 @@ from rlf.policies.base_policy import create_simple_action_data
 import rlf.policies.utils as putils
 import rlf.rl.utils as rutils
 
-
 class BasicPolicy(BaseNetPolicy):
     def __init__(self,
+            is_stoch=False,
+            use_goal=False,
             get_base_net_fn=None):
-        super().__init__(get_base_net_fn)
+        super().__init__(use_goal, get_base_net_fn)
         self.state_norm_fn = lambda x: x
         self.action_denorm_fn = lambda x: x
+        self.is_stoch = is_stoch
 
     def set_state_norm_fn(self, state_norm_fn):
         self.state_norm_fn = state_norm_fn
@@ -26,13 +28,33 @@ class BasicPolicy(BaseNetPolicy):
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
         ac_dim = rutils.get_ac_dim(action_space)
-        self.head = nn.Linear(self.base_net.output_shape[0], ac_dim)
+        self.action_head = nn.Linear(self.base_net.output_shape[0], ac_dim)
+        if not rutils.is_discrete and self.is_stoch:
+            self.std = nn.Linear(self.base_net.output_shape[0], ac_dim)
 
-    def forward(self, state, hxs, mask):
-        base_features, _ = self.base_net(state, hxs, mask)
-        return self.head(base_features), None, None
+    def forward(self, state, rnn_hxs, mask):
+        # USES RSAMPLE
+        base_features, _ = self.base_net(state, rnn_hxs, mask)
+        ret_action = self.action_head(base_features)
+        if not rutils.is_discrete(self.action_space) and self.is_stoch:
+            std = self.std(base_features)
+            dist = torch.distributions.Normal(ret_action, std)
+            ret_action = dist.rsample()
 
-    def get_action(self, state, add_state, hxs, mask, step_info):
-        ret_action, _, _ = self.forward(state, hxs, mask)
-        ret_action = rutils.get_ac_compact(self.action_space, ret_action)
-        return create_simple_action_data(ret_action)
+        return ret_action, None, None
+
+    def get_action(self, state, add_state, rnn_hxs, mask, step_info):
+        base_features, _ = self.base_net(state, rnn_hxs, mask)
+
+        ret_action = self.action_head(base_features)
+        if step_info.is_eval or not self.is_stoch:
+            ret_action = rutils.get_ac_compact(self.action_space, ret_action)
+        else:
+            if rutils.is_discrete(self.action_space):
+                dist = torch.distributions.Categorical(ret_action)
+            else:
+                std = self.std(base_features)
+                dist = torch.distributions.Normal(ret_action, std)
+            ret_action = dist.sample()
+
+        return create_simple_action_data(ret_action, rnn_hxs)

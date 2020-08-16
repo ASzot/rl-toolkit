@@ -8,6 +8,7 @@ from rlf.algos.on_policy.ppo import PPO
 from rlf.il.transition_dataset import TransitionDataset
 import rlf.rl.utils as rutils
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+from rlf.rl.model import ConcatLayer
 
 class GAIFO(NestedAlgo):
     def __init__(self, agent_updater=PPO(), get_discrim=None):
@@ -22,31 +23,26 @@ class PairTransitionDataset(TransitionDataset):
         return {
                 'state': self.trajs['obs'][i],
                 'next_state': self.trajs['next_obs'][i],
+                'done': self.trajs['done'][i],
                 }
 
-class DoubleStateDiscrim(nn.Module):
-    def __init__(self, state_enc, hidden_dim=64):
-        super().__init__()
-        self.state_enc = state_enc
-        output_size = self.state_enc.output_shape[0]
-        self.head = nn.Sequential(
-                nn.Linear(output_size, hidden_dim),
-                nn.Tanh(),
-                nn.Linear(hidden_dim, hidden_dim),
-                nn.Tanh(),
-                nn.Linear(hidden_dim, 1))
+def get_default_discrim(in_shape, ac_dim):
+    """
+    Returns: (nn.Module) Should take two states as input.
+    """
+    hidden_dim = 64
+    return nn.Sequential(
+        ConcatLayer(-1),
+        nn.Linear(2*in_shape[0], hidden_dim), nn.Tanh(),
+        nn.Linear(hidden_dim, hidden_dim), nn.Tanh(),
+        nn.Linear(hidden_dim, 1))
 
-    def forward(self, s0, s1):
-        both_s = torch.cat([s0, s1], dim=1)
-        both_s_enc, _ = self.state_enc(both_s, None, None)
-        return self.head(both_s_enc)
 
 class GaifoDiscrim(GailDiscrim):
-    def _create_discrim(self):
-        new_shape = list(rutils.get_obs_shape(self.policy.obs_space))
-        new_shape[0] *= 2
-        base_net = self.policy.get_base_net_fn(new_shape)
-        return DoubleStateDiscrim(base_net).to(self.args.device)
+    def __init__(self, get_discrim=None):
+        if get_discrim is None:
+            get_discrim = get_default_discrim
+        super().__init__(get_discrim)
 
     def _get_traj_dataset(self, traj_load_path):
         return PairTransitionDataset(traj_load_path)
@@ -66,8 +62,12 @@ class GaifoDiscrim(GailDiscrim):
         agent_s0 = agent_batch['state'].to(d)
         agent_s1 = agent_batch['next_state'].to(d)
 
-        expert_d = self.discrim_net(exp_s0, exp_s1)
-        agent_d = self.discrim_net(agent_s0, agent_s1)
+        expert_d = self.discrim_net([exp_s0, exp_s1])
+        agent_d = self.discrim_net([agent_s0, agent_s1])
+        # Select the valid transitions where the episode did not end in
+        # between.
+        expert_d = expert_d[expert_batch['done'] == 0]
+        agent_d = agent_d[agent_batch['mask'] == 1]
         return expert_d, agent_d, 0
 
     def _compute_disc_val(self, state, next_state, action):
@@ -78,7 +78,8 @@ class GaifoDiscrim(GailDiscrim):
         ob_shape = rutils.get_obs_shape(self.policy.obs_space)
         self.agent_obs_pairs = {
                 'state': obs[:-1].view(-1, *ob_shape),
-                'next_state': obs[1:].view(-1, *ob_shape)
+                'next_state': obs[1:].view(-1, *ob_shape),
+                'mask': storage.masks[:-1].view(-1, 1),
                 }
         failure_sampler = BatchSampler(SubsetRandomSampler(
             range(self.args.num_steps)), self.args.traj_batch_size,
@@ -106,8 +107,8 @@ class GaifoDiscrim(GailDiscrim):
                 next_state[i] = torch.FloatTensor(obsfilt(next_state[i].cpu().numpy(),
                         update=False)).to(self.args.device)
 
-        d_val = self.discrim_net(state, next_state)
+        d_val = self.discrim_net([state, next_state])
         s = torch.sigmoid(d_val)
         eps = 1e-20
-        reward = (s + eps).log() - (1 - s + eps).log()
+        reward = (s + eps).log()
         return reward

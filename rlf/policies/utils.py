@@ -14,13 +14,7 @@ def is_image_obs(obs_shape):
 
 def get_def_critic_head(hidden_dim):
     critic_head = nn.Linear(hidden_dim, 1)
-
-    if putils.is_image_obs(obs_shape):
-        def init_(m): return weight_init(
-            m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
-        critic_head = init_(critic_head)
-    else:
-        critic_head = def_mlp_weight_init(critic_head)
+    critic_head = def_mlp_weight_init(critic_head)
     return critic_head
 
 def get_def_actor_head(hidden_dim, action_dim):

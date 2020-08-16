@@ -51,7 +51,7 @@ class BaseNetPolicy(nn.Module, BasePolicy):
 
     def watch(self, logger):
         super().watch(logger)
-        logger.watch_model(self)
+        #logger.watch_model(self)
         print('Using policy network:')
         print(self)
 

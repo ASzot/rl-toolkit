@@ -1,3 +1,0 @@
-# Documented Commands
-- `hopper`
-- `cartpole`

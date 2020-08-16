@@ -19,9 +19,9 @@ class NestedAlgo(BaseAlgo):
         for module in self.modules:
             module.init(policy, args)
 
-    def set_env_ref(self, get_env_ob_filt, env_norm):
+    def set_env_ref(self, envs):
         for module in self.modules:
-            module.set_env_ref(get_env_ob_filt, env_norm)
+            module.set_env_ref(envs)
 
     def get_num_updates(self):
         n_updates = self.modules[0].get_num_updates()
