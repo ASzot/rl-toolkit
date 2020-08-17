@@ -32,6 +32,8 @@ the important parts. You can do all of these things without touching any of the 
 - Imitation learning:
   - Behavioral Cloning (BC)
   - Generative Adversarial Imitation Learning (GAIL)
+- Imitation learning from observation: 
+  - Generative Adversarial Imitation from Observation (GAIfO)
   - Behavioral Cloning from Observations (BCO)
 
 See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks)
