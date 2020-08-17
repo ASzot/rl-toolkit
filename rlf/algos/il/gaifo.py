@@ -9,6 +9,8 @@ from rlf.il.transition_dataset import TransitionDataset
 import rlf.rl.utils as rutils
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 from rlf.rl.model import ConcatLayer
+from collections import defaultdict
+import torch.nn.functional as F
 
 class GAIFO(NestedAlgo):
     def __init__(self, agent_updater=PPO(), get_discrim=None):
@@ -110,5 +112,40 @@ class GaifoDiscrim(GailDiscrim):
         d_val = self.discrim_net([state, next_state])
         s = torch.sigmoid(d_val)
         eps = 1e-20
-        reward = (s + eps).log()
+        reward = -1.0 * (s + eps).log()
         return reward
+
+    def _update_reward_func(self, storage):
+        self.discrim_net.train()
+
+        d = self.args.device
+        log_vals = defaultdict(lambda: 0)
+        obsfilt = self.get_env_ob_filt()
+
+        n = 0
+        expert_sampler, agent_sampler = self._get_sampler(storage)
+        for epoch_i in range(self.args.n_gail_epochs):
+            for expert_batch, agent_batch in zip(expert_sampler, agent_sampler):
+                expert_batch, agent_batch = self._trans_batches(
+                    expert_batch, agent_batch)
+                n += 1
+                expert_d, agent_d, grad_pen = self._compute_discrim_loss(agent_batch, expert_batch,
+                        obsfilt)
+                expert_loss = F.binary_cross_entropy_with_logits(expert_d,
+                                                                 torch.zeros(expert_d.shape).to(d))
+                agent_loss = F.binary_cross_entropy_with_logits(agent_d,
+                                                                torch.ones(agent_d.shape).to(d))
+                discrim_loss = expert_loss + agent_loss
+
+                self.opt.zero_grad()
+                discrim_loss.backward()
+                self.opt.step()
+
+                log_vals['discrim_loss'] += discrim_loss.item()
+                log_vals['expert_loss'] += expert_loss.item()
+                log_vals['agent_loss'] += agent_loss.item()
+
+        for k in log_vals:
+            log_vals[k] /= n
+
+        return log_vals
