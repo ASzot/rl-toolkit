@@ -91,7 +91,7 @@ Commit: `570d8c8d024cb86266610e72c5431ef17253c067`
 
 ### HalfCheetah-v3
 Commit: `58644db1ac638ba6c8a22e7a01eacfedffd4a49f`
-- PPO: `python -m rlf --cmd ppo/halfcheetah --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
+- PPO: `python -m rlf --cmd ppo/halfcheetah --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False`
 ![Hopper-v3](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/halfcheetah.png)
 
 ### HalfCheetah-v3 Imitation Learning
