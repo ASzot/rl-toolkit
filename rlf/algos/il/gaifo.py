@@ -112,7 +112,16 @@ class GaifoDiscrim(GailDiscrim):
         d_val = self.discrim_net([state, next_state])
         s = torch.sigmoid(d_val)
         eps = 1e-20
-        reward = -1.0 * (s + eps).log()
+        if self.args.reward_type == 'airl':
+            reward = (s + eps).log() - (1 - s + eps).log()
+        elif self.args.reward_type == 'gail':
+            reward = (s + eps).log()
+        elif self.args.reward_type == 'raw':
+            reward = d_val
+        elif self.args.reward_type == 'gaifo':
+            reward = -1.0 * (s + eps).log()
+        else:
+            raise ValueError(f"Unrecognized reward type {self.args.reward_type}")
         return reward
 
     def _update_reward_func(self, storage):
@@ -131,10 +140,16 @@ class GaifoDiscrim(GailDiscrim):
                 n += 1
                 expert_d, agent_d, grad_pen = self._compute_discrim_loss(agent_batch, expert_batch,
                         obsfilt)
-                expert_loss = F.binary_cross_entropy_with_logits(expert_d,
-                                                                 torch.zeros(expert_d.shape).to(d))
-                agent_loss = F.binary_cross_entropy_with_logits(agent_d,
-                                                                torch.ones(agent_d.shape).to(d))
+                if self.args.reward_type == 'gaifo':
+                    expert_loss = F.binary_cross_entropy_with_logits(expert_d,
+                                                                     torch.zeros(expert_d.shape).to(d))
+                    agent_loss = F.binary_cross_entropy_with_logits(agent_d,
+                                                                    torch.ones(agent_d.shape).to(d))
+                else:
+                    expert_loss = F.binary_cross_entropy_with_logits(expert_d,
+                                                                     torch.ones(expert_d.shape).to(d))
+                    agent_loss = F.binary_cross_entropy_with_logits(agent_d,
+                                                                    torch.zeros(agent_d.shape).to(d))
                 discrim_loss = expert_loss + agent_loss
 
                 self.opt.zero_grad()

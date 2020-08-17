@@ -29,7 +29,7 @@ class BasicPolicy(BaseNetPolicy):
         super().init(obs_space, action_space, args)
         ac_dim = rutils.get_ac_dim(action_space)
         self.action_head = nn.Linear(self.base_net.output_shape[0], ac_dim)
-        if not rutils.is_discrete and self.is_stoch:
+        if not rutils.is_discrete(self.action_space) and self.is_stoch:
             self.std = nn.Linear(self.base_net.output_shape[0], ac_dim)
 
     def forward(self, state, rnn_hxs, mask):
