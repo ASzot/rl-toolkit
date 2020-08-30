@@ -308,7 +308,7 @@ class RolloutStorage(BaseStorage):
         ob_shape = self.ob_keys[None]
         s = self.obs[:-1].view(-1, *ob_shape).numpy()
         n_s = self.obs[1:].view(-1, *ob_shape).numpy()
-        mask = self.masks[:-1].view(-1, 1).numpy()
+        mask = self.masks[1:].view(-1, 1).numpy()
         actions = self.actions.view(-1, self.actions.size(-1)).numpy()
         reward = self.rewards.view(-1, 1).numpy()
         return s, n_s, actions, reward, mask

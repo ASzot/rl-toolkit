@@ -137,6 +137,13 @@ class BaseAlgo(object):
         self.update_i += 1
 
     def on_traj_finished(self, traj):
+        """
+        done_trajs: A list of transitions where each transition is a tuple of form:
+            (state,action,mask,info_dict,reward). The data is a bit confusing.
+            mask[t] is technically the mask at t+1. The mask at t=0 is always
+            1. The final state is NOT included and must be included through the
+            info_dict if needed.
+        """
         pass
 
     def get_add_args(self, parser):
