@@ -5,7 +5,6 @@ import numpy as np
 class PolicyIteration(BaseTabular):
     def init(self, policy, args):
         super().init(policy, args)
-        self.num_updates = self.args.num_iters // self.args.iters_per_update
 
     def get_num_updates(self):
         return self.num_updates

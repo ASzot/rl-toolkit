@@ -232,6 +232,7 @@ class RolloutStorage(BaseStorage):
         gen = self.get_generator(advantages, num_mini_batch=1)
         return next(gen)
 
+
     def feed_forward_generator(self,
                                advantages,
                                num_mini_batch=None,
@@ -298,6 +299,24 @@ class RolloutStorage(BaseStorage):
                     'prev_log_prob': old_action_log_probs_batch,
                     'adv': adv_targ,
                     }
+
+    def get_np_tensors(self):
+        """
+        Helper method to get the "simple" data in the buffer as numpy arrays. The
+        data ordering is preserved.
+        """
+        ob_shape = self.ob_keys[None]
+        s = self.obs[:-1].view(-1, *ob_shape).numpy()
+        n_s = self.obs[1:].view(-1, *ob_shape).numpy()
+        mask = self.masks[:-1].view(-1, 1).numpy()
+        actions = self.actions.view(-1, self.actions.size(-1)).numpy()
+        reward = self.rewards.view(-1, 1).numpy()
+        return s, n_s, actions, reward, mask
+
+    def get_scalars(self):
+        s, n_s, a, r, m = self.get_np_tensors()
+        return int(s[0]), int(n_s[0]), a[0,0], r[0,0], m[0,0]
+
 
     def recurrent_generator(self, advantages, num_mini_batch):
         # Only called if args.recurrent_policy is True

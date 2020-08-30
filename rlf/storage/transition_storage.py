@@ -132,9 +132,6 @@ class TransitionStorage(BaseStorage):
 
     def get_obs(self, step):
         ret_obs = self.last_seen['obs']
-        if self.set_device is not None:
-            for k, v in ret_obs.items():
-                ret_obs[k] = v.to(self.set_device)
         return ret_obs
 
     def get_hidden_state(self, step):

@@ -49,9 +49,7 @@ class DQN(BaseNetPolicy):
         else:
             # Take a random action.
             ret_action = torch.LongTensor([[random.randrange(self.action_space.n)]
-                for i in range(state.shape[0])])
-            if self.args.cuda:
-                ret_action = ret_action.cuda()
+                for i in range(state.shape[0])]).to(self.args.device)
 
         return create_simple_action_data(ret_action, hxs, {
             'alg_add_eps': eps_threshold

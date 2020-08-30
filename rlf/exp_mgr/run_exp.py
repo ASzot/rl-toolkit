@@ -99,7 +99,10 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed):
     if sess_id == -1:
         if len(cmds) == 1:
             exec_cmd = cmds[0]
-            exec_cmd = 'CUDA_VISIBLE_DEVICES=' + cd + ' ' + exec_cmd + ' ' + add_on
+            if cd != '-1':
+                exec_cmd = 'CUDA_VISIBLE_DEVICES=' + cd + ' ' + exec_cmd + ' ' + add_on
+            else:
+                exec_cmd = exec_cmd + ' ' + add_on
             print('executing ', exec_cmd)
             os.system(exec_cmd)
         else:
@@ -122,8 +125,9 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed):
             conda_env = config_mgr.get_prop('conda_env')
             pane.send_keys('source activate ' + conda_env)
             pane.enter()
-            pane.send_keys('export CUDA_VISIBLE_DEVICES=' + cd)
-            pane.enter()
+            if cd != '-1':
+                pane.send_keys('export CUDA_VISIBLE_DEVICES=' + cd)
+                pane.enter()
             pane.send_keys(cmd)
             pane.enter()
 

@@ -5,6 +5,10 @@ import rlf.algos.utils as autils
 
 
 def get_sarsa_rollout_data(rollouts):
+    ### NOTE
+    # This is completely incorrect. The data is not sequential, it's randomly
+    # sampled when calling get_rollout_data. So cur_state and next_state are
+    # not right!
     ret = rollouts.get_rollout_data()
     cur_state = ret['state'][:-1]
     next_state = ret['state'][1:]
@@ -20,6 +24,12 @@ class SARSA(OnPolicy):
     r_t + \gamma * Q(s_{t+1}, a_{t+1})
     """
     def update(self, rollouts):
+        raise ValueError('Algorithm is incorrect. Fix it')
+        ### NOTE
+        # This should be changed to just predict the next action rather than
+        # saving it from the rollout, this would enable you to set num_steps to
+        # 1 and simply things.
+
         # n_ stands for "next"
         state, action, reward, n_state, n_action, n_mask = get_sarsa_rollout_data(rollouts)
 

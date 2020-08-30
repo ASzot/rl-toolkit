@@ -13,8 +13,8 @@ def create_simple_action_data(action, hxs, extra={}):
             torch.zeros([*action.shape[:-1], 1]),
             hxs, extra, 0)
 
-def create_np_action_data(action):
-    return create_simple_action_data(torch.tensor([[action]]), {})
+def create_np_action_data(action, extra={}):
+    return create_simple_action_data(torch.tensor([[action]]), {}, extra=extra)
 
 class ActionData(object):
     """
