@@ -24,7 +24,7 @@ class BaseNetPolicy(nn.Module, BasePolicy):
         """
         super().__init__()
         if get_base_net_fn is None:
-            get_base_net_fn = putils.def_get_hidden_net
+            get_base_net_fn = putils.get_img_encoder
 
         self.get_base_net_fn = get_base_net_fn
         self.use_goal = use_goal

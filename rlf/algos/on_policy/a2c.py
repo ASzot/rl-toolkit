@@ -1,5 +1,3 @@
-from collections import defaultdict
-import torch.optim as optim
 from rlf.algos.on_policy.on_policy_base import OnPolicy
 
 

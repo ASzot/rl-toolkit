@@ -27,6 +27,21 @@ class BaseAlgo(object):
     """
     Base class for all algorithms to derive from. Use this class as an empty
     updater (for policies that need no learning!).
+    Updater classes typically look like:
+    ```
+    class MyUpdater([OnPolicy or OffPolicy]):
+        def update(self, rollouts):
+            # Calculate loss and then update:
+            loss = ...
+            self._standard_step(loss)
+            return {
+                    'logging_stat': 0.0
+                    }
+
+        def get_add_args(self, parser):
+            super().get_add_args(parser)
+            # Add additional arguments.
+    ```
     """
 
     def __init__(self):

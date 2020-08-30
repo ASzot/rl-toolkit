@@ -40,7 +40,7 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets, env_interface,
 
         env.seed(seed + rank)
 
-        env = Monitor(env, os.path.join(log_dir, str(rank)),
+        env = Monitor(env, None,
                 allow_early_resets=allow_early_resets)
 
         obs_space = env.observation_space

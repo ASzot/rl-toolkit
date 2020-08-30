@@ -167,6 +167,10 @@ class MLPBase(BaseNet):
     def __init__(self, num_inputs, recurrent, hidden_sizes,
             weight_init=def_mlp_weight_init, get_activation=lambda: nn.Tanh(),
             no_last_act=False):
+        """
+        - no_last_act: if True the activation will not be applied on the final
+          output.
+        """
         super().__init__(recurrent, num_inputs, hidden_sizes[-1])
 
         assert len(hidden_sizes) > 0

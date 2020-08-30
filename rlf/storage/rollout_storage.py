@@ -228,15 +228,6 @@ class RolloutStorage(BaseStorage):
                 advantages, num_mini_batch, mini_batch_size)
         return data_generator
 
-    def get_sarsa_rollout_data(self):
-        ret = self.get_rollout_data()
-        cur_state = ret['state'][:-1]
-        next_state = ret['state'][1:]
-        cur_action = ret['action'][:-1]
-        next_action = ret['action'][1:]
-        reward = ret['reward'][:-1]
-        return cur_state, cur_action, reward, next_state, next_action, ret
-
     def get_rollout_data(self, advantages=None):
         gen = self.get_generator(advantages, num_mini_batch=1)
         return next(gen)

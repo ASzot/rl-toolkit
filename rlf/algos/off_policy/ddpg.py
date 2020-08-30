@@ -1,4 +1,4 @@
-from rlf.algos.off_policy.off_policy_base import OffPolicy
+from rlf.algos.off_policy.actor_critic_updater import ActorCriticUpdater
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -8,28 +8,11 @@ import rlf.algos.utils as autils
 from collections import defaultdict
 
 
-class DDPG(OffPolicy):
+class DDPG(ActorCriticUpdater):
     def init(self, policy, args):
         if args.updates_per_batch is None:
             args.updates_per_batch = args.update_every
         super().init(policy, args)
-        self.target_policy = self._copy_policy()
-
-    def _get_optimizers(self):
-        return {
-                'actor_opt': (
-                    optim.Adam(self.policy.get_actor_params(), lr=self.args.lr,
-                        eps=self.args.eps),
-                    self.policy.get_actor_params,
-                    self.args.lr
-                ),
-                'critic_opt': (
-                    optim.Adam(self.policy.get_critic_params(), lr=self.args.critic_lr,
-                        eps=self.args.eps),
-                    self.policy.get_critic_params,
-                    self.args.critic_lr
-                )
-            }
 
     def update(self, storage):
         super().update(storage)
@@ -94,16 +77,6 @@ class DDPG(OffPolicy):
 
         #########################################
         # New args
-        parser.add_argument('--tau',
-            type=float,
-            default=1e-3,
-            help='Mixture for the target network weight update')
-
-        parser.add_argument('--critic-lr',
-            type=float,
-            default=1e-3,
-            help='Mixture for the target network weight update')
-
         parser.add_argument('--warmup-steps',
             type=int,
             default=int(1000),

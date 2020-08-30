@@ -2,7 +2,7 @@ import torch.nn.functional as F
 import torch
 import gym.spaces as spaces
 
-def td_loss(target, policy, cur_states, cur_actions, add_info, cont_actions=False):
+def td_loss(target, policy, cur_states, cur_actions, add_info={}, cont_actions=False):
     """
     Computes the mean squared error between the Q values for the current states
     and the target q values.

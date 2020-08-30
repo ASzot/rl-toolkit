@@ -20,11 +20,11 @@ class QLearning(OffPolicy):
             return {}
 
         for update_i in range(self.args.updates_per_batch):
-            state, n_state, action, reward, add_info, n_add_info = self._sample_transitions(storage)
+            state, n_state, action, reward, _, n_add_info = self._sample_transitions(storage)
 
-            next_q_vals = self.target_policy(n_state, **n_add_info).max(1)[0].detach().unsqueeze(-1) * n_add_info['masks']
+            next_q_vals = self.target_policy(n_state).max(1)[0].detach().unsqueeze(-1) * n_add_info['masks']
             target = reward + (next_q_vals * self.args.gamma)
-            loss = autils.td_loss(target, self.policy, state, action, add_info)
+            loss = autils.td_loss(target, self.policy, state, action)
 
             self._standard_step(loss)
 
@@ -39,7 +39,7 @@ class QLearning(OffPolicy):
         super().get_add_args(parser)
         parser.add_argument('--tau', type=float, default=0.0,
             help=("Mixture for the target network weight update. ",
-                "If non-zero this is DDQN"))
+                "If zero this is regular DQN (no target network)"))
 
         parser.add_argument('--updates-per-batch', type=int, default=1,
             help='Number of updates to perform in each call to update')

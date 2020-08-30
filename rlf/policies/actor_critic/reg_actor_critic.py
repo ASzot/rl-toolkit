@@ -35,7 +35,7 @@ class RegActorCritic(ActorCritic):
         """
 
         if get_critic_fn is None:
-            get_critic_fn = putils.get_reg_ac_critic_head
+            get_critic_fn = putils.get_def_ac_critic
 
         super().__init__(get_critic_fn, get_critic_head_fn, use_goal, get_base_net_fn)
 

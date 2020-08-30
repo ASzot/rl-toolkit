@@ -15,23 +15,23 @@ class DQN(BaseNetPolicy):
     """
 
     def __init__(self,
-            get_actor_head_fn=None,
+            get_actor=None,
             use_goal=False,
             get_base_net_fn=None):
         super().__init__(use_goal, get_base_net_fn)
-        if get_actor_head_fn is None:
-            get_actor_head_fn = putils.get_def_actor_head
-        self.get_actor_head_fn = get_actor_head_fn
+        if get_actor is None:
+            get_actor = putils.get_def_actor_head
+        self.get_actor = get_actor
 
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
         assert self.action_space.__class__.__name__ == 'Discrete'
-        self.head = self.get_actor_head_fn(self.base_net.output_shape[0],
+        self.actor = self.get_actor(self.base_net.output_shape[0],
                 action_space.n)
 
-    def forward(self, state, add_state, hxs, masks):
+    def forward(self, state, add_state=None, hxs=None, masks=None):
         base_features, _ = self._apply_base_net(state, add_state, hxs, masks)
-        return self.head(base_features)
+        return self.actor(base_features)
 
     def get_action(self, state, add_state, hxs, masks, step_info):
         if step_info.is_eval:

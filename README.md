@@ -100,9 +100,9 @@ Commit: `58644db1ac638ba6c8a22e7a01eacfedffd4a49f`
 
 ### HalfCheetah-v3 Imitation Learning
 Commit: `58644db1ac638ba6c8a22e7a01eacfedffd4a49f`
-- BCO: `python -m rlf --cmd bco/halfcheetah --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
-- GAIfO-s: `python -m rlf --cmd gaifo_s/halfcheetah --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
-- GAIfO: `python -m rlf --cmd gaifo/halfcheetah --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
+- BCO: `python -m rlf --cmd bco/halfcheetah --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
+- GAIfO-s: `python -m rlf --cmd gaifo_s/halfcheetah --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
+- GAIfO: `python -m rlf --cmd gaifo/halfcheetah --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
 
 ![Hopper-v3](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/halfcheetah_il.png)
 

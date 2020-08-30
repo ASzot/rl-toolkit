@@ -61,7 +61,7 @@ def get_def_critic(obs_shape, input_shape, action_space):
     else:
         return def_get_hidden_net(input_shape)
 
-def get_reg_ac_critic_head(obs_shape, input_shape, action_space, hidden_size=(64, 64)):
+def get_def_ac_critic(obs_shape, input_shape, action_space, hidden_size=(64, 64)):
     assert len(input_shape) == 1
     return TwoLayerMlpWithAction(input_shape[0], hidden_size, action_space.shape[0])
 

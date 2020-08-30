@@ -23,11 +23,6 @@ class ActorCritic(BaseNetPolicy):
           dimension 1, for the critic value.
         """
 
-        # We don't want any base encoder for non-image envs so we can separate
-        # critic and actor.
-        if get_base_net_fn is None:
-            get_base_net_fn = putils.get_img_encoder
-
         super().__init__(use_goal, get_base_net_fn)
 
         if get_critic_fn is None:
