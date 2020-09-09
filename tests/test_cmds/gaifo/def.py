@@ -4,7 +4,7 @@ from rlf import run_policy
 from tests.test_run_settings import TestRunSettings
 from rlf.policies.actor_critic.dist_actor_critic import DistActorCritic
 from rlf.rl.model import MLPBase
-from rlf.algos import GAIFO
+from rlf import GAIFO
 from rlf.rl.model import ConcatLayer
 import torch.nn as nn
 

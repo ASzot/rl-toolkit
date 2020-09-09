@@ -5,7 +5,7 @@ from tests.test_run_settings import TestRunSettings
 from rlf.policies.actor_critic.dist_actor_critic import DistActorCritic
 from rlf.rl.model import MLPBase
 import torch.nn as nn
-from rlf.algos import GAIL
+from rlf import GAIL
 
 def get_discrim(in_shape, ac_dim):
     return nn.Sequential(

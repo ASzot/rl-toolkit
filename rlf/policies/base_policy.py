@@ -1,8 +1,8 @@
 import torch
 import rlf.policies.utils as putils
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 import rlf.rl.utils as rutils
+import attr
 
 def create_simple_action_data(action, hxs, extra={}):
     """
@@ -37,7 +37,7 @@ class ActionData(object):
                 upp_bound.to(self.action.device))
         self.take_action = rutils.multi_dim_clip(self.take_action, low_bound, upp_bound)
 
-@dataclass
+@attr.s
 class StepInfo:
     cur_num_steps: int
     cur_num_episodes: int

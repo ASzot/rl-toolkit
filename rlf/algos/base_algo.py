@@ -1,11 +1,11 @@
 from rlf.storage.rollout_storage import RolloutStorage
-from dataclasses import dataclass
 from typing import Callable
 import numpy as np
 import rlf.rl.utils as rutils
 from rlf.rl.envs import get_vec_normalize
+import attr
 
-@dataclass
+@attr.s
 class AlgorithmSettings:
     """
     - ret_raw_obs: If this algorithm should have access to

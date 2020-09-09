@@ -1,12 +1,12 @@
 import sys
 sys.path.insert(0, './')
-from rlf.algos import DDPG
-from rlf.algos import QLearning
+from rlf import DDPG
+from rlf import QLearning
 from rlf.algos.off_policy.her import HerStorage
 from rlf import run_policy
 from tests.test_run_settings import TestRunSettings
-from rlf.policies import RegActorCritic
-from rlf.policies import DQN
+from rlf import RegActorCritic
+from rlf import DQN
 from rlf.rl.model import MLPBase, TwoLayerMlpWithAction
 import torch.nn as nn
 import torch.nn.functional as F
