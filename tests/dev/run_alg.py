@@ -10,7 +10,7 @@ from rlf.algos.on_policy.reinforce import REINFORCE
 from rlf.algos.on_policy.a2c import A2C
 from rlf.algos.off_policy.q_learning import QLearning
 from rlf.algos.on_policy.ppo import PPO
-from rlf.algos import BaseAlgo
+from rlf import BaseAlgo
 from rlf.algos.il.gaifo import GAIFO
 from rlf.policies.basic_policy import BasicPolicy
 from rlf.policies.random_policy import RandomPolicy

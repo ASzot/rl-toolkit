@@ -5,7 +5,7 @@ import rlf.rl.utils as rutils
 from rlf.rl.envs import get_vec_normalize
 import attr
 
-@attr.s
+@attr.s(auto_attribs=True, slots=True)
 class AlgorithmSettings:
     """
     - ret_raw_obs: If this algorithm should have access to

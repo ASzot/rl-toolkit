@@ -56,8 +56,7 @@ class RunSettings(object):
         about the project.
         """
 
-        config_dir = osp.dirname(osp.dirname(osp.realpath(__file__)))
-        return osp.join(config_dir, 'config.yaml')
+        return './config.yaml'
 
     def create_traj_saver(self, save_path):
         return TrajSaver(save_path)

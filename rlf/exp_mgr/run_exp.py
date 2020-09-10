@@ -135,6 +135,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed):
 
 def full_execute_command_file():
     parser = get_arg_parser()
+    print(os.getcwd())
     args, rest = parser.parse_known_args()
     config_mgr.init(args.cfg)
 
