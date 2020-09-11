@@ -10,7 +10,6 @@ class BlackJackWrapper(gym.ObservationWrapper):
 
     def observation(self, observation):
         return [*observation[:2], int(observation[2])]
-        print('done')
 
 
 class BlackJackInterface(EnvInterface):
