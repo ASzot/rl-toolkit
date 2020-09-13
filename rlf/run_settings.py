@@ -135,14 +135,11 @@ class RunSettings(object):
 
         checkpointer = Checkpointer(args)
 
-        policy = self.policy
-        updater = self.algo
-
-        alg_env_settings = updater.get_env_settings(args)
+        alg_env_settings = self.algo.get_env_settings(args)
 
         # Setup environment
         envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
-                             args.gamma, args.env_log_dir, args.device,
+                             args.gamma, args.device,
                              False, env_interface, args,
                              alg_env_settings)
 
@@ -155,24 +152,24 @@ class RunSettings(object):
 
         # Setup policy
         policy_args = (envs.observation_space, envs.action_space, args)
-        policy.init(*policy_args)
-        policy = policy.to(args.device)
-        policy.watch(log)
+        self.policy.init(*policy_args)
+        self.policy = self.policy.to(args.device)
+        self.policy.watch(log)
 
-        # Setup updater
-        updater.set_get_policy(self.get_policy, policy_args)
-        updater.init(policy, args)
-        updater.set_env_ref(envs)
+        # Setup algo
+        self.algo.set_get_policy(self.get_policy, policy_args)
+        self.algo.init(self.policy, args)
+        self.algo.set_env_ref(envs)
 
         # Setup storage buffer
-        storage = updater.get_storage_buffer(policy, envs, args)
+        storage = self.algo.get_storage_buffer(self.policy, envs, args)
         for ik, get_shape in alg_env_settings.include_info_keys:
             storage.add_info_key(ik, get_shape(envs))
         storage.to(args.device)
         storage.init_storage(envs.reset())
-        storage.set_traj_done_callback(updater.on_traj_finished)
+        storage.set_traj_done_callback(self.algo.on_traj_finished)
 
-        runner = Runner(envs, storage, policy, log, env_interface, checkpointer, args, updater)
+        runner = Runner(envs, storage, self.policy, log, env_interface, checkpointer, args, self.algo)
         return runner
 
     def import_add(self):

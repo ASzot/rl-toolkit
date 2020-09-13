@@ -30,6 +30,13 @@ class EnvInterface(object):
         """
         return gym.make(env_id)
 
+    def get_setup_multiproc_fn(self, make_env):
+        """
+        - make_env: ((seed_rank) -> gym.Env)
+        """
+        return None
+
+
     def get_add_args(self, parser):
         """
         Add additional command line arguments which will be available in

@@ -65,7 +65,7 @@ def evaluate(args, alg_env_settings, policy, true_vec_norm, env_interface,
 
     if eval_envs is None:
         eval_envs = make_vec_envs(args.env_name, args.seed + num_steps, num_processes,
-                                  args.gamma, args.env_log_dir, args.device, True,
+                                  args.gamma, args.device, True,
                                   env_interface, args,
                                   alg_env_settings, set_eval=True)
 

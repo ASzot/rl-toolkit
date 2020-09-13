@@ -5,7 +5,6 @@ from rlf.rl.evaluation import train_eval
 from rlf.policies.base_policy import get_step_info
 from rlf.rl.envs import get_vec_normalize
 from rlf.algos.base_net_algo import BaseNetAlgo
-from rlf.rl.envs import make_vec_envs
 import numpy as np
 
 
@@ -56,7 +55,7 @@ class Runner:
         self.episode_count = 0
         self.train_eval_envs = None
         self.alg_env_settings = self.updater.get_env_settings(self.args)
-        # pre_main and first_train should be merged into one function
+        #TODO: pre_main and first_train should be merged into one function
         self.updater.pre_main(self.log, self.env_interface)
         self.updater.first_train(self.log, self._eval_policy)
         if self.args.clip_actions:

@@ -13,6 +13,7 @@ from rlf.baselines.vec_env.shmem_vec_env import ShmemVecEnv
 from rlf.baselines.vec_env.vec_normalize import \
     VecNormalize as VecNormalize_
 import rlf.rl.utils as rutils
+from functools import partial
 
 
 def get_vec_normalize(venv):
@@ -23,7 +24,7 @@ def get_vec_normalize(venv):
 
     return None
 
-def make_env(env_id, seed, rank, log_dir, allow_early_resets, env_interface,
+def make_env(rank, env_id, seed, allow_early_resets, env_interface,
         set_eval, alg_env_settings, args):
     def _thunk():
         env = env_interface.create_from_id(env_id)
@@ -67,7 +68,7 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets, env_interface,
 
 def make_vec_envs_easy(env_name, num_processes, env_interface, alg_env_settings, args):
     return make_vec_envs(env_name, args.seed, num_processes,
-                         args.gamma, args.env_log_dir, args.device,
+                         args.gamma, args.device,
                          False, env_interface, args,
                          alg_env_settings)
 
@@ -75,7 +76,6 @@ def make_vec_envs(env_name,
                   seed,
                   num_processes,
                   gamma,
-                  log_dir,
                   device,
                   allow_early_resets,
                   env_interface,
@@ -87,14 +87,18 @@ def make_vec_envs(env_name,
     if args.render_metric and set_eval and num_processes > 1:
         raise ValueError('Cannot create multiple processes when rendering metrics at the moment')
 
-    envs = [
-        make_env(env_name, seed, i, log_dir, allow_early_resets, env_interface,
-            set_eval, alg_env_settings, args)
-        for i in range(num_processes)
-    ]
+    bound_make_env = partial(make_env,
+        env_id=env_name, seed=seed, allow_early_resets=allow_early_resets,
+        env_interface=env_interface,
+        set_eval=set_eval, alg_env_settings=alg_env_settings, args=args)
 
+    envs = [bound_make_env(rank=i) for i in range(num_processes)]
     if len(envs) > 1:
-        envs = ShmemVecEnv(envs, context='fork')
+        custom_envs = env_interface.get_setup_multiproc_fn(bound_make_env)
+        if custom_envs is None:
+            envs = ShmemVecEnv(envs, context='fork')
+        else:
+            envs = custom_envs
     else:
         envs = DummyVecEnv(envs)
 
