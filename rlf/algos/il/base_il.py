@@ -4,6 +4,7 @@ from rlf.il.transition_dataset import TransitionDataset
 import torch
 import numpy as np
 import rlf.rl.utils as rutils
+import os.path as osp
 
 class ExperienceGenerator(object):
     def init(self, policy, args, exp_gen_num_trans):
@@ -30,7 +31,8 @@ class BaseILAlgo(BaseNetAlgo):
     def _load_expert_data(self, policy, args):
         assert args.traj_load_path is not None, 'Must specify expert demonstrations!'
         self.args = args
-        self.orig_dataset = self._get_traj_dataset(args.traj_load_path)
+        self.orig_dataset = self._get_traj_dataset(osp.join(args.cwd,
+            args.traj_load_path))
         if args.traj_viz:
             expert_dataset.viz(args)
         num_trajs = self._create_train_loader(args)

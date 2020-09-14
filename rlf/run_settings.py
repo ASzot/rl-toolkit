@@ -15,11 +15,14 @@ import numpy as np
 import random
 import os.path as osp
 from gym.spaces import Box
+import os
+from ray import tune
 
 # Import the env interfaces
 import rlf.envs.minigrid_interface
 import rlf.envs.bit_flip
 import rlf.envs.blackjack
+
 
 def init_seeds(args):
     # Set all seeds
@@ -30,24 +33,22 @@ def init_seeds(args):
 
     torch.set_num_threads(1)
 
-class RunSettings(object):
-    def __init__(self, args_str=None):
-        self.args = None
+class RunSettings(tune.Trainable):
+    def __init__(self, args_str=None, config=None, logger_creator=None):
         self.args_str = args_str
-        self.eval_result = None
+        self.working_dir = os.getcwd()
 
-        base_parser = argparse.ArgumentParser()
-        self.get_add_args(base_parser)
+        base_parser = self._get_base_parser()
         if self.args_str is None:
             self.base_args, _ = base_parser.parse_known_args()
         else:
             self.base_args, _ = base_parser.parse_known_args(self.args_str)
-        self.base_parser = base_parser
+        super().__init__(config, logger_creator)
 
-        self.policy = self.get_policy()
-        self.algo = self.get_algo()
-
-        self.args = self.get_args()
+    def _get_base_parser(self):
+        base_parser = argparse.ArgumentParser()
+        self.get_add_args(base_parser)
+        return base_parser
 
     def get_config_file(self):
         """
@@ -55,8 +56,7 @@ class RunSettings(object):
         Returns the location to a config file that holds whatever information
         about the project.
         """
-
-        return './config.yaml'
+        return osp.join(self.working_dir, 'config.yaml')
 
     def create_traj_saver(self, save_path):
         return TrajSaver(save_path)
@@ -66,6 +66,12 @@ class RunSettings(object):
 
     def get_logger(self):
         return BaseLogger()
+
+    def get_add_ray_config(self, config):
+        return config
+
+    def get_add_ray_kwargs(self):
+        return {}
 
     def get_policy(self):
         """
@@ -79,9 +85,6 @@ class RunSettings(object):
         """
         raise NotImplemented('Must return algorithm to be used')
 
-    def get_env_interface(self):
-        return self._get_env_interface(self.get_args())
-
     def _get_env_interface(self, args, task_id=None):
         env_interface = get_env_interface(args.env_name)(args)
         env_interface.setup(args, task_id)
@@ -90,14 +93,10 @@ class RunSettings(object):
     def get_parser(self):
         return get_default_parser()
 
-    def get_args(self):
-        if self.args is not None:
-            # If cached don't get them again
-            return self.args
-
+    def get_args(self, algo, policy):
         parser = self.get_parser()
-        self.algo.get_add_args(parser)
-        self.policy.get_add_args(parser)
+        algo.get_add_args(parser)
+        policy.get_add_args(parser)
 
         if self.args_str is None:
             args, rest = parser.parse_known_args()
@@ -111,7 +110,7 @@ class RunSettings(object):
         rutils.update_args(args, vars(env_args))
 
         # Check that there are no arguments not accounted for in `base_args`
-        _, rest_of_args = self.base_parser.parse_known_args(rest)
+        _, rest_of_args = self._get_base_parser().parse_known_args(rest)
         if len(rest_of_args) != 0:
             raise ValueError('Unrecognized arguments %s' % str(rest_of_args))
 
@@ -120,22 +119,41 @@ class RunSettings(object):
         args.num_env_steps = int(args.num_env_steps)
         return args
 
-    def create_runner(self):
+    def stop(self):
+        self.ray_runner.close()
+        del self.ray_runner
+        del self.ray_args
+
+    def create_runner(self, add_args={}):
+        policy = self.get_policy()
+        algo = self.get_algo()
+
         # Set up args used for training
-        args = self.get_args()
+        args = self.get_args(algo, policy)
+        args.cwd = self.working_dir
+        if 'wandb' in add_args:
+            del add_args['wandb']
+        rutils.update_args(args, add_args, True)
+        if 'cwd' in add_args:
+            self.working_dir = add_args['cwd']
+
         config_mgr.init(self.get_config_file())
-        log = self.get_logger()
+        if args.ray:
+            # No logger when ray is tuning
+            log = BaseLogger()
+        else:
+            log = self.get_logger()
         log.init(args)
         log.set_prefix(args)
 
         args.device = torch.device("cuda:0" if args.cuda else "cpu")
         init_seeds(args)
 
-        env_interface = self.get_env_interface()
+        env_interface = self._get_env_interface(args)
 
         checkpointer = Checkpointer(args)
 
-        alg_env_settings = self.algo.get_env_settings(args)
+        alg_env_settings = algo.get_env_settings(args)
 
         # Setup environment
         envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
@@ -152,25 +170,45 @@ class RunSettings(object):
 
         # Setup policy
         policy_args = (envs.observation_space, envs.action_space, args)
-        self.policy.init(*policy_args)
-        self.policy = self.policy.to(args.device)
-        self.policy.watch(log)
+        policy.init(*policy_args)
+        policy = policy.to(args.device)
+        policy.watch(log)
 
         # Setup algo
-        self.algo.set_get_policy(self.get_policy, policy_args)
-        self.algo.init(self.policy, args)
-        self.algo.set_env_ref(envs)
+        algo.set_get_policy(self.get_policy, policy_args)
+        algo.init(policy, args)
+        algo.set_env_ref(envs)
 
         # Setup storage buffer
-        storage = self.algo.get_storage_buffer(self.policy, envs, args)
+        storage = algo.get_storage_buffer(policy, envs, args)
         for ik, get_shape in alg_env_settings.include_info_keys:
             storage.add_info_key(ik, get_shape(envs))
         storage.to(args.device)
         storage.init_storage(envs.reset())
-        storage.set_traj_done_callback(self.algo.on_traj_finished)
+        storage.set_traj_done_callback(algo.on_traj_finished)
 
-        runner = Runner(envs, storage, self.policy, log, env_interface, checkpointer, args, self.algo)
+        runner = Runner(envs, storage, policy, log, env_interface, checkpointer, args, algo)
         return runner
 
     def import_add(self):
         pass
+
+    def setup(self, config):
+        self.import_add()
+        self.ray_runner = self.create_runner(config)
+        self.ray_runner.setup()
+        self.ray_args = self.ray_runner.args
+
+        if not self.ray_args.ray_debug:
+            self.ray_runner.log.disable_print()
+
+    def step(self):
+        updater_log_vals = self.ray_runner.training_iter(self.training_iteration)
+        if (self.training_iteration+1) % self.ray_args.log_interval == 0:
+            log_dict = self.ray_runner.log_vals(updater_log_vals, self.training_iteration)
+        if (self.training_iteration+1) % self.ray_args.save_interval == 0:
+            self.ray_runner.save()
+        if (self.training_iteration+1) % self.ray_args.eval_interval == 0:
+            self.ray_runner.eval()
+
+        return log_dict

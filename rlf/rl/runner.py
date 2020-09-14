@@ -19,6 +19,7 @@ class Runner:
         self.checkpointer = checkpointer
         self.args = args
         self.updater = updater
+        self.train_eval_envs = None
 
     def training_iter(self, update_iter):
         self.log.start_interval_log()
@@ -53,7 +54,6 @@ class Runner:
 
     def setup(self):
         self.episode_count = 0
-        self.train_eval_envs = None
         self.alg_env_settings = self.updater.get_env_settings(self.args)
         #TODO: pre_main and first_train should be merged into one function
         self.updater.pre_main(self.log, self.env_interface)

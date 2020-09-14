@@ -88,6 +88,15 @@ And adapters for popular 3rd party RL environments.
 Also directly include 3rd party environments. 
 * `BitFlip-v0`
 
+## Ray
+Install with `pip install ray` and `pip install "ray[tune]"`. To run a job with
+Ray specify `--ray` and specify your hyperparam search for Ray tune using
+Python syntax in the command line argument with `--ray-config "{'lr':
+tune.uniform(0.01, 0.001)}"`. You can specify additional settings such as
+`--ray-cpus`, `--ray-gpus`, `--ray-nsamples`. `--ray-debug` runs Ray in serial
+mode. When using Ray you cannot reference global variables from anywhere in
+your RunSettings.
+
 # Benchmarks
 ### Hopper-v3
 Commit: `570d8c8d024cb86266610e72c5431ef17253c067`

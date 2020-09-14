@@ -1,27 +1,35 @@
 import numpy as np
+import rlf.rl.utils as rutils
+import os
 
 def run_policy(run_settings):
     runner = run_settings.create_runner()
     end_update = runner.updater.get_num_updates()
+    args = runner.args
 
-    if run_settings.args.ray:
+    if args.ray:
         from ray import tune
         import ray
-        from rlf.rl.ray_runner import RunSettingsTrainable
 
         # Release resources as they will be recreated by Ray
         runner.close()
 
-        add_config = eval(run_settings.args.ray_config)
-        use_config = {'run_settings': run_settings}
-        use_config.update(add_config)
+        use_config = eval(args.ray_config)
+        use_config['cwd'] = os.getcwd()
+        use_config = run_settings.get_add_ray_config(use_config)
 
-        #ray.init(num_cpus=8)
-        tune.run(RunSettingsTrainable,
-                #resources_per_trial={'cpu': run_settings.args.ray_cpus, "gpu": 0.5},
+        rutils.pstart_sep()
+        print('Running ray for %i updates per run' % end_update)
+        rutils.pend_sep()
+
+        ray.init(local_mode=args.ray_debug)
+        tune.run(type(run_settings),
+                resources_per_trial={'cpu': args.ray_cpus, "gpu": args.ray_gpus},
                 stop={'training_iteration': end_update},
+                num_samples=args.ray_nsamples,
                 global_checkpoint_period=np.inf,
-                config=use_config)
+                config=use_config,
+                **run_settings.get_add_ray_kwargs())
     else:
         args = runner.args
 

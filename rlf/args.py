@@ -152,9 +152,13 @@ def add_args(parser):
     parser.add_argument('--ray', action='store_true')
     parser.add_argument('--ray-config', type=str, default="{}")
     parser.add_argument('--ray-cpus', type=float, default=1)
+    parser.add_argument('--ray-gpus', type=float, default=0)
+    parser.add_argument('--ray-nsamples', type=int, default=1)
     parser.add_argument('--ray-debug', action='store_true',
-            help=("Turns on internal logging for the script (not just ",
-                "Ray's logger"))
+            help="""
+            Turns on internal non-ray logging. Also enables `local_mode` for
+            Ray.
+            """)
 
 
     #############################

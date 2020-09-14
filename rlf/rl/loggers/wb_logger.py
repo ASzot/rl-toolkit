@@ -13,11 +13,24 @@ import string
 import copy
 from rlf.exp_mgr import config_mgr
 from rlf.rl.loggers.base_logger import BaseLogger
+from ray.tune.logger import DEFAULT_LOGGERS
+from ray.tune.integration.wandb import WandbLogger
 
 from collections import deque, defaultdict
 import wandb
 
+def get_wb_ray_kwargs():
+    return {
+            "loggers": DEFAULT_LOGGERS+(WandbLogger, )
+            }
 
+def get_wb_ray_config(config):
+    config["wandb"] = {
+            "project": config_mgr.get_prop("proj_name"),
+            "api_key": config_mgr.get_prop("wb_api_key"),
+            "log_config": True,
+            }
+    return config
 
 class WbLogger(BaseLogger):
     """

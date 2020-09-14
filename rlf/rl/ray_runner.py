@@ -1,19 +1,21 @@
 from ray import tune
 import ray
 import rlf.rl.utils as rutils
+import pickle
+from rlf.run_settings import RunSettings
 
 class RunSettingsTrainable(tune.Trainable):
-    def _setup(self, config):
-        self.update_i = 0
-        run_settings = config['run_settings']
-        run_settings.import_add()
-        del config['run_settings']
-        rutils.update_args(run_settings.args, config, True)
-        self.runner = run_settings.setup()
-        self.runner.setup()
-        self.args = run_settings.args
+    run_settings: RunSettings = None
 
-        if not run_settings.args.ray_debug:
+    def _setup(self, config):
+        run_settings = pickle.loads(config['run_settings'])
+        self.update_i = 0
+        run_settings.import_add()
+        self.runner = run_settings.create_runner(config)
+        self.runner.setup()
+        self.args = self.runner.args
+
+        if not self.args.ray_debug:
             self.runner.log.disable_print()
 
     def _train(self):

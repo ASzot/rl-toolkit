@@ -47,7 +47,7 @@ def plot_line(plot_vals, save_name, args, to_wb, update_iter=None, x_vals=None,
     if update_iter is not None:
         kwargs['step'] = update_iter
 
-    if to_wb:
+    if to_wb and not args.ray:
         wandb.log({save_name:
             [wandb.Image(Image.open(save_path))]}, **kwargs)
 
@@ -400,7 +400,7 @@ def update_args(args, update_dict, check_exist=False):
     args_dict = vars(args)
     for k, v in update_dict.items():
         if check_exist and k not in args_dict:
-            raise ValueError(f"Could not set key {k}")
+            raise ValueError("Could not set key %s" % k)
         args_dict[k] = v
 
 
