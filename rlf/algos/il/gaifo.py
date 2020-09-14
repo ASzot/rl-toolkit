@@ -17,8 +17,8 @@ class GAIFO(NestedAlgo):
         super().__init__([GaifoDiscrim(get_discrim), agent_updater], 1)
 
 class PairTransitionDataset(TransitionDataset):
-    def __init__(self, load_path):
-        super().__init__(load_path)
+    def __init__(self, load_path, transform_dem_dataset_fn):
+        super().__init__(load_path, transform_dem_dataset_fn)
         self.trajs['next_obs'] = self.trajs['next_obs'].float()
 
     def __getitem__(self, i):
@@ -47,7 +47,7 @@ class GaifoDiscrim(GailDiscrim):
         super().__init__(get_discrim)
 
     def _get_traj_dataset(self, traj_load_path):
-        return PairTransitionDataset(traj_load_path)
+        return PairTransitionDataset(traj_load_path, self._transform_dem_dataset_fn)
 
     def _trans_batches(self, expert_batch, agent_batch):
         agent_batch = iutils.select_idx_from_dict(agent_batch,

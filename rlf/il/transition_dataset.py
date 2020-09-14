@@ -5,8 +5,9 @@ import numpy as np
 
 
 class TransitionDataset(ImitationLearningDataset):
-    def __init__(self, load_path):
+    def __init__(self, load_path, transform_dem_dataset_fn):
         self.trajs = torch.load(load_path)
+        self.trajs = transform_dem_dataset_fn(self.trajs)
 
         # Convert all to floats
         self.trajs['obs'] = self.trajs['obs'].float()

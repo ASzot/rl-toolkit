@@ -21,6 +21,11 @@ class BaseILAlgo(BaseNetAlgo):
         self.exp_generator = exp_generator
         self.data_iter = None
         self._holdout_idxs = None
+        # By default do not transform the dataset at all.
+        self._transform_dem_dataset_fn = lambda x: x
+
+    def set_transform_dem_dataset_fn(self, transform_dem_dataset_fn):
+        self._transform_dem_dataset_fn = transform_dem_dataset_fn
 
     def _load_expert_data(self, policy, args):
         assert args.traj_load_path is not None, 'Must specify expert demonstrations!'
@@ -102,7 +107,7 @@ class BaseILAlgo(BaseNetAlgo):
         return self.expert_mean, self.expert_std
 
     def _get_traj_dataset(self, traj_load_path):
-        return TransitionDataset(traj_load_path)
+        return TransitionDataset(traj_load_path, self._transform_dem_dataset_fn)
 
     def get_add_args(self, parser):
         super().get_add_args(parser)

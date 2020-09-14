@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import rlf.rl.utils as rutils
-from rlf.rl.model import InjectNet
 from collections import defaultdict
 from rlf.baselines.common.running_mean_std import RunningMeanStd
 from rlf.algos.nested_algo import NestedAlgo
@@ -13,16 +12,18 @@ import torch.optim as optim
 from torch import autograd
 import numpy as np
 from rlf.rl.model import ConcatLayer
+from rlf.rl.model import InjectNet
+from functools import partial
 
 
-def get_default_discrim(in_shape, ac_dim):
+def get_default_discrim(ac_dim, in_shape):
     """
     - ac_dim: int will be 0 if no action are used.
     Returns: (nn.Module) Should take state AND actions as input if ac_dim
     != 0. If ac_dim = 0 (discriminator does not use actions) then ONLY take
     state as input.
     """
-    if len(in_shape) == 1:
+    if len(in_shape) != 1:
         raise ValueError("""
                 Default discriminator only supports 1D state spaces. Create your
                 own discriminator if you want to do this.
@@ -33,8 +34,7 @@ def get_default_discrim(in_shape, ac_dim):
             nn.Linear(hidden_dim, hidden_dim), nn.Tanh(),
             nn.Linear(hidden_dim, 1)
             ]
-    if ac_dim != 0:
-        layers.insert(0, ConcatLayer(-1))
+
     return nn.Sequential(*layers)
 
 class GAIL(NestedAlgo):
@@ -49,12 +49,14 @@ class GailDiscrim(BaseIRLAlgo):
         self.get_discrim = get_discrim
 
     def _create_discrim(self):
-        ob_space = rutils.get_obs_shape(self.policy.obs_space)
-        if self.args.action_input:
-            ac_dim = rutils.get_ac_dim(self.action_space)
-        else:
-            ac_dim = 0
-        discrim_head = self.get_discrim(ob_space, ac_dim)
+        ob_shape = rutils.get_obs_shape(self.policy.obs_space)
+        ac_dim = rutils.get_ac_dim(self.action_space)
+        discrim_head = InjectNet(
+            self.policy.get_base_net_fn(ob_shape).net,
+            partial(self.get_discrim, in_shape=ob_shape),
+            ac_dim,
+            self.args.action_input)
+
         return discrim_head.to(self.args.device)
 
     def init(self, policy, args):
@@ -107,10 +109,7 @@ class GailDiscrim(BaseIRLAlgo):
         return expert_d, agent_d, grad_pen
 
     def _compute_disc_val(self, state, action):
-        if self.args.action_input:
-            return self.discrim_net(state, action)
-        else:
-            return self.discrim_net(state)
+        return self.discrim_net(state, action)
 
     def _update_reward_func(self, storage):
         self.discrim_net.train()

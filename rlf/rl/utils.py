@@ -376,29 +376,12 @@ def save_mp4(frames, vid_dir, name, fps=60.0, no_frame_drop=False):
     if osp.exists(vid_file):
         os.remove(vid_file)
 
-    videodims = tuple(frames[0].shape[1:])
-    import ipdb; ipdb.set_trace()
-    video = cv2.VideoWriter(vid_name, fourcc, 60, videodims)
+    videodims = tuple(frames[0].shape[:-1])
+    fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
+    video = cv2.VideoWriter(vid_file, fourcc, 60, videodims)
     for frame in frames:
         video.write(frame)
     video.release()
-    #if no_frame_drop:
-    #    def f(t):
-    #        idx = min(int(t * fps), len(frames)-1)
-    #        return frames[idx]
-
-    #    video = mpy.VideoClip(f, duration=len(frames)/fps)
-    #    video.write_videofile(vid_file, fps, verbose=False)
-
-    #else:
-    #    drop_frame = 1.5
-    #    def f(t):
-    #        frame_length = len(frames)
-    #        new_fps = 1./(1./fps + 1./frame_length)
-    #        idx = min(int(t*new_fps), frame_length-1)
-    #        return frames[int(drop_frame*idx)]
-    #    video = mpy.VideoClip(f, duration=len(frames)/fps/drop_frame)
-    #    video.write_videofile(vid_file, fps, verbose=False)
     print(f"Rendered to {vid_file}")
 
 def render_text(frame, txt, line):
