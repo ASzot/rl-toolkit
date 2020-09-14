@@ -33,8 +33,6 @@ class BaseILAlgo(BaseNetAlgo):
         self.args = args
         self.orig_dataset = self._get_traj_dataset(osp.join(args.cwd,
             args.traj_load_path))
-        if args.traj_viz:
-            expert_dataset.viz(args)
         num_trajs = self._create_train_loader(args)
 
         trans_count_str = utils.human_format_int(len(self.expert_train_loader) * args.traj_batch_size)
@@ -52,6 +50,8 @@ class BaseILAlgo(BaseNetAlgo):
         self.expert_dataset = self.orig_dataset
         if args.traj_frac != 1.0:
             self.expert_dataset = self.expert_dataset.compute_split(args.traj_frac)
+        if args.traj_viz:
+            self.expert_dataset.viz(args)
 
         self.expert_train_loader = torch.utils.data.DataLoader(
                 dataset=self.expert_dataset,
@@ -120,6 +120,11 @@ class BaseILAlgo(BaseNetAlgo):
         parser.add_argument('--traj-viz', action='store_true', default=False)
         parser.add_argument('--clip-dataset-actions', action='store_true', default=False)
         parser.add_argument('--exp-gen-num-trans', type=int, default=None)
+
+        # Unless you have some weird dataset situation, you probably want to
+        # specify either both or none of these. Specifying only in-action-norm
+        # will normalize the actions as input to the policy but will not
+        # denormalize the output when being passed to the environment.
         parser.add_argument('--il-in-action-norm', action='store_true',
                 default=False,
                 help='Normalize expert actions input to the policy')

@@ -124,7 +124,7 @@ class RunSettings(tune.Trainable):
         del self.ray_runner
         del self.ray_args
 
-    def create_runner(self, add_args={}):
+    def create_runner(self, add_args={}, ray_create=False):
         policy = self.get_policy()
         algo = self.get_algo()
 
@@ -142,6 +142,8 @@ class RunSettings(tune.Trainable):
             # No logger when ray is tuning
             log = BaseLogger()
         else:
+            if ray_create:
+                return None
             log = self.get_logger()
         log.init(args)
         log.set_prefix(args)
@@ -195,7 +197,9 @@ class RunSettings(tune.Trainable):
 
     def setup(self, config):
         self.import_add()
-        self.ray_runner = self.create_runner(config)
+        self.ray_runner = self.create_runner(config, ray_create=True)
+        if self.ray_runner is None:
+            return
         self.ray_runner.setup()
         self.ray_args = self.ray_runner.args
 
