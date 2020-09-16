@@ -1,7 +1,7 @@
 import torch
 
 from rlf.rl import utils
-from rlf.rl.evaluation import train_eval
+from rlf.rl.evaluation import train_eval, full_eval
 from rlf.policies.base_policy import get_step_info
 from rlf.rl.envs import get_vec_normalize
 from rlf.algos.base_net_algo import BaseNetAlgo
@@ -104,9 +104,11 @@ class Runner:
     def should_load_from_checkpoint(self):
         return self.checkpointer.should_load()
 
-    def full_eval(self):
-        return full_eval(envs, policy, log, checkpointer, env_interface, args,
-                alg_env_settings, self.create_traj_saver)
+    def full_eval(self, create_traj_saver_fn):
+        alg_env_settings = self.updater.get_env_settings(self.args)
+        return full_eval(self.train_eval_envs, self.policy, self.log,
+                self.checkpointer, self.env_interface, self.args,
+                alg_env_settings, create_traj_saver_fn)
 
     def load_from_checkpoint(self):
         self.policy.load_state_dict(self.checkpointer.get_key('policy'))

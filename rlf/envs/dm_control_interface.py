@@ -101,7 +101,7 @@ def convertObservation(spec_obs):
         return space_obs
 
 class DmControlWrapper(core.Env):
-    def __init__(self, env):
+    def __init__(self, env, step_limit):
         self.dmcenv = env
 
         # convert spec to space
@@ -113,6 +113,8 @@ class DmControlWrapper(core.Env):
 
         self.metadata['render.modes'] = list(self.render_mode_list.keys())
         self.viewer = {key:None for key in self.render_mode_list.keys()}
+        self.step_count = 0
+        self.step_limit = step_limit
 
         # set seed
         self._seed()
@@ -125,15 +127,20 @@ class DmControlWrapper(core.Env):
         return [seed]
 
     def reset(self):
+        self.step_count = 0
         self.timestep = self.dmcenv.reset()
         return self.getObservation()
 
     def step(self, a):
+        self.step_count += 1
+        done = False
+        if self.step_limit is not None and self.step_count > self.step_limit:
+            done = True
         if type(self.action_space) == DmcDiscrete:
             a += self.action_space.offset
         self.timestep = self.dmcenv.step(a)
 
-        return self.getObservation(), self.timestep.reward, self.timestep.last(), {}
+        return self.getObservation(), self.timestep.reward, (self.timestep.last() or done), {}
 
 
     def create_render_mode(self, name, show=True, return_pixel=False, height=240, width=320, camera_id=-1, overlays=(), depth=False, scene_option=None):
@@ -163,15 +170,15 @@ class DmControlWrapper(core.Env):
 
 class DmControlInterface(EnvInterface):
     def env_trans_fn(self, env, set_eval):
-        return DmControlWrapper(env)
+        return DmControlWrapper(env, self.args.time_limit)
 
     def create_from_id(self, env_id):
         # Must be in the format dm.domain.task
         _, domain, task = env_id.split('.')
         try:
             task_kwargs = None
-            if args.time_limit is not None:
-                task_kwargs = {'time_limit': args.time_limit}
+            if self.args.time_limit is not None:
+                task_kwargs = {'time_limit': self.args.time_limit}
             env = suite.load(domain_name=domain, task_name=task,
                     task_kwargs=task_kwargs)
             return env
