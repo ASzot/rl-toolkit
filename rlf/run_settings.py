@@ -16,7 +16,6 @@ import random
 import os.path as osp
 from gym.spaces import Box
 import os
-from ray import tune
 
 # Import the env interfaces
 import rlf.envs.minigrid_interface
@@ -33,7 +32,16 @@ def init_seeds(args):
 
     torch.set_num_threads(1)
 
-class RunSettings(tune.Trainable):
+try:
+    from ray import tune
+    MasterClass = tune.Trainable
+except:
+    class BlankTrainable:
+        def __init__(self, config, logger_creator):
+            pass
+    MasterClass = BlankTrainable
+
+class RunSettings(MasterClass):
     def __init__(self, args_str=None, config=None, logger_creator=None):
         self.args_str = args_str
         self.working_dir = os.getcwd()
