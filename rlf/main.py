@@ -37,7 +37,7 @@ def run_policy(run_settings):
             runner.load_from_checkpoint()
 
         if args.eval_only:
-            return runner.full_eval()
+            return runner.full_eval(run_settings.create_traj_saver)
 
         start_update = 0
         if args.resume:

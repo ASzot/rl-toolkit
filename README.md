@@ -81,6 +81,7 @@ Several keys in the info dictionary are specially treated.
 And adapters for popular 3rd party RL environments.
 * OpenAI Gym Fetch: 
   * `--gf-dense` whether the reward should be dense or sparse. 
+* DeepMind Control Suite: Adapts to the OpenAI Gym environment interface.
 * Gym Minigrid
   * `--gw-flatten`: If True flattens the observation and ignores the mission
     string. 
