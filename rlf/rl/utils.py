@@ -21,6 +21,15 @@ try:
 except:
     pass
 
+def get_env_attr(env, attr_name, max_calls=10):
+    try:
+        return getattr(env, attr_name)
+    except Exception as e:
+        if max_calls == 0:
+            raise e
+        return get_env_attr(env.env, attr_name, max_calls-1)
+
+
 def plot_line(plot_vals, save_name, args, to_wb, update_iter=None, x_vals=None,
         x_name=None, y_name=None, title=None):
     """
@@ -206,6 +215,13 @@ def get_def_obs(obs):
     else:
         return obs
 
+def set_def_obs(obs, new_obs):
+    if isinstance(obs, dict):
+        obs['observation'] = new_obs
+    else:
+        obs = new_obs
+    return obs
+
 def obs_select(obs, idx):
     if isinstance(obs, dict):
         return {k: obs[k][idx] for k in obs}
@@ -235,6 +251,14 @@ def combine_spaces(orig_space, new_space_key, new_space):
             new_space_key: new_space,
             })
 
+def update_obs_space(cur_space, new_obs_space):
+    if is_dict_obs(cur_space):
+        cur_space.spaces['observation'] = new_obs_space
+    else:
+        cur_space = new_obs_space
+    return cur_space
+
+
 
 def combine_obs(orig_obs, new_obs_key, new_obs):
     if isinstance(orig_obs, dict):
@@ -257,7 +281,11 @@ def reshape_obs_space(obs_space, new_shape):
             low=obs_space.high.reshape(-1)[0],
             dtype=obs_space.dtype)
 
-
+def combine_states(state0, state1):
+    if len(state0.shape) == 4:
+        return torch.cat([state0, state1], dim=1)
+    else:
+        return torch.cat([state0, state1], dim=-1)
 
 
 def get_ac_repr(ac, action):

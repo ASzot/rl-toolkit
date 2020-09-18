@@ -7,6 +7,7 @@ from gym import spaces
 import cv2
 cv2.ocl.setUseOpenCL(False)
 from .wrappers import TimeLimit
+import rlf.rl.utils as rutils
 
 
 class NoopResetEnv(gym.Wrapper):
@@ -138,20 +139,23 @@ class WarpFrame(gym.ObservationWrapper):
         self.height = height
         self.grayscale = grayscale
         if self.grayscale:
-            self.observation_space = spaces.Box(low=0, high=255,
-                shape=(self.height, self.width, 1), dtype=np.uint8)
+            self.observation_space = rutils.update_obs_space(self.observation_space,
+                    spaces.Box(low=0, high=255, shape=(self.height, self.width, 1), dtype=np.uint8))
         else:
-            self.observation_space = spaces.Box(low=0, high=255,
-                shape=(self.height, self.width, env.observation_space.shape[-1]), dtype=np.uint8)
+            new_shape = (self.height, self.width, rutils.get_def_obs_shape(env.observation_space)[-1])
+            self.observation_space = rutils.update_obs_space(self.observation_space,
+                    spaces.Box(low=0, high=255, shape=new_shape, dtype=np.uint8))
 
-    def observation(self, frame):
+    def observation(self, obs):
+        frame = rutils.get_def_obs(obs)
         if self.grayscale:
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
         frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
         if self.grayscale:
             frame = np.expand_dims(frame, -1)
-        return frame
+
+        return rutils.set_def_obs(obs, frame)
 
 class FrameStack(gym.Wrapper):
     def __init__(self, env, k):

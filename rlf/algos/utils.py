@@ -1,6 +1,7 @@
 import torch.nn.functional as F
 import torch
 import gym.spaces as spaces
+from torch import autograd
 
 def td_loss(target, policy, cur_states, cur_actions, add_info={}, cont_actions=False):
     """
@@ -71,3 +72,36 @@ def set_flat_params_to(params, flat_params):
 def get_flat_params_from(params):
     return torch.cat([param.view(-1) for param in params])
 
+
+def wass_grad_pen(expert_state, expert_action, policy_state, policy_action,
+        use_actions, disc_fn):
+    num_dims = len(expert_state.shape) - 1
+    alpha = torch.rand(expert_state.size(0), 1)
+    alpha_state = alpha.view(-1, *[1 for _ in range(num_dims)]
+                             ).expand_as(expert_state).to(expert_state.device)
+    mixup_data_state = alpha_state * expert_state + \
+        (1 - alpha_state) * policy_state
+    mixup_data_state.requires_grad = True
+
+    alpha_action = alpha.expand_as(expert_action).to(expert_action.device)
+    mixup_data_action = alpha_action * expert_action + \
+        (1 - alpha_action) * policy_action
+    mixup_data_action.requires_grad = True
+
+    disc = disc_fn(mixup_data_state, mixup_data_action)
+    ones = torch.ones(disc.size()).to(disc.device)
+
+    inputs = [mixup_data_state]
+    if use_actions:
+        inputs.append(mixup_data_action)
+
+    grad = autograd.grad(
+        outputs=disc,
+        inputs=inputs,
+        grad_outputs=ones,
+        create_graph=True,
+        retain_graph=True,
+        only_inputs=True)[0]
+
+    grad_pen = (grad.norm(2, dim=1) - 1).pow(2).mean()
+    return grad_pen

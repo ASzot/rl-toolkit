@@ -3,13 +3,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import rlf.rl.utils as rutils
+import rlf.algos.utils as autils
 from collections import defaultdict
 from rlf.baselines.common.running_mean_std import RunningMeanStd
 from rlf.algos.nested_algo import NestedAlgo
 from rlf.algos.on_policy.ppo import PPO
 from rlf.args import str2bool
 import torch.optim as optim
-from torch import autograd
 import numpy as np
 from rlf.rl.model import ConcatLayer
 from rlf.rl.model import InjectNet
@@ -103,8 +103,9 @@ class GailDiscrim(BaseIRLAlgo):
         expert_d = self._compute_disc_val(expert_states, expert_actions)
         agent_d = self._compute_disc_val(agent_states, agent_actions)
 
-        grad_pen = self.compute_grad_pen(expert_states, expert_actions,
-                                         agent_states, agent_actions, self.args.gail_grad_pen)
+        grad_pen = self.args.disc_grad_pen * autils.wass_grad_pen(expert_states,
+                expert_actions, agent_states, agent_actions,
+                self.args.action_input, self._compute_disc_val)
 
         return expert_d, agent_d, grad_pen
 
@@ -186,44 +187,6 @@ class GailDiscrim(BaseIRLAlgo):
             else:
                 return reward, {}
 
-    def compute_grad_pen(self,
-                         expert_state,
-                         expert_action,
-                         policy_state,
-                         policy_action,
-                         lambda_=10):
-
-        num_dims = len(expert_state.shape) - 1
-        alpha = torch.rand(expert_state.size(0), 1)
-        alpha_state = alpha.view(-1, *[1 for _ in range(num_dims)]
-                                 ).expand_as(expert_state).to(expert_state.device)
-        mixup_data_state = alpha_state * expert_state + \
-            (1 - alpha_state) * policy_state
-        mixup_data_state.requires_grad = True
-
-        alpha_action = alpha.expand_as(expert_action).to(expert_action.device)
-        mixup_data_action = alpha_action * expert_action + \
-            (1 - alpha_action) * policy_action
-        mixup_data_action.requires_grad = True
-
-        disc = self._compute_disc_val(mixup_data_state, mixup_data_action)
-        ones = torch.ones(disc.size()).to(disc.device)
-
-        inputs = [mixup_data_state]
-        if self.args.action_input:
-            inputs.append(mixup_data_action)
-
-        grad = autograd.grad(
-            outputs=disc,
-            inputs=inputs,
-            grad_outputs=ones,
-            create_graph=True,
-            retain_graph=True,
-            only_inputs=True)[0]
-
-        grad_pen = lambda_ * (grad.norm(2, dim=1) - 1).pow(2).mean()
-        return grad_pen
-
     def get_add_args(self, parser):
         super().get_add_args(parser)
         #########################################
@@ -234,7 +197,7 @@ class GailDiscrim(BaseIRLAlgo):
         parser.add_argument('--action-input', type=str2bool, default=False)
         parser.add_argument('--gail-reward-norm', type=str2bool, default=False)
         parser.add_argument('--disc-lr', type=float, default=0.0001)
-        parser.add_argument('--gail-grad-pen', type=float, default=0.0)
+        parser.add_argument('--disc-grad-pen', type=float, default=0.0)
         parser.add_argument('--n-gail-epochs', type=int, default=1)
         parser.add_argument('--reward-type', type=str, default='airl', help="""
                 One of [airl, raw, gail]. Changes the reward computation. Does

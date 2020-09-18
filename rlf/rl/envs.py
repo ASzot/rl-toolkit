@@ -6,7 +6,7 @@ import torch
 from gym.spaces.box import Box
 
 from rlf.baselines.monitor import Monitor
-from rlf.baselines.common.atari_wrappers import make_atari, wrap_deepmind
+from rlf.baselines.common.atari_wrappers import make_atari, wrap_deepmind, WarpFrame
 from rlf.baselines.vec_env import VecEnvWrapper
 from rlf.baselines.vec_env.dummy_vec_env import DummyVecEnv
 from rlf.baselines.vec_env.shmem_vec_env import ShmemVecEnv
@@ -49,6 +49,8 @@ def make_env(rank, env_id, seed, allow_early_resets, env_interface,
         if is_atari:
             if not rutils.is_dict_obs(obs_space) and len(obs_space.shape) == 3:
                 env = wrap_deepmind(env)
+        if args.warp_frame:
+            env = WarpFrame(env, grayscale=True)
 
         keys = rutils.get_ob_keys(env.observation_space)
         transpose_keys = [k for k in keys
