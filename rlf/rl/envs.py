@@ -25,7 +25,7 @@ def get_vec_normalize(venv):
     return None
 
 def make_env(rank, env_id, seed, allow_early_resets, env_interface,
-        set_eval, alg_env_settings, args):
+        set_eval, alg_env_settings, args, immediate_call=False):
     def _thunk():
         env = env_interface.create_from_id(env_id)
 
@@ -64,7 +64,11 @@ def make_env(rank, env_id, seed, allow_early_resets, env_interface,
                 return alg_env_settings.mod_render_frames_fn(frames, **kwargs)
             env = RenderWrapper(env, overall_render_mod)
 
+        env = env_interface.final_trans_fn(env)
+
         return env
+    if immediate_call:
+        return _thunk()
 
     return _thunk
 
@@ -89,14 +93,16 @@ def make_vec_envs(env_name,
     if args.render_metric and set_eval and num_processes > 1:
         raise ValueError('Cannot create multiple processes when rendering metrics at the moment')
 
-    bound_make_env = partial(make_env,
-        env_id=env_name, seed=seed, allow_early_resets=allow_early_resets,
-        env_interface=env_interface,
-        set_eval=set_eval, alg_env_settings=alg_env_settings, args=args)
+    envs = [
+            make_env(i, env_name, seed, allow_early_resets, env_interface,
+                set_eval, alg_env_settings, args)
+            for i in range(num_processes)
+            ]
 
-    envs = [bound_make_env(rank=i) for i in range(num_processes)]
     if len(envs) > 1:
-        custom_envs = env_interface.get_setup_multiproc_fn(bound_make_env)
+        custom_envs = env_interface.get_setup_multiproc_fn(make_env, env_name,
+                seed, allow_early_resets, env_interface, set_eval,
+                alg_env_settings, args)
         if custom_envs is None:
             envs = ShmemVecEnv(envs, context='fork')
         else:

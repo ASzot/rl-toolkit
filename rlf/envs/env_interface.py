@@ -14,6 +14,9 @@ class EnvInterface(object):
     def env_trans_fn(self, env, set_eval):
         return env
 
+    def final_trans_fn(self, env):
+        return env
+
     def get_special_stat_names(self):
         return []
 
@@ -30,7 +33,9 @@ class EnvInterface(object):
         """
         return gym.make(env_id)
 
-    def get_setup_multiproc_fn(self, make_env):
+    def get_setup_multiproc_fn(self, make_env, env_id, seed,
+            allow_early_resets, env_interface, set_eval, alg_env_settings,
+            args):
         """
         - make_env: ((seed_rank) -> gym.Env)
         """

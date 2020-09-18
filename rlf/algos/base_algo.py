@@ -22,6 +22,9 @@ class AlgorithmSettings:
     mod_render_frames_fn: Callable
 
 
+def mod_render_frames_identity(cur_frame, obs):
+        return cur_frame
+
 
 class BaseAlgo(object):
     """
@@ -101,7 +104,7 @@ class BaseAlgo(object):
         Some updaters require specific things from the environment.
         """
         return AlgorithmSettings(False, None, None, [],
-                lambda cur_frame, obs: cur_frame)
+                mod_render_frames_identity)
 
     def set_get_policy(self, get_policy_fn, policy_args):
         """

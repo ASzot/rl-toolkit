@@ -13,11 +13,15 @@ import string
 import copy
 from rlf.exp_mgr import config_mgr
 from rlf.rl.loggers.base_logger import BaseLogger
-from ray.tune.logger import DEFAULT_LOGGERS
-from ray.tune.integration.wandb import WandbLogger
 
 from collections import deque, defaultdict
 import wandb
+
+try:
+    from ray.tune.logger import DEFAULT_LOGGERS
+    from ray.tune.integration.wandb import WandbLogger
+except:
+    pass
 
 def get_wb_ray_kwargs():
     return {
