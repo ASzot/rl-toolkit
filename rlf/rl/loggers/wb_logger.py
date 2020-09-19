@@ -41,7 +41,7 @@ class WbLogger(BaseLogger):
     Logger for logging to the weights and W&B online service.
     """
 
-    def __init__(self, wb_proj_name=None, should_log_vids=False):
+    def __init__(self, wb_proj_name=None, should_log_vids=False, wb_entity=None):
         """
         - wb_proj_name: (string) if None, will use the proj_name provided in
           the `config.yaml` file.
@@ -49,7 +49,10 @@ class WbLogger(BaseLogger):
         super().__init__()
         if wb_proj_name is None:
             wb_proj_name = config_mgr.get_prop('proj_name')
+        if wb_entity is None:
+            wb_entity = config_mgr.get_prop('wb_entity')
         self.wb_proj_name = wb_proj_name
+        self.wb_entity = wb_entity
         self.should_log_vids = should_log_vids
 
     def init(self, args):
@@ -71,7 +74,8 @@ class WbLogger(BaseLogger):
         else:
             group_id = None
 
-        wandb.init(project=self.wb_proj_name, name=self.prefix, group=group_id)
+        wandb.init(project=self.wb_proj_name, name=self.prefix,
+                entity=self.wb_entity, group=group_id)
         wandb.config.update(args)
         return wandb
 

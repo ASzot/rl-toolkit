@@ -30,7 +30,7 @@ def get_default_discrim(ac_dim, in_shape):
                 """)
     hidden_dim = 64
     layers = [
-            nn.Linear(in_shape[0] + ac_dim, hidden_dim), nn.Tanh(),
+            #nn.Linear(in_shape[0] + ac_dim, hidden_dim), nn.Tanh(),
             nn.Linear(hidden_dim, hidden_dim), nn.Tanh(),
             nn.Linear(hidden_dim, 1)
             ]
@@ -54,7 +54,7 @@ class GailDiscrim(BaseIRLAlgo):
         discrim_head = InjectNet(
             self.policy.get_base_net_fn(ob_shape).net,
             partial(self.get_discrim, in_shape=ob_shape),
-            ac_dim,
+            ob_shape[0], 64, ac_dim,
             self.args.action_input)
 
         return discrim_head.to(self.args.device)
@@ -134,7 +134,7 @@ class GailDiscrim(BaseIRLAlgo):
                                                                 torch.zeros(agent_d.shape).to(d))
                 discrim_loss = expert_loss + agent_loss
 
-                if self.args.gail_grad_pen != 0.0:
+                if self.args.disc_grad_pen != 0.0:
                     log_vals['grad_pen'] += grad_pen.item()
                     total_loss = discrim_loss + grad_pen
                 else:

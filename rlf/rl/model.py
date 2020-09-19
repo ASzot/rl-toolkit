@@ -223,18 +223,22 @@ class TwoLayerMlpWithAction(BaseNet):
 
 
 class InjectNet(nn.Module):
-    def __init__(self, base_net, get_head_net_fn, inject_dim, should_inject):
+    def __init__(self, base_net, get_head_net_fn, in_dim, hidden_dim, inject_dim, should_inject):
         super().__init__()
         self.base_net = base_net
         if not should_inject:
             inject_dim = 0
         self.head_net = get_head_net_fn(inject_dim)
+        self.inject_layer = nn.Sequential(
+                nn.Linear(in_dim, hidden_dim),
+                nn.Tanh())
         self.should_inject = should_inject
 
     def forward(self, x, inject_x):
         x = self.base_net(x)
         if self.should_inject:
             x = torch.cat([x, inject_x], dim=-1)
+        x = self.inject_layer(x)
         x = self.head_net(x)
         return x
 

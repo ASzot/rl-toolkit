@@ -251,12 +251,16 @@ def combine_spaces(orig_space, new_space_key, new_space):
             new_space_key: new_space,
             })
 
-def update_obs_space(cur_space, new_obs_space):
+def update_obs_space(cur_space, update_obs_space):
     if is_dict_obs(cur_space):
-        cur_space.spaces['observation'] = new_obs_space
+        new_obs_space = {
+                **cur_space.spaces
+                }
+        new_obs_space['observation'] = update_obs_space
+        new_obs_space = gym.spaces.Dict(new_obs_space)
     else:
-        cur_space = new_obs_space
-    return cur_space
+        new_obs_space = update_obs_space
+    return new_obs_space
 
 
 

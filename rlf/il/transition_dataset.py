@@ -30,7 +30,6 @@ class TransitionDataset(ImitationLearningDataset):
                 low_val, high_val)
         self._compute_action_stats()
 
-
     def get_expert_stats(self, device):
         return {
                 'state': (self.state_mean.to(device), self.state_std.to(device)),
