@@ -144,6 +144,12 @@ def add_args(parser):
     parser.add_argument('--normalize-env', type=str2bool, default=True)
     parser.add_argument('--clip-actions', type=str2bool, default=False)
     parser.add_argument('--frame-stack', type=str2bool, default=True)
+    parser.add_argument('--context-mode', type=str, default='fork',
+            help="""
+            The mode used for multi-processing. Valid options are "fork",
+            "spawn", "forkserver". "fork" will not work if you are doing
+            rendering in MuJoCo.
+            """)
     parser.add_argument('--warp-frame', type=str2bool, default=False,
             help="""
             Resizes to 84x84 and makes grayscale

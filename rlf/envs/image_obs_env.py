@@ -28,20 +28,16 @@ class ImageObsWrapper(gym.Wrapper):
 
     def reset(self):
         state =  self.env.reset()
-        return self._trans_obs(state, True)
+        return self._trans_obs(state)
 
     def step(self, a):
         state, reward, done, info = self.env.step(a)
-        obs = self._trans_obs(state, False)
+        obs = self._trans_obs(state)
         return obs, reward, done, info
 
-    def _trans_obs(self, state, is_reset):
-        if not is_reset:
-            z = self.render(mode='rgb_array')
-        #img = self.env.render('rgb_array', width=self.render_dim,
-        #        height=self.render_dim)
-        img = np.zeros(self.observation_space['observation'].shape,
-                dtype=np.uint8)
+    def _trans_obs(self, state):
+        img = self.env.render('rgb_array', width=self.render_dim,
+                height=self.render_dim)
 
         state['state'] = state.pop('observation')
 

@@ -104,7 +104,7 @@ def make_vec_envs(env_name,
                 seed, allow_early_resets, env_interface, set_eval,
                 alg_env_settings, args)
         if custom_envs is None:
-            envs = ShmemVecEnv(envs, context='fork')
+            envs = ShmemVecEnv(envs, context=args.context_mode)
         else:
             envs = custom_envs
     else:
@@ -350,11 +350,16 @@ class VecNormalize(VecNormalize_):
 # Derived from
 # https://github.com/openai/baselines/blob/master/baselines/common/vec_env/vec_frame_stack.py
 class VecPyTorchFrameStack(VecEnvWrapper):
+    """
+    For now, this will only stack the "observation" key in dictionary
+    observation spaces.
+    """
+
     def __init__(self, venv, nstack, device=None):
         self.venv = venv
         self.nstack = nstack
 
-        wos = venv.observation_space  # wrapped ob space
+        wos = rutils.get_obs_space(venv.observation_space)
         self.shape_dim0 = wos.shape[0]
 
         low = np.repeat(wos.low, self.nstack, axis=0)
@@ -365,8 +370,10 @@ class VecPyTorchFrameStack(VecEnvWrapper):
         self.stacked_obs = torch.zeros((venv.num_envs, ) +
                                        low.shape).to(device)
 
-        observation_space = gym.spaces.Box(
-            low=low, high=high, dtype=venv.observation_space.dtype)
+        new_obs_space = gym.spaces.Box(low=low, high=high,
+                dtype=wos.dtype)
+        observation_space = rutils.update_obs_space(venv.observation_space,
+                new_obs_space)
         VecEnvWrapper.__init__(self, venv, observation_space=observation_space)
 
     def step_wait(self):
@@ -377,15 +384,17 @@ class VecPyTorchFrameStack(VecEnvWrapper):
         for (i, new) in enumerate(news):
             if new:
                 self.stacked_obs[i] = 0
-        self.stacked_obs[:, -self.shape_dim0:] = obs
+        self.stacked_obs[:, -self.shape_dim0:] = rutils.get_def_obs(obs)
 
         for i in range(len(infos)):
             if 'final_obs' in infos[i]:
-                new_final = torch.zeros(*self.observation_space.shape)
+                new_final = torch.zeros(*self.stacked_obs.shape[1:])
                 new_final[:-1] = self.stacked_obs[i][1:]
                 new_final[0] = torch.tensor(infos[i]['final_obs']).to(self.stacked_obs.device)
                 infos[i]['final_obs'] = new_final
-        return self.stacked_obs, rews, news, infos
+
+        obs = rutils.set_def_obs(obs, self.stacked_obs)
+        return obs, rews, news, infos
 
     def reset(self):
         obs = self.venv.reset()
@@ -393,8 +402,10 @@ class VecPyTorchFrameStack(VecEnvWrapper):
             self.stacked_obs = torch.zeros(self.stacked_obs.shape)
         else:
             self.stacked_obs.zero_()
-        self.stacked_obs[:, -self.shape_dim0:] = obs
-        return self.stacked_obs
+        self.stacked_obs[:, -self.shape_dim0:] = rutils.get_def_obs(obs)
+
+        obs = rutils.set_def_obs(obs, self.stacked_obs)
+        return obs
 
     def close(self):
         self.venv.close()
