@@ -230,7 +230,7 @@ class InjectNet(nn.Module):
             inject_dim = 0
         self.head_net = get_head_net_fn(inject_dim)
         self.inject_layer = nn.Sequential(
-                nn.Linear(in_dim, hidden_dim),
+                nn.Linear(in_dim+inject_dim, hidden_dim),
                 nn.Tanh())
         self.should_inject = should_inject
 
