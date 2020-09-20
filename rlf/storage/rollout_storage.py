@@ -260,7 +260,7 @@ class RolloutStorage(BaseStorage):
             for k, ob_shape in self.ob_keys.items():
                 if k is None:
                     obs_batch = self.obs[:-1].view(-1, *ob_shape)[indices]
-                elif k == 'observation':
+                elif k == self.args.policy_ob_key:
                     obs_batch[k] = self.obs[k][:-1].view(-1, *ob_shape)[indices]
                 else:
                     other_obs_batch[k] = self.obs[k][:-1].view(-1, *ob_shape)[indices]

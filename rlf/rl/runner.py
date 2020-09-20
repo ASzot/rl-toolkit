@@ -31,7 +31,7 @@ class Runner:
             step_info = get_step_info(update_iter, step, self.episode_count, self.args)
             with torch.no_grad():
                 ac_info = self.policy.get_action(
-                        utils.get_def_obs(obs),
+                        utils.get_def_obs(obs, self.args.policy_ob_key),
                         utils.get_other_obs(obs),
                         self.storage.get_hidden_state(step),
                         self.storage.get_masks(step), step_info)

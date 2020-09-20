@@ -36,7 +36,7 @@ class ActorCritic(BaseNetPolicy):
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
 
-        obs_shape = rutils.get_obs_shape(obs_space)
+        obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
 
         self.critic = self.get_critic_fn(obs_shape,
                                               self.base_net.output_shape, action_space)

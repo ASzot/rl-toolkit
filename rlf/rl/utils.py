@@ -197,9 +197,9 @@ def get_ob_shape(obs_space, k):
     else:
         return obs_space.spaces[k].shape
 
-def get_obs_shape(ob_space):
+def get_obs_shape(ob_space, k='observation'):
     if isinstance(ob_space, gym.spaces.Dict):
-        return ob_space.spaces['observation'].shape
+        return ob_space.spaces[k].shape
     else:
         return ob_space.shape
 
@@ -209,15 +209,15 @@ def get_obs_space(ob_space):
     else:
         return ob_space
 
-def get_def_obs(obs):
+def get_def_obs(obs, k='observation'):
     if isinstance(obs, dict):
-        return obs['observation']
+        return obs[k]
     else:
         return obs
 
-def set_def_obs(obs, new_obs):
+def set_def_obs(obs, new_obs, k='observation'):
     if isinstance(obs, dict):
-        obs['observation'] = new_obs
+        obs[k] = new_obs
     else:
         obs = new_obs
     return obs
@@ -417,6 +417,22 @@ def save_mp4(frames, vid_dir, name, fps=60.0, no_frame_drop=False):
         video.write(frame)
     video.release()
     print(f"Rendered to {vid_file}")
+
+def save_agent_obs(frames, imdim, vid_dir, name):
+    use_dir = osp.join(vid_dir, name+'_frames')
+    if not osp.exists(use_dir):
+        os.makedirs(use_dir)
+
+    if imdim != 1:
+        raise ValueError('Only gray scale is supported right now')
+
+    for i in range(frames.shape[0]):
+        for frame_j in range(frames.shape[1]):
+            fname = f"{i}_{frame_j}.jpg"
+            frame = frames[i,frame_j].cpu().numpy()
+            cv2.imwrite(osp.join(use_dir, fname), frame)
+
+    print(f"Wrote observation sequence to {use_dir}")
 
 def render_text(frame, txt, line):
     font = cv2.FONT_HERSHEY_SIMPLEX

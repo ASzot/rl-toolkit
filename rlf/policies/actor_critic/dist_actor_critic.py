@@ -39,7 +39,8 @@ class DistActorCritic(ActorCritic):
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
         self.actor = self.get_actor_fn(
-            rutils.get_obs_shape(obs_space), self.base_net.output_shape)
+            rutils.get_obs_shape(obs_space, args.policy_ob_key),
+            self.base_net.output_shape)
         self.dist = self.get_dist_fn(
             self.actor.output_shape, self.action_space)
 

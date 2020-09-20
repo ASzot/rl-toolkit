@@ -5,6 +5,7 @@ import operator
 import numpy as np
 from collections import defaultdict, deque
 from abc import ABC, abstractmethod
+import rlf.rl.utils as rutils
 
 class BaseIRLAlgo(BaseILAlgo):
     def __init__(self):

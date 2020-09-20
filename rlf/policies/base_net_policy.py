@@ -32,13 +32,13 @@ class BaseNetPolicy(nn.Module, BasePolicy):
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
         if self.use_goal:
-            use_obs_shape = rutils.get_obs_shape(obs_space)
+            use_obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
             if len(use_obs_shape) != 1:
                 raise ValueError(('Goal conditioning only ',
                     'works with flat state representation'))
             use_obs_shape = (use_obs_shape[0] + obs_space['desired_goal'].shape[0],)
         else:
-            use_obs_shape = rutils.get_obs_shape(obs_space)
+            use_obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
         self.base_net = self.get_base_net_fn(use_obs_shape)
 
     def _apply_base_net(self, state, add_state, hxs, masks):

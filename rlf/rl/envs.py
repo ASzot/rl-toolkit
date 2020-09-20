@@ -13,6 +13,7 @@ from rlf.baselines.vec_env.shmem_vec_env import ShmemVecEnv
 from rlf.baselines.vec_env.vec_normalize import \
     VecNormalize as VecNormalize_
 import rlf.rl.utils as rutils
+import rlf.algos.utils as autils
 from functools import partial
 
 
@@ -228,7 +229,7 @@ class TransposeImage(TransposeObs):
         assert len(op) == 3
         self.op = op
 
-        spaces = {}
+        spaces = env.observation_space.spaces
         for k in transpose_keys:
             if k is not None:
                 obs_space = self.observation_space.spaces[k]
@@ -355,56 +356,32 @@ class VecPyTorchFrameStack(VecEnvWrapper):
     observation spaces.
     """
 
-    def __init__(self, venv, nstack, device=None):
+    def __init__(self, venv, nstack, device):
         self.venv = venv
         self.nstack = nstack
 
-        wos = rutils.get_obs_space(venv.observation_space)
-        self.shape_dim0 = wos.shape[0]
+        ob_space = rutils.get_obs_space(venv.observation_space)
 
-        low = np.repeat(wos.low, self.nstack, axis=0)
-        high = np.repeat(wos.high, self.nstack, axis=0)
+        self.stacked_obs = autils.StackHelper(ob_space.shape, nstack, device, venv.num_envs)
+        new_obs_space = rutils.update_obs_space(
+                venv.observation_space,
+                rutils.reshape_obs_space(ob_space, self.stacked_obs.get_shape()))
 
-        if device is None:
-            device = torch.device('cpu')
-        self.stacked_obs = torch.zeros((venv.num_envs, ) +
-                                       low.shape).to(device)
-
-        new_obs_space = gym.spaces.Box(low=low, high=high,
-                dtype=wos.dtype)
-        observation_space = rutils.update_obs_space(venv.observation_space,
-                new_obs_space)
-        VecEnvWrapper.__init__(self, venv, observation_space=observation_space)
+        VecEnvWrapper.__init__(self, venv, observation_space=new_obs_space)
 
     def step_wait(self):
         obs, rews, news, infos = self.venv.step_wait()
 
-        self.stacked_obs[:, :-self.shape_dim0] = \
-            self.stacked_obs[:, self.shape_dim0:]
-        for (i, new) in enumerate(news):
-            if new:
-                self.stacked_obs[i] = 0
-        self.stacked_obs[:, -self.shape_dim0:] = rutils.get_def_obs(obs)
+        stacked_obs, infos = self.stacked_obs.update_obs(
+                rutils.get_def_obs(obs), news, infos)
 
-        for i in range(len(infos)):
-            if 'final_obs' in infos[i]:
-                new_final = torch.zeros(*self.stacked_obs.shape[1:])
-                new_final[:-1] = self.stacked_obs[i][1:]
-                new_final[0] = torch.tensor(infos[i]['final_obs']).to(self.stacked_obs.device)
-                infos[i]['final_obs'] = new_final
-
-        obs = rutils.set_def_obs(obs, self.stacked_obs)
+        obs = rutils.set_def_obs(obs, stacked_obs)
         return obs, rews, news, infos
 
     def reset(self):
         obs = self.venv.reset()
-        if torch.backends.cudnn.deterministic:
-            self.stacked_obs = torch.zeros(self.stacked_obs.shape)
-        else:
-            self.stacked_obs.zero_()
-        self.stacked_obs[:, -self.shape_dim0:] = rutils.get_def_obs(obs)
-
-        obs = rutils.set_def_obs(obs, self.stacked_obs)
+        stacked_obs = self.stacked_obs.reset(rutils.get_def_obs(obs))
+        obs = rutils.set_def_obs(obs, stacked_obs)
         return obs
 
     def close(self):
