@@ -229,7 +229,10 @@ class TransposeImage(TransposeObs):
         assert len(op) == 3
         self.op = op
 
-        spaces = env.observation_space.spaces
+        if rutils.is_dict_obs(env.observation_space):
+            spaces = env.observation_space.spaces
+        else:
+            spaces = {}
         for k in transpose_keys:
             if k is not None:
                 obs_space = self.observation_space.spaces[k]

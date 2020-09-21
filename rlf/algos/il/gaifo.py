@@ -28,7 +28,7 @@ class PairTransitionDataset(TransitionDataset):
                 'done': self.trajs['done'][i],
                 }
 
-def get_default_discrim(in_shape, ac_dim):
+def get_default_discrim(ac_dim, in_shape):
     """
     Returns: (nn.Module) Should take two states as input.
     """
@@ -39,12 +39,30 @@ def get_default_discrim(in_shape, ac_dim):
         nn.Linear(hidden_dim, hidden_dim), nn.Tanh(),
         nn.Linear(hidden_dim, 1))
 
+class DoubleStateDiscrim(nn.Module):
+    def __init__(self, state_enc, hidden_dim=64):
+        super().__init__()
+        self.state_enc = state_enc
+        output_size = self.state_enc.output_shape[0]
+        self.head = nn.Sequential(
+                nn.Linear(output_size, hidden_dim),
+                nn.Tanh(),
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.Tanh(),
+                nn.Linear(hidden_dim, 1))
+
+    def forward(self, s0, s1):
+        both_s = torch.cat([s0, s1], dim=1)
+        both_s_enc, _ = self.state_enc(both_s, None, None)
+        return self.head(both_s_enc)
+
 
 class GaifoDiscrim(GailDiscrim):
-    def __init__(self, get_discrim=None):
-        if get_discrim is None:
-            get_discrim = get_default_discrim
-        super().__init__(get_discrim)
+    def _create_discrim(self):
+        new_shape = list(rutils.get_obs_shape(self.policy.obs_space))
+        new_shape[0] *= 2
+        base_net = self.policy.get_base_net_fn(new_shape)
+        return DoubleStateDiscrim(base_net).to(self.args.device)
 
     def _get_traj_dataset(self, traj_load_path):
         return PairTransitionDataset(traj_load_path, self._transform_dem_dataset_fn)
@@ -64,8 +82,8 @@ class GaifoDiscrim(GailDiscrim):
         agent_s0 = agent_batch['state'].to(d)
         agent_s1 = agent_batch['next_state'].to(d)
 
-        expert_d = self.discrim_net([exp_s0, exp_s1])
-        agent_d = self.discrim_net([agent_s0, agent_s1])
+        expert_d = self.discrim_net(exp_s0, exp_s1)
+        agent_d = self.discrim_net(agent_s0, agent_s1)
         # Select the valid transitions where the episode did not end in
         # between.
         expert_d = expert_d[expert_batch['done'] == 0]
@@ -109,7 +127,7 @@ class GaifoDiscrim(GailDiscrim):
                 next_state[i] = torch.FloatTensor(obsfilt(next_state[i].cpu().numpy(),
                         update=False)).to(self.args.device)
 
-        d_val = self.discrim_net([state, next_state])
+        d_val = self.discrim_net(state, next_state)
         s = torch.sigmoid(d_val)
         eps = 1e-20
         if self.args.reward_type == 'airl':
