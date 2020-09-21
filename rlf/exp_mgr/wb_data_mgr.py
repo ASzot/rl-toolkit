@@ -65,8 +65,15 @@ def get_run_ids_from_report(wb_entity, wb_proj_name, report_name, get_sections, 
     if report is None:
         raise ValueError('Could not find report')
 
+    # Find which section the run sets are in
+    report_section_idx = None
+    for i in range(len(report.sections)):
+        if 'runSets' in report.sections[i]:
+            report_section_idx = i
+            break
+
     run_ids = []
-    for run_set in report.sections[0]['runSets']:
+    for run_set in report.sections[report_section_idx]['runSets']:
         report_section = run_set['name']
         if report_section not in get_sections:
             continue

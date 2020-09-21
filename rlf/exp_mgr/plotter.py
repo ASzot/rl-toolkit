@@ -49,13 +49,22 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
     avg_y_df = plot_df.groupby([group_key, x_name]).mean()
     std_y_df = plot_df.groupby([group_key, x_name]).std()
     avg_y_df['std'] = std_y_df[y_name]
+
+    midx = 0
+    ms = ['*', '^', 'o', 'v', 'D', 's',]
     lines = []
     for name, sub_df in avg_y_df.groupby(level=0):
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
         y_std = sub_df['std'].fillna(0).to_numpy()
-        l = ax.plot(x_vals, y_vals, label=name)
-        lines.append(l[0])
+        l = ax.plot(x_vals, y_vals)
+        sel_vals = [int(x) for x in np.linspace(0, len(x_vals)-1, num=8)]
+        ladd = ax.plot(x_vals[sel_vals], y_vals[sel_vals], ms[midx],
+                label=rename_map.get(name, name), color=group_colors[name],
+                markersize=8)
+        midx += 1
+
+        lines.append((ladd[0], l[0]))
 
         plt.setp(l, linewidth=2, color=group_colors[name])
         min_y_fill = y_vals - y_std
@@ -80,8 +89,8 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         plt.yticks(ax.get_yticks(), [ytick_fn(t) for t in ax.get_yticks()])
 
     if legend:
-        labs = [l.get_label() for l in lines]
-        plt.legend(lines, labs, fontsize='small')
+        labs = [l[0].get_label() for l in lines]
+        plt.legend(lines, labs, fontsize='x-large')
 
     ax.grid(b=True, which='major', color='lightgray', linestyle='--')
 
@@ -92,7 +101,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
 
 def high_res_save(save_path):
     file_format = save_path.split('.')[-1]
-    plt.savefig(save_path, format=file_format, dpi=1000)
+    plt.savefig(save_path, format=file_format, dpi=1000, bbox_inches='tight')
     print(f"Saved figure to {save_path}")
 
 def gen_fake_data(x_scale, data_key, n_runs=5):
