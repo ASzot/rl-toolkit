@@ -117,12 +117,12 @@ class DmControlWrapper(core.Env):
         self.step_limit = step_limit
 
         # set seed
-        self._seed()
+        self.seed()
 
     def getObservation(self):
         return convertObservation(self.timestep.observation)
 
-    def _seed(self, seed=None):
+    def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 

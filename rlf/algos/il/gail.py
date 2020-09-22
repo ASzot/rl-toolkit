@@ -79,12 +79,28 @@ class GailDiscrim(BaseIRLAlgo):
     def _trans_batches(self, expert_batch, agent_batch):
         return expert_batch, agent_batch
 
+    def get_env_settings(self, args):
+        settings = super().get_env_settings(args)
+        if not args.gail_state_norm:
+            settings.ret_raw_obs = True
+        return settings
+
     def _norm_expert_state(self, state, obsfilt):
+        if not self.args.gail_state_norm:
+            return state
         state = state.cpu().numpy()
+
         if obsfilt is not None:
             state = obsfilt(state, update=False)
         state = torch.tensor(state).to(self.args.device)
         return state
+
+    def _trans_agent_state(self, state, other_state=None):
+        if not self.args.gail_state_norm:
+            if other_state is None:
+                return state['raw_obs']
+            return other_state['raw_obs']
+        return rutils.get_def_obs(state)
 
     def _compute_discrim_loss(self, agent_batch, expert_batch, obsfilt):
         expert_actions = expert_batch['actions'].to(self.args.device)
@@ -92,7 +108,8 @@ class GailDiscrim(BaseIRLAlgo):
         expert_states = self._norm_expert_state(expert_batch['state'],
                 obsfilt)
 
-        agent_states = agent_batch['state']
+        agent_states = self._trans_agent_state(agent_batch['state'],
+                agent_batch['other_state'] if 'other_state' in agent_batch else None)
         agent_actions = agent_batch['action']
 
         agent_actions = rutils.get_ac_repr(
@@ -164,7 +181,7 @@ class GailDiscrim(BaseIRLAlgo):
         return log_vals
 
     def _compute_discrim_reward(self, storage, step, add_info):
-        state = rutils.get_def_obs(storage.get_obs(step))
+        state = self._trans_agent_state(storage.get_obs(step))
         action = storage.actions[step]
         action = rutils.get_ac_repr(self.action_space, action)
         d_val = self._compute_disc_val(state, action)
@@ -206,6 +223,7 @@ class GailDiscrim(BaseIRLAlgo):
         # New args
         parser.add_argument('--action-input', type=str2bool, default=False)
         parser.add_argument('--gail-reward-norm', type=str2bool, default=False)
+        parser.add_argument('--gail-state-norm', type=str2bool, default=True)
         parser.add_argument('--disc-lr', type=float, default=0.0001)
         parser.add_argument('--disc-grad-pen', type=float, default=0.0)
         parser.add_argument('--n-gail-epochs', type=int, default=1)
