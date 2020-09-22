@@ -112,15 +112,26 @@ class GailDiscrim(BaseIRLAlgo):
     def _compute_disc_val(self, state, action):
         return self.discrim_net(state, action)
 
+    def _compute_expert_loss(self, expert_d, expert_batch):
+        return F.binary_cross_entropy_with_logits(expert_d,
+                torch.ones(expert_d.shape).to(self.args.device))
+
+    def _compute_agent_loss(self, agent_d, agent_batch):
+        return F.binary_cross_entropy_with_logits(agent_d,
+                torch.zeros(agent_d.shape).to(self.args.device))
+
     def _update_reward_func(self, storage):
         self.discrim_net.train()
 
-        d = self.args.device
         log_vals = defaultdict(lambda: 0)
         obsfilt = self.get_env_ob_filt()
 
         n = 0
         expert_sampler, agent_sampler = self._get_sampler(storage)
+        if agent_sampler is None:
+            # algo requested not to update this step
+            return {}
+
         for epoch_i in range(self.args.n_gail_epochs):
             for expert_batch, agent_batch in zip(expert_sampler, agent_sampler):
                 expert_batch, agent_batch = self._trans_batches(
@@ -128,10 +139,9 @@ class GailDiscrim(BaseIRLAlgo):
                 n += 1
                 expert_d, agent_d, grad_pen = self._compute_discrim_loss(agent_batch, expert_batch,
                         obsfilt)
-                expert_loss = F.binary_cross_entropy_with_logits(expert_d,
-                                                                 torch.ones(expert_d.shape).to(d))
-                agent_loss = F.binary_cross_entropy_with_logits(agent_d,
-                                                                torch.zeros(agent_d.shape).to(d))
+                expert_loss = self._compute_expert_loss(expert_d, expert_batch)
+                agent_loss = self._compute_agent_loss(agent_d, agent_batch)
+
                 discrim_loss = expert_loss + agent_loss
 
                 if self.args.disc_grad_pen != 0.0:
