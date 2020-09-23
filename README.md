@@ -1,10 +1,7 @@
 # RL Toolkit (RLT)
 
-# Still a work in progress.
+Code I use to to quickly and flexibly implement RL algorithms
 
-A framework to quickly and flexibly implement RL algorithms. Easily implement
-your own RL algorithms. Have control over the key features and only focus on
-the important parts. You can do all of these things without touching any of the code!
 - Custom policies. 
 - Custom update functions.
 - Configurable replay buffer or trajectory storage. Control how you collect
@@ -68,15 +65,6 @@ Easily run templated commands. Start by defining a `.cmd` file.
 - Choose to log to W&B. 
 
 ## Custom Environments
-Several keys in the info dictionary are specially treated. 
-* `final_obs` if returned when the episode finishes, this is treated as the
-  final observation seen before the reset. Note that the agent never acts in
-  this state. Having access to this can be useful when viewing the entire
-  trajectory of the agent. 
-* `raw_obs` if the alg_setting `ret_raw_obs` is returned, then the VecNormalize
-  environment will pass the environment observation before any normalization in
-  the `raw_obs` field. 
-
 
 And adapters for popular 3rd party RL environments.
 * OpenAI Gym Fetch: 
@@ -91,6 +79,7 @@ Also directly include 3rd party environments.
 * `BitFlip-v0`
 
 ## Ray
+
 Install with `pip install ray` and `pip install "ray[tune]"`. To run a job with
 Ray specify `--ray` and specify your hyperparam search for Ray tune using
 Python syntax in the command line argument with `--ray-config "{'lr':
@@ -101,6 +90,7 @@ your RunSettings.
 
 # Benchmarks
 ### Hopper-v3
+
 Commit: `570d8c8d024cb86266610e72c5431ef17253c067`
 - PPO: `python -m rlf --cmd ppo/hopper --cd 0 --cfg ./tests/config.yaml --seed "31,41,51" --sess-id 0 --cuda False` 
 
@@ -131,3 +121,7 @@ Commit: `95bb3a7d0bf1945e414a0e77de8a749bd79dc554`
 - BitFlip: `python -m rlf --cmd her/bit_flip --cfg ./tests/config.yaml --cuda False --sess-id 0`
 
 ![HER](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/her.png)
+
+# Sources
+* The PPO and rollout storage code is based on https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail.
+* The environment preprocessing uses a stripped down version of https://github.com/openai/baselines.
