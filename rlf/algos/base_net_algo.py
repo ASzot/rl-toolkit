@@ -20,12 +20,19 @@ class BaseNetAlgo(BaseAlgo):
         self.optimizers = self._get_optimizers()
 
         if self._arg('linear_lr_decay'):
-            if self.args.legacy_lr_decay:
-                self.lr_updates = args.num_env_steps
-            elif self._arg('lr_env_steps') is None:
+            if self._arg('lr_env_steps') is None:
                 self.lr_updates = self.get_num_updates()
             else:
                 self.lr_updates = int(self._arg('lr_env_steps')) // args.num_steps // args.num_processes
+
+    def update(self, storage):
+        log_vals = super().update(storage)
+        for k, (opt, _, initial_lr) in self.optimizers.items():
+            lr = None
+            for param_group in opt.param_groups:
+                lr = param_group['lr']
+            log_vals[k + '_lr'] = lr
+        return log_vals
 
     def _copy_policy(self):
         cp_policy = super()._copy_policy()
@@ -87,7 +94,6 @@ class BaseNetAlgo(BaseAlgo):
                             help='optimizer epsilon (default: 1e-5)')
         parser.add_argument(f"--{self.arg_prefix}lr", type=float, default=1e-3,
                             help='learning rate (default: 1e-3)')
-        parser.add_argument('--legacy-lr-decay', action='store_true')
 
     def _get_optimizers(self):
         return {

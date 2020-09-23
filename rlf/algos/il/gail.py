@@ -23,11 +23,6 @@ def get_default_discrim(ac_dim, in_shape):
     != 0. If ac_dim = 0 (discriminator does not use actions) then ONLY take
     state as input.
     """
-    if len(in_shape) != 1:
-        raise ValueError("""
-                Default discriminator only supports 1D state spaces. Create your
-                own discriminator if you want to do this.
-                """)
     hidden_dim = 64
     layers = [
             #nn.Linear(in_shape[0] + ac_dim, hidden_dim), nn.Tanh(),
@@ -51,10 +46,11 @@ class GailDiscrim(BaseIRLAlgo):
     def _create_discrim(self):
         ob_shape = rutils.get_obs_shape(self.policy.obs_space)
         ac_dim = rutils.get_ac_dim(self.action_space)
+        base_net = self.policy.get_base_net_fn(ob_shape)
         discrim_head = InjectNet(
-            self.policy.get_base_net_fn(ob_shape).net,
+            base_net.net,
             partial(self.get_discrim, in_shape=ob_shape),
-            ob_shape[0], 64, ac_dim,
+            base_net.output_shape[0], 64, ac_dim,
             self.args.action_input)
 
         return discrim_head.to(self.args.device)

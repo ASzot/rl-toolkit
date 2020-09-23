@@ -5,6 +5,7 @@ import operator
 import numpy as np
 from collections import defaultdict, deque
 from abc import ABC, abstractmethod
+from rlf.rl.loggers import sanity_checker
 import rlf.rl.utils as rutils
 
 class BaseIRLAlgo(BaseILAlgo):
@@ -40,6 +41,7 @@ class BaseIRLAlgo(BaseILAlgo):
 
         for step in range(self.args.num_steps):
             rewards, ep_log_vals  = self._get_reward(step, storage, add_info)
+            sanity_checker.check("irl_reward", step=step, reward=rewards)
             ep_log_vals['reward'] = rewards
             storage.rewards[step] = rewards
 

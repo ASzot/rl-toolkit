@@ -16,6 +16,7 @@ import random
 import os.path as osp
 from gym.spaces import Box
 import os
+from rlf.rl.loggers import sanity_checker
 
 # Import the env interfaces
 import rlf.envs.minigrid_interface
@@ -196,6 +197,8 @@ class RunSettings(MasterClass):
         storage.to(args.device)
         storage.init_storage(envs.reset())
         storage.set_traj_done_callback(algo.on_traj_finished)
+
+        sanity_checker.set_sanity_checker(args)
 
         runner = Runner(envs, storage, policy, log, env_interface, checkpointer, args, algo)
         return runner

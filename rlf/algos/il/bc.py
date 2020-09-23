@@ -8,9 +8,19 @@ import rlf.rl.utils as rutils
 import rlf.algos.utils as autils
 from tqdm import tqdm
 import copy
+from rlf.args import str2bool
 
 
 class BehavioralCloning(BaseILAlgo):
+    """
+    When used as a standalone updater, BC will perform a single update per call
+    to update. The total number of udpates is # epochs * # batches in expert
+    dataset. num-steps must be 0 and num-procs 1 as no experience should be collected in the
+    environment. To see the performance, you must evaluate. To just evaluate at
+    the end of training, set eval-interval to a large number that is greater
+    than the number of updates. There will always be a final evaluation.
+    """
+
     def __init__(self, set_arg_defs=True):
         super().__init__()
         self.set_arg_defs = set_arg_defs
@@ -56,8 +66,7 @@ class BehavioralCloning(BaseILAlgo):
         with tqdm(total=self.args.bc_num_epochs) as pbar:
             while self.num_epochs < self.args.bc_num_epochs:
                 super().pre_update(self.num_bc_updates)
-                log_vals = self._bc_step()
-                self.num_bc_updates += 1
+                log_vals = self._bc_step(False)
                 action_loss.append(log_vals['pr_action_loss'])
 
                 pbar.update(self.num_epochs - prev_num)
@@ -72,7 +81,9 @@ class BehavioralCloning(BaseILAlgo):
         # Override the learning rate decay
         pass
 
-    def _bc_step(self):
+    def _bc_step(self, decay_lr):
+        if decay_lr:
+            super().pre_update(self.num_bc_updates)
         expert_batch = self._get_next_data()
 
         if expert_batch is None:
@@ -91,18 +102,28 @@ class BehavioralCloning(BaseILAlgo):
         true_actions = expert_batch['actions'].to(self.args.device)
         true_actions = self._adjust_action(true_actions)
 
+        log_dict = {}
+
         pred_actions, _, _ = self.policy(states, None, None)
+        if rutils.is_discrete(self.policy.action_space):
+            pred_label = rutils.get_ac_compact(self.policy.action_space, pred_actions)
+            acc = (pred_label == true_actions.long()).sum().float() / pred_label.shape[0]
+            log_dict['_pr_acc'] = acc.item()
         loss = autils.compute_ac_loss(pred_actions, true_actions,
                 self.policy.action_space)
 
         self._standard_step(loss)
+        self.num_bc_updates += 1
 
-        return {
-                'pr_action_loss': loss.item()
-                }
+        log_dict['_pr_action_loss'] = loss.item()
+
+        return log_dict
 
     def update(self, storage):
-        return self._bc_step()
+        top_log_vals = super().update(storage)
+        log_vals = self._bc_step(True)
+        log_vals.update(top_log_vals)
+        return log_vals
 
     def get_storage_buffer(self, policy, envs, args):
         return BaseStorage()
@@ -131,6 +152,6 @@ class BehavioralCloning(BaseILAlgo):
         #########################################
         # New args
         parser.add_argument('--bc-num-epochs', type=int, default=1)
-        parser.add_argument('--bc-state-norm', action='store_true')
+        parser.add_argument('--bc-state-norm', type=str2bool, default=False)
         parser.add_argument('--bc-noise', type=float, default=None)
 

@@ -16,6 +16,12 @@ def add_args(parser):
     #############################
     # INTERVALS
     #############################
+    parser.add_argument('--sanity', action='store_true', default=False)
+    parser.add_argument('--sanity-verbose', action='store_true', default=False)
+    parser.add_argument('--sanity-cmd', type=str, default="", help="""
+            Example format "after_rollout:5" stops after 5 calls to after_rollout
+            """)
+
     parser.add_argument('--log-interval',
         type=int,
         default=1,

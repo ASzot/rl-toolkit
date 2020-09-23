@@ -6,6 +6,7 @@ from rlf.policies.base_policy import get_step_info
 from rlf.rl.envs import get_vec_normalize
 from rlf.algos.base_net_algo import BaseNetAlgo
 import numpy as np
+from rlf.rl.loggers import sanity_checker
 
 
 class Runner:
@@ -39,6 +40,8 @@ class Runner:
                     ac_info.clip_action(*self.ac_tensor)
 
             next_obs, reward, done, infos = self.envs.step(ac_info.take_action)
+            sanity_checker.check("env_step", obs=obs, action=ac_info.take_action,
+                    next_obs=next_obs)
             reward += ac_info.add_reward
 
             step_log_vals = utils.agg_ep_log_stats(infos, ac_info.extra)
@@ -48,8 +51,13 @@ class Runner:
 
             self.storage.insert(obs, next_obs, reward, done, infos, ac_info)
 
+        sanity_checker.check("rollout")
+
+        sanity_checker.check("pre_update", model=self.policy)
         updater_log_vals = self.updater.update(self.storage)
+        sanity_checker.check("update", model=self.policy)
         self.storage.after_update()
+
         return updater_log_vals
 
     def setup(self):
