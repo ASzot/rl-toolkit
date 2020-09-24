@@ -187,6 +187,7 @@ class BaseLogger(object):
             print('')
 
         # Log all values
+        log_dat['fps'] = fps
         self.log_vals(log_dat, total_num_steps)
         return log_dat
 

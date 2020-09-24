@@ -17,8 +17,9 @@ class DQN(BaseNetPolicy):
     def __init__(self,
             get_actor=None,
             use_goal=False,
+            fuse_states=[],
             get_base_net_fn=None):
-        super().__init__(use_goal, get_base_net_fn)
+        super().__init__(use_goal, fuse_states, get_base_net_fn)
         if get_actor is None:
             get_actor = putils.get_def_actor_head
         self.get_actor = get_actor

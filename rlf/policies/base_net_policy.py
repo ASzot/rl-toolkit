@@ -15,6 +15,7 @@ class BaseNetPolicy(nn.Module, BasePolicy):
 
     def __init__(self,
             use_goal=False,
+            fuse_states=[],
             get_base_net_fn=None):
         """
         - get_base_fn: (tuple(int) -> rlf.rl.model.BaseNet)
@@ -27,6 +28,7 @@ class BaseNetPolicy(nn.Module, BasePolicy):
             get_base_net_fn = putils.get_img_encoder
 
         self.get_base_net_fn = get_base_net_fn
+        self.fuse_states = fuse_states
         self.use_goal = use_goal
 
     def init(self, obs_space, action_space, args):
@@ -39,7 +41,24 @@ class BaseNetPolicy(nn.Module, BasePolicy):
             use_obs_shape = (use_obs_shape[0] + obs_space['desired_goal'].shape[0],)
         else:
             use_obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
+
         self.base_net = self.get_base_net_fn(use_obs_shape)
+        base_out_dim = self.base_net.output_shape[0]
+        for k in self.fuse_states:
+            if len(obs_space.spaces[k].shape) != 1:
+                raise ValueError('Can only fuse 1D states')
+            base_out_dim += obs_space.spaces[k].shape[0]
+        self.base_out_shape = (base_out_dim,)
+
+    def _get_base_out_shape(self):
+        return self.base_out_shape
+
+    def _fuse_base_out(self, base_features, add_input):
+        if len(self.fuse_states) == 0:
+            return base_features
+        fuse_states = torch.cat([add_input[k] for k in self.fuse_states], dim=-1)
+        fused = torch.cat([base_features, fuse_states], dim=-1)
+        return fused
 
     def _apply_base_net(self, state, add_state, hxs, masks):
         if self.use_goal:

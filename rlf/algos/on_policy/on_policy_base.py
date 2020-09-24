@@ -26,8 +26,8 @@ class OnPolicy(BaseNetAlgo):
         """
         with torch.no_grad():
             next_value = self.policy.get_value(
-                rutils.get_def_obs(rollouts.get_obs(-1),
-                    self.args.policy_ob_key),
+                rutils.get_def_obs(rollouts.get_obs(-1), self.args.policy_ob_key),
+                rutils.get_other_obs(rollouts.get_obs(-1), self.args.policy_ob_key),
                 rollouts.recurrent_hidden_states[-1] if self.args.recurrent_policy else None,
                 rollouts.masks[-1]).detach()
         return next_value

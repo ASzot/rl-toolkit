@@ -20,9 +20,11 @@ class DistActorCritic(ActorCritic):
                  get_dist_fn=None,
                  get_critic_fn=None,
                  get_critic_head_fn=None,
+                 fuse_states=[],
                  use_goal=False,
                  get_base_net_fn=None):
-        super().__init__(get_critic_fn, get_critic_head_fn, use_goal, get_base_net_fn)
+        super().__init__(get_critic_fn, get_critic_head_fn, use_goal,
+                fuse_states, get_base_net_fn)
         """
         - get_actor_fn: (obs_space : (int), input_shape : (int) ->
           rlf.rl.model.BaseNet)
@@ -40,7 +42,7 @@ class DistActorCritic(ActorCritic):
         super().init(obs_space, action_space, args)
         self.actor = self.get_actor_fn(
             rutils.get_obs_shape(obs_space, args.policy_ob_key),
-            self.base_net.output_shape)
+            self._get_base_out_shape())
         self.dist = self.get_dist_fn(
             self.actor.output_shape, self.action_space)
 
@@ -59,9 +61,8 @@ class DistActorCritic(ActorCritic):
         })
 
     def forward(self, state, add_state, hxs, masks):
-        if state is None and self.use_goal:
-            raise ValueError('Using goal is not supported in PPO yet')
         base_features, hxs = self._apply_base_net(state, add_state, hxs, masks)
+        base_features = self._fuse_base_out(base_features, add_state)
 
         value = self._get_value_from_features(base_features, hxs, masks)
 
@@ -70,8 +71,8 @@ class DistActorCritic(ActorCritic):
 
         return dist, value, hxs
 
-    def evaluate_actions(self, state, hxs, masks, action):
-        dist, value, hxs = self.forward(state, None, hxs, masks)
+    def evaluate_actions(self, state, add_state, hxs, masks, action):
+        dist, value, hxs = self.forward(state, add_state, hxs, masks)
 
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy()

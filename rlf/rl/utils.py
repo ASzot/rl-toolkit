@@ -233,9 +233,9 @@ def deep_get_other_obs(obs):
 def deep_get_def_obs(obs):
     return [get_def_obs(o) for o in obs]
 
-def get_other_obs(obs):
+def get_other_obs(obs, maink='observation'):
     if isinstance(obs, dict):
-        return {k: obs[k] for k in obs if k != 'observation'}
+        return {k: obs[k] for k in obs if k != maink}
     else:
         return {}
 

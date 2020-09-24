@@ -15,6 +15,7 @@ class ActorCritic(BaseNetPolicy):
                  get_critic_fn=None,
                  get_critic_head_fn=None,
                  use_goal=False,
+                 fuse_states=[],
                  get_base_net_fn=None):
         """
         - get_critic_fn: (obs_shape: (int), input_shape: (int),
@@ -23,7 +24,7 @@ class ActorCritic(BaseNetPolicy):
           dimension 1, for the critic value.
         """
 
-        super().__init__(use_goal, get_base_net_fn)
+        super().__init__(use_goal, fuse_states, get_base_net_fn)
 
         if get_critic_fn is None:
             get_critic_fn = putils.get_def_critic
@@ -38,16 +39,21 @@ class ActorCritic(BaseNetPolicy):
 
         obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
 
-        self.critic = self.get_critic_fn(obs_shape,
-                                              self.base_net.output_shape, action_space)
+        self.critic = self.get_critic_fn(obs_shape, self._get_base_out_shape(),
+                action_space)
         self.critic_head = self.get_critic_head_fn(self.critic.output_shape[0])
 
     def _get_value_from_features(self, base_features, hxs, masks):
+        """
+        - base_features: post fusion base features
+        """
         critic_features, hxs = self.critic(base_features, hxs, masks)
         return self.critic_head(critic_features)
 
-    def get_value(self, inputs, hxs, masks):
+    def get_value(self, inputs, add_inputs, hxs, masks):
         base_features, hxs = self.base_net(inputs, hxs, masks)
+        base_features = self._fuse_base_out(base_features, add_inputs)
+
         return self._get_value_from_features(base_features, hxs, masks)
 
     def get_critic_params(self):

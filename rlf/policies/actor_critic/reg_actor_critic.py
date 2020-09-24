@@ -25,6 +25,7 @@ class RegActorCritic(ActorCritic):
             get_critic_fn=None,
             get_critic_head_fn=None,
             use_goal=False,
+            fuse_states=[],
             get_base_net_fn=None):
         """
         - get_actor_fn:
@@ -37,7 +38,8 @@ class RegActorCritic(ActorCritic):
         if get_critic_fn is None:
             get_critic_fn = putils.get_def_ac_critic
 
-        super().__init__(get_critic_fn, get_critic_head_fn, use_goal, get_base_net_fn)
+        super().__init__(get_critic_fn, get_critic_head_fn, use_goal,
+                fuse_states, get_base_net_fn)
 
         if get_actor_fn is None:
             get_actor_fn = putils.get_def_actor
