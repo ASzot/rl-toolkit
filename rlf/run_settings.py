@@ -157,6 +157,8 @@ class RunSettings(MasterClass):
         log.init(args)
         log.set_prefix(args)
 
+        sanity_checker.set_sanity_checker(args)
+
         args.device = torch.device("cuda:0" if args.cuda else "cpu")
         init_seeds(args)
 
@@ -197,8 +199,6 @@ class RunSettings(MasterClass):
         storage.to(args.device)
         storage.init_storage(envs.reset())
         storage.set_traj_done_callback(algo.on_traj_finished)
-
-        sanity_checker.set_sanity_checker(args)
 
         runner = Runner(envs, storage, policy, log, env_interface, checkpointer, args, algo)
         return runner

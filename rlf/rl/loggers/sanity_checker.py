@@ -28,6 +28,12 @@ class SanityChecker:
         if self.log_key_calls[self.stop_key] >= self.stop_iters:
             raise ValueError('Sanity stopped. Program done.')
 
+    def check_rnd_state(self, key):
+        if not self.should_check:
+            return
+        weight = nn.Linear(3,2).weight
+        print(f"{key}:Rnd", weight.view(-1).detach())
+
 
     def get_str(self, k,v, indent=""):
         s = f"{indent}{k}: "
@@ -37,7 +43,7 @@ class SanityChecker:
                 s += self.get_str(x,y, "   ")
         elif isinstance(v, nn.Module):
             params = list(v.parameters())
-            sample_spots = [0, -1, -5, 10]
+            sample_spots = [0, -1, -5, 3]
             for x in sample_spots:
                 s += f"\n{indent}   {x}:" + print_tensor(params[x])
         else:
@@ -67,3 +73,5 @@ def set_sanity_checker(args):
 def check(*args, **kwargs):
     get_sanity_checker().check(*args, **kwargs)
 
+def check_rand_state(key=""):
+    get_sanity_checker().check_rnd_state(key)

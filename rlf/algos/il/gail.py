@@ -14,6 +14,7 @@ import numpy as np
 from rlf.rl.model import ConcatLayer
 from rlf.rl.model import InjectNet
 from functools import partial
+from rlf.rl.loggers import sanity_checker
 
 
 def get_default_discrim(ac_dim, in_shape):
@@ -116,11 +117,16 @@ class GailDiscrim(BaseIRLAlgo):
         expert_d = self._compute_disc_val(expert_states, expert_actions)
         agent_d = self._compute_disc_val(agent_states, agent_actions)
 
+        grad_pen = self.compute_pen(expert_states, expert_actions, agent_states,
+                agent_actions)
+
+        return expert_d, agent_d, grad_pen
+
+    def compute_pen(self, expert_states, expert_actions, agent_states, agent_actions):
         grad_pen = self.args.disc_grad_pen * autils.wass_grad_pen(expert_states,
                 expert_actions, agent_states, agent_actions,
                 self.args.action_input, self._compute_disc_val)
-
-        return expert_d, agent_d, grad_pen
+        return grad_pen
 
     def _compute_disc_val(self, state, action):
         return self.discrim_net(state, action)

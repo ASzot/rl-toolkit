@@ -40,8 +40,11 @@ class BaseIRLAlgo(BaseILAlgo):
                 add_info[k] = storage.obs[k]
 
         for step in range(self.args.num_steps):
+            sanity_checker.check_rand_state(f"Pre{step}")
             rewards, ep_log_vals  = self._get_reward(step, storage, add_info)
+            sanity_checker.check_rand_state(f"Post{step}")
             sanity_checker.check("irl_reward", step=step, reward=rewards)
+
             ep_log_vals['reward'] = rewards
             storage.rewards[step] = rewards
 

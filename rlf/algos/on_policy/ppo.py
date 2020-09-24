@@ -4,9 +4,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 from collections import defaultdict
 from rlf.algos.on_policy.on_policy_base import OnPolicy
+from rlf.rl.loggers import sanity_checker
 
 class PPO(OnPolicy):
     def update(self, rollouts):
+        sanity_checker.check_rand_state()
+        sanity_checker.check("ppo", net=self.policy)
         self._compute_returns(rollouts)
         advantages = rollouts.compute_advantages()
 
