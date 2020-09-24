@@ -12,9 +12,10 @@ import rlf.rl.utils as rutils
 class BasicPolicy(BaseNetPolicy):
     def __init__(self,
             is_stoch=False,
+            fuse_states=[],
             use_goal=False,
             get_base_net_fn=None):
-        super().__init__(use_goal, get_base_net_fn)
+        super().__init__(use_goal, fuse_states, get_base_net_fn)
         self.state_norm_fn = lambda x: x
         self.action_denorm_fn = lambda x: x
         self.is_stoch = is_stoch
