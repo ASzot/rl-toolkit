@@ -17,7 +17,7 @@ from functools import partial
 from rlf.rl.loggers import sanity_checker
 
 
-def get_default_discrim(ac_dim, in_shape):
+def get_default_discrim():
     """
     - ac_dim: int will be 0 if no action are used.
     Returns: (nn.Module) Should take state AND actions as input if ac_dim
@@ -31,7 +31,7 @@ def get_default_discrim(ac_dim, in_shape):
             nn.Linear(hidden_dim, 1)
             ]
 
-    return nn.Sequential(*layers)
+    return nn.Sequential(*layers), hidden_dim
 
 class GAIL(NestedAlgo):
     def __init__(self, agent_updater=PPO(), get_discrim=None):
@@ -48,10 +48,11 @@ class GailDiscrim(BaseIRLAlgo):
         ob_shape = rutils.get_obs_shape(self.policy.obs_space)
         ac_dim = rutils.get_ac_dim(self.action_space)
         base_net = self.policy.get_base_net_fn(ob_shape)
+        discrim, dhidden_dim = self.get_discrim()
         discrim_head = InjectNet(
             base_net.net,
-            partial(self.get_discrim, in_shape=ob_shape),
-            base_net.output_shape[0], 64, ac_dim,
+            discrim,
+            base_net.output_shape[0], dhidden_dim, ac_dim,
             self.args.action_input)
 
         return discrim_head.to(self.args.device)

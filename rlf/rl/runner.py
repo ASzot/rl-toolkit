@@ -51,8 +51,6 @@ class Runner:
 
             self.storage.insert(obs, next_obs, reward, done, infos, ac_info)
 
-        sanity_checker.check("rollout")
-
         sanity_checker.check("pre_update", model=self.policy)
         updater_log_vals = self.updater.update(self.storage)
         sanity_checker.check("update", model=self.policy)

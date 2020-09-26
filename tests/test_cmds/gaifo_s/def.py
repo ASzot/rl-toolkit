@@ -7,11 +7,10 @@ from rlf.rl.model import MLPBase
 import torch.nn as nn
 from rlf import GAIL
 
-def get_discrim(in_shape, ac_dim):
+def get_discrim():
     return nn.Sequential(
-            nn.Linear(in_shape[0], 400), nn.Tanh(),
             nn.Linear(400, 300), nn.Tanh(),
-            nn.Linear(300, 1))
+            nn.Linear(300, 1)), 400
 
 class GaifoSRunSettings(TestRunSettings):
     def get_policy(self):
