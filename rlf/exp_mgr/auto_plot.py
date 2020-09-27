@@ -74,7 +74,9 @@ def plot_from_file(plot_cfg_path):
                 uniq_step = plot_df['_step'].unique()
                 use_line_df = None
                 for group_name, df in line_df.groupby('run'):
-                    df = df.iloc[np.array([0]).repeat(len(uniq_step))]
+                    #df = df.iloc[np.array([0]).repeat(len(uniq_step))]
+                    df = df.iloc[np.array([np.argmax(df[line_plot_key])]).repeat(len(uniq_step))]
+
                     df.index = np.arange(len(uniq_step))
                     df['_step'] = uniq_step
                     if use_line_df is None:
