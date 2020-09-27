@@ -90,17 +90,7 @@ class BehavioralCloning(BaseILAlgo):
             self._reset_data_fetcher()
             expert_batch = self._get_next_data()
 
-        states = expert_batch['state'].to(self.args.device)
-        if self.args.bc_state_norm:
-            states = self._norm_state(states)
-
-        if self.args.bc_noise is not None:
-            add_noise = torch.randn(states.shape) * self.args.bc_noise
-            states += add_noise.to(self.args.device)
-            states = states.detach()
-
-        true_actions = expert_batch['actions'].to(self.args.device)
-        true_actions = self._adjust_action(true_actions)
+        states, true_actions = self._get_data(expert_batch)
 
         log_dict = {}
 
@@ -115,9 +105,43 @@ class BehavioralCloning(BaseILAlgo):
         self._standard_step(loss)
         self.num_bc_updates += 1
 
+        val_loss = self._compute_val_loss()
+        if val_loss is not None:
+            log_dict['_pr_val_loss'] = val_loss.item()
+
         log_dict['_pr_action_loss'] = loss.item()
 
         return log_dict
+
+    def _get_data(self, batch):
+        states = batch['state'].to(self.args.device)
+        if self.args.bc_state_norm:
+            states = self._norm_state(states)
+
+        if self.args.bc_noise is not None:
+            add_noise = torch.randn(states.shape) * self.args.bc_noise
+            states += add_noise.to(self.args.device)
+            states = states.detach()
+
+        true_actions = batch['actions'].to(self.args.device)
+        true_actions = self._adjust_action(true_actions)
+        return states, true_actions
+
+    def _compute_val_loss(self):
+        if self.update_i % self.args.eval_interval != 0:
+            return None
+        if self.val_train_loader is None:
+            return None
+        with torch.no_grad():
+            losses = []
+            for batch in self.val_train_loader:
+                states, true_actions = self._get_data(batch)
+                pred_actions, _, _ = self.policy(states, None, None)
+                loss = autils.compute_ac_loss(pred_actions, true_actions, self.policy.action_space)
+                losses.append(loss.item())
+
+            return np.mean(losses)
+
 
     def update(self, storage):
         top_log_vals = super().update(storage)

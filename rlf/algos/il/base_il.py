@@ -53,11 +53,26 @@ class BaseILAlgo(BaseNetAlgo):
         if args.traj_viz:
             self.expert_dataset.viz(args)
 
-        self.expert_train_loader = torch.utils.data.DataLoader(
-                dataset=self.expert_dataset,
+        if args.traj_val_ratio != 0.0:
+            N = len(self.expert_dataset)
+            n_val = int(N * args.traj_val_ratio)
+            train_dataset, val_dataset = torch.utils.data.random_split(
+                    self.expert_dataset, [N- n_val, n_val])
+            self.val_train_loader = torch.utils.data.DataLoader(
+                dataset=val_dataset,
                 batch_size=args.traj_batch_size,
                 shuffle=True,
                 drop_last=True)
+        else:
+            train_dataset = self.expert_dataset
+            self.val_train_loader = None
+
+        self.expert_train_loader = torch.utils.data.DataLoader(
+                dataset=train_dataset,
+                batch_size=args.traj_batch_size,
+                shuffle=True,
+                drop_last=True)
+
         if isinstance(self.expert_dataset, torch.utils.data.Subset):
             return int(args.traj_frac * self.expert_dataset.dataset.get_num_trajs())
         else:
@@ -115,6 +130,7 @@ class BaseILAlgo(BaseNetAlgo):
         super().get_add_args(parser)
         parser.add_argument('--traj-load-path', type=str, default=None)
         parser.add_argument('--traj-batch-size', type=int, default=128)
+        parser.add_argument('--traj-val-ratio', type=float, default=0.0)
         parser.add_argument('--traj-frac', type=float, default=1.0,
                 help="The fraction of trajectories to use")
         parser.add_argument('--traj-viz', action='store_true', default=False)

@@ -65,8 +65,9 @@ def plot_from_file(plot_cfg_path):
 
             if 'line_sections' in plot_section:
                 line_plot_key = plot_settings['line_plot_key']
+                line_val_key = plot_settings['line_val_key']
                 line_df = get_report_data(plot_section['report_name'],
-                        line_plot_key,
+                        [line_plot_key, line_val_key],
                         plot_section['line_sections'],
                         plot_section['force_reload'],
                         plot_settings['config_yaml'])
@@ -75,7 +76,8 @@ def plot_from_file(plot_cfg_path):
                 use_line_df = None
                 for group_name, df in line_df.groupby('run'):
                     #df = df.iloc[np.array([0]).repeat(len(uniq_step))]
-                    df = df.iloc[np.array([np.argmax(df[line_plot_key])]).repeat(len(uniq_step))]
+                    df = df.iloc[np.array([np.argmax(df[line_val_key])]).repeat(len(uniq_step))]
+                    del df[line_val_key]
 
                     df.index = np.arange(len(uniq_step))
                     df['_step'] = uniq_step

@@ -112,7 +112,10 @@ def get_report_data(report_name, plot_field, plot_sections,
     for report_section, run_id in run_ids:
         wbrun = api.run(f"{wb_entity}/{wb_proj_name}/{run_id}")
         df = wbrun.history(samples=15000)
-        df = df[['_step', plot_field]]
+        if not isinstance(plot_field, str):
+            df = df[['_step', *plot_field]]
+        else:
+            df = df[['_step', plot_field]]
         df['method'] = report_section
         df['run'] = run_id
 
