@@ -67,7 +67,7 @@ class BehavioralCloning(BaseILAlgo):
             while self.num_epochs < self.args.bc_num_epochs:
                 super().pre_update(self.num_bc_updates)
                 log_vals = self._bc_step(False)
-                action_loss.append(log_vals['pr_action_loss'])
+                action_loss.append(log_vals['_pr_action_loss'])
 
                 pbar.update(self.num_epochs - prev_num)
                 prev_num = self.num_epochs
