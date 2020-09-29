@@ -26,6 +26,7 @@ def export_legend(ax, filename="legend.pdf"):
     legend = ax2.legend(*ax.get_legend_handles_labels(), frameon=False, loc='lower center', ncol=10,)
     for line in legend.get_lines():
         line.set_linewidth(8.0)
+        #line.set_markersize(20)
     fig  = legend.figure
     fig.canvas.draw()
     bbox  = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
@@ -37,12 +38,17 @@ def plot_legend(plot_cfg_path):
         colors = sns.color_palette()
         group_colors = {name: colors[idx] for name, idx in
                 plot_settings['colors'].items()}
+        ms = ['*', '^', 'o', 'v', 'D', 's',]
         for section_name, section in plot_settings['plot_sections'].items():
             fig, ax = plt.subplots(figsize=(5, 4))
             names = section.split(',')
+            darkness = 0.1
+            name_to_ms = {n: ms[i] for i, n in enumerate(sorted(names))}
             for name in names:
                 disp_name = plot_settings['name_map'][name]
-                ax.plot([0], [1], label=disp_name, color=group_colors[name])
+                ax.plot([0], [1], marker=name_to_ms[name], label=disp_name,
+                        color=group_colors[name], markersize=11,
+                        markeredgewidth=1.0, markeredgecolor=(darkness, darkness, darkness, 1))
             export_legend(ax, osp.join(plot_settings['save_loc'], section_name + '_legend.pdf'))
             plt.clf()
 
@@ -76,7 +82,7 @@ def plot_from_file(plot_cfg_path):
                 use_line_df = None
                 for group_name, df in line_df.groupby('run'):
                     #df = df.iloc[np.array([0]).repeat(len(uniq_step))]
-                    df = df.iloc[np.array([np.argmax(df[line_val_key])]).repeat(len(uniq_step))]
+                    df = df.iloc[np.array([np.argmin(df[line_val_key])]).repeat(len(uniq_step))]
                     del df[line_val_key]
 
                     df.index = np.arange(len(uniq_step))
