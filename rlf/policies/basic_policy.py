@@ -52,7 +52,7 @@ class BasicPolicy(BaseNetPolicy):
             ret_action = rutils.get_ac_compact(self.action_space, ret_action)
         else:
             if rutils.is_discrete(self.action_space):
-                dist = torch.distributions.Categorical(ret_action)
+                dist = torch.distributions.Categorical(ret_action.softmax(dim=-1))
             else:
                 std = self.std(base_features)
                 dist = torch.distributions.Normal(ret_action, std)
