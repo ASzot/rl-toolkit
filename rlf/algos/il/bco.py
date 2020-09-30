@@ -15,26 +15,51 @@ from gym import spaces
 import numpy as np
 import os
 import os.path as osp
+from rlf.rl.model import Flatten
 
 
 class InvFunc(nn.Module):
-    def __init__(self, get_state_enc, action_size, hidden_dim=64):
+    def __init__(self, get_state_enc, obs_shape, action_size, hidden_dim=64):
         super().__init__()
-        self.state_enc = get_state_enc()
-        head_in = 2*self.state_enc.output_shape[0]
-        self.head = nn.Sequential(
-            nn.Linear(head_in, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, action_size),
-        )
+        self.is_img = len(obs_shape) == 3
+
+        if self.is_img:
+            n = obs_shape[1]
+            m = obs_shape[2]
+            image_embedding_size = ((n-1)//2-2)*((m-1)//2-2)*64
+            self.head = nn.Sequential(
+                    nn.Conv2d(2*obs_shape[0], 16, (2, 2)),
+                    nn.ReLU(),
+                    nn.MaxPool2d((2, 2)),
+                    nn.Conv2d(16, 32, (2, 2)),
+                    nn.ReLU(),
+                    nn.Conv2d(32, 64, (2, 2)),
+                    nn.ReLU(),
+                    Flatten(),
+                    nn.Linear(image_embedding_size, hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim, action_size)
+                    )
+        else:
+            self.head = nn.Sequential(
+                    nn.Linear(2*obs_shape[0], hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim, action_size)
+                    )
+
 
     def forward(self, state_1, state_2):
-        state_1_enc, _ = self.state_enc(state_1, None, None)
-        state_2_enc, _ = self.state_enc(state_2, None, None)
-        x = torch.cat([state_1_enc, state_2_enc], dim=-1)
-        return self.head(x)
+        if self.is_img:
+            x = torch.cat([state_1, state_2], dim=1)
+        else:
+            x = torch.cat([state_1, state_2], dim=-1)
+
+        tmp = self.head(x)
+        return tmp
 
 
 def select_batch(trans_idx, dataset, device, ob_shape):
@@ -81,12 +106,10 @@ class BehavioralCloningFromObs(BehavioralCloning):
             self.lr_updates = bc_updates * bco_full_updates
             print(f"Adjusted # lr updates to {self.lr_updates}")
 
-        base_net = self.policy.get_base_net_fn(
-            rutils.get_obs_shape(self.policy.obs_space))
-
         get_state_enc = partial(self.policy.get_base_net_fn,
-                                rutils.get_obs_shape(self.policy.obs_space))
+                rutils.get_obs_shape(self.policy.obs_space))
         self.inv_func = InvFunc(get_state_enc,
+                                rutils.get_obs_shape(self.policy.obs_space),
                                 rutils.get_ac_dim(self.policy.action_space))
         self.inv_func = self.inv_func.to(self.args.device)
         self.inv_opt = optim.Adam(self.inv_func.parameters(),
