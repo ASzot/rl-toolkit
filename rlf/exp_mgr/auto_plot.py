@@ -4,7 +4,7 @@ import argparse
 import yaml
 from rlf.rl.utils import human_format_int
 from rlf.exp_mgr.wb_data_mgr import get_report_data
-from rlf.exp_mgr.plotter import uncert_plot, high_res_save
+from rlf.exp_mgr.plotter import uncert_plot, high_res_save, MARKER_ORDER
 import matplotlib.pyplot as plt
 import os.path as osp
 import os
@@ -19,14 +19,13 @@ def get_arg_parser():
     return parser
 
 
-def export_legend(ax, filename="legend.pdf"):
+def export_legend(ax, line_width, filename="legend.pdf"):
     fig2 = plt.figure()
     ax2 = fig2.add_subplot()
     ax2.axis('off')
     legend = ax2.legend(*ax.get_legend_handles_labels(), frameon=False, loc='lower center', ncol=10,)
     for line in legend.get_lines():
-        line.set_linewidth(8.0)
-        #line.set_markersize(20)
+        line.set_linewidth(line_width)
     fig  = legend.figure
     fig.canvas.draw()
     bbox  = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
@@ -38,18 +37,20 @@ def plot_legend(plot_cfg_path):
         colors = sns.color_palette()
         group_colors = {name: colors[idx] for name, idx in
                 plot_settings['colors'].items()}
-        ms = ['*', '^', 'o', 'v', 'D', 's',]
         for section_name, section in plot_settings['plot_sections'].items():
             fig, ax = plt.subplots(figsize=(5, 4))
             names = section.split(',')
-            darkness = 0.1
-            name_to_ms = {n: ms[i] for i, n in enumerate(sorted(names))}
+            darkness = plot_settings['marker_darkness']
+            name_to_ms = {n: MARKER_ORDER[i] for i, n in enumerate(sorted(names))}
             for name in names:
                 disp_name = plot_settings['name_map'][name]
                 ax.plot([0], [1], marker=name_to_ms[name], label=disp_name,
-                        color=group_colors[name], markersize=11,
-                        markeredgewidth=1.0, markeredgecolor=(darkness, darkness, darkness, 1))
-            export_legend(ax, osp.join(plot_settings['save_loc'], section_name + '_legend.pdf'))
+                        color=group_colors[name],
+                        markersize=plot_settings['marker_size'],
+                        markeredgewidth=plot_settings['marker_width'],
+                        markeredgecolor=(darkness, darkness, darkness, 1))
+            export_legend(ax, plot_settings['line_width'],
+                    osp.join(plot_settings['save_loc'], section_name + '_legend.pdf'))
             plt.clf()
 
 def plot_from_file(plot_cfg_path):
@@ -60,30 +61,54 @@ def plot_from_file(plot_cfg_path):
         group_colors = {name: colors[idx] for name, idx in
                 plot_settings['colors'].items()}
 
+        def get_setting(local, k, local_override=True):
+            if local_override:
+                if k in local:
+                    return local[k]
+                else:
+                    return plot_settings[k]
+            else:
+                if k in plot_settings:
+                    return plot_settings[k]
+                else:
+                    return local[k]
+
         for plot_section in plot_settings['plot_sections']:
             plot_key = plot_section.get('plot_key', plot_settings['plot_key'])
             print(f"Getting data for {plot_section['report_name']}")
             plot_df = get_report_data(plot_section['report_name'],
                     plot_key,
                     plot_section['plot_sections'],
-                    plot_section['force_reload'],
+                    get_setting(plot_section,'force_reload', False),
                     plot_settings['config_yaml'])
 
             if 'line_sections' in plot_section:
-                line_plot_key = plot_settings['line_plot_key']
-                line_val_key = plot_settings['line_val_key']
+                line_plot_key = get_setting(plot_section, 'line_plot_key')
+                take_operation = get_setting(plot_section, 'line_op')
+                line_val_key = get_setting(plot_section, 'line_val_key')
+                if line_plot_key != line_val_key:
+                    fetch_keys = [line_plot_key, line_val_key]
+                else:
+                    fetch_keys = line_plot_key
                 line_df = get_report_data(plot_section['report_name'],
-                        [line_plot_key, line_val_key],
+                        fetch_keys,
                         plot_section['line_sections'],
-                        plot_section['force_reload'],
+                        get_setting(plot_section,'force_reload', False),
                         plot_settings['config_yaml'])
                 line_df = line_df[line_df[line_plot_key].notna()]
                 uniq_step = plot_df['_step'].unique()
                 use_line_df = None
                 for group_name, df in line_df.groupby('run'):
                     #df = df.iloc[np.array([0]).repeat(len(uniq_step))]
-                    df = df.iloc[np.array([np.argmin(df[line_val_key])]).repeat(len(uniq_step))]
-                    del df[line_val_key]
+                    if take_operation == 'min':
+                        use_idx = np.argmin(df[line_val_key])
+                    elif take_operation == 'max':
+                        use_idx = np.argmax(df[line_val_key])
+                    else:
+                        raise ValueError('Unrecognized line reduce')
+                    df = df.iloc[np.array([use_idx]).repeat(len(uniq_step))]
+                    if line_plot_key != line_val_key:
+                        del df[line_val_key]
 
                     df.index = np.arange(len(uniq_step))
                     df['_step'] = uniq_step

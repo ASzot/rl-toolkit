@@ -4,6 +4,8 @@ import pathlib
 import seaborn as sns
 import numpy as np
 
+MARKER_ORDER = ['X', '^', 'o', 'v', 'D', 's',]
+
 # Taken from the answer here https://stackoverflow.com/questions/42281844/what-is-the-mathematics-behind-the-smoothing-parameter-in-tensorboards-scalar
 def smooth_arr(scalars, weight):  # Weight between 0 and 1
     last = scalars[0]  # First value in the plot (first timestep)
@@ -51,7 +53,6 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
     avg_y_df['std'] = std_y_df[y_name]
 
     midx = 0
-    ms = ['*', '^', 'o', 'v', 'D', 's',]
     lines = []
     for name, sub_df in avg_y_df.groupby(level=0):
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
@@ -59,7 +60,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         y_std = sub_df['std'].fillna(0).to_numpy()
         l = ax.plot(x_vals, y_vals)
         sel_vals = [int(x) for x in np.linspace(0, len(x_vals)-1, num=8)]
-        ladd = ax.plot(x_vals[sel_vals], y_vals[sel_vals], ms[midx],
+        ladd = ax.plot(x_vals[sel_vals], y_vals[sel_vals], MARKER_ORDER[midx],
                 label=rename_map.get(name, name), color=group_colors[name],
                 markersize=8)
         midx += 1
