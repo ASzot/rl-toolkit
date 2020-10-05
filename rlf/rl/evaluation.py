@@ -7,7 +7,7 @@ import os.path as osp
 
 from rlf.rl import utils
 from rlf.rl.envs import make_vec_envs
-from rlf.rl.utils import save_mp4
+from rlf.exp_mgr.viz_utils import save_mp4
 from rlf.policies.base_policy import get_empty_step_info
 from rlf.il.traj_mgr import TrajSaver
 from tqdm import tqdm

@@ -393,59 +393,6 @@ def cleanup_log_dir(log_dir):
             os.remove(f)
 
 
-def save_mp4(frames, vid_dir, name, fps=60.0, no_frame_drop=False):
-    frames = np.array(frames)
-    if len(frames[0].shape) == 4:
-        new_frames = frames[0]
-        for i in range(len(frames) - 1):
-            new_frames = np.concatenate([new_frames, frames[i + 1]])
-        frames = new_frames
-
-    if not osp.exists(vid_dir):
-        os.makedirs(vid_dir)
-
-    vid_file = osp.join(vid_dir, name + '.mp4')
-    if osp.exists(vid_file):
-        os.remove(vid_file)
-
-    w, h = frames[0].shape[:-1]
-    videodims = (h, w)
-    fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
-    video = cv2.VideoWriter(vid_file, fourcc, 60, videodims)
-    for frame in frames:
-        frame = frame[..., 0:3][..., ::-1]
-        video.write(frame)
-    video.release()
-    print(f"Rendered to {vid_file}")
-
-def save_agent_obs(frames, imdim, vid_dir, name):
-    use_dir = osp.join(vid_dir, name+'_frames')
-    if not osp.exists(use_dir):
-        os.makedirs(use_dir)
-
-    if imdim != 1:
-        raise ValueError('Only gray scale is supported right now')
-
-    for i in range(frames.shape[0]):
-        for frame_j in range(frames.shape[1]):
-            fname = f"{i}_{frame_j}.jpg"
-            frame = frames[i,frame_j].cpu().numpy()
-            cv2.imwrite(osp.join(use_dir, fname), frame)
-
-    print(f"Wrote observation sequence to {use_dir}")
-
-def render_text(frame, txt, line):
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    scale = frame.shape[0] / 500 / 2
-    line_type = 1
-    padding = int(frame.shape[0] * 0.05 / 2)
-    text_width, text_height = cv2.getTextSize(txt, font, scale, line_type)[0]
-    line_offset = line * (text_height + padding)
-    frame = frame.astype(np.uint8)
-    cv2.putText(frame, txt, (padding,line_offset+padding+text_height),
-            font, scale, (255,255,255), line_type)
-    return frame
-
 def update_args(args, update_dict, check_exist=False):
     args_dict = vars(args)
     for k, v in update_dict.items():
