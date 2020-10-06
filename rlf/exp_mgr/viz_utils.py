@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import os.path as osp
+import os
 
 def append_text_to_image(image, lines):
     h, w, c = image.shape
