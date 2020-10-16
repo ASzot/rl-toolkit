@@ -80,6 +80,9 @@ class BasePolicy(ABC):
     def load_resume(self, checkpointer):
         pass
 
+    def set_env_ref(self, envs):
+        pass
+
     @abstractmethod
     def get_action(self, state, add_state, hxs, masks, step_info):
         """

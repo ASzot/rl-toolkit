@@ -171,8 +171,8 @@ class RunSettings(MasterClass):
         # Setup environment
         envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                              args.gamma, args.device,
-                             False, env_interface, args,
-                             alg_env_settings)
+                             args.eval_only, env_interface, args,
+                             alg_env_settings, set_eval=args.eval_only)
 
         rutils.pstart_sep()
         print('Action space:', envs.action_space)
@@ -186,6 +186,7 @@ class RunSettings(MasterClass):
         policy.init(*policy_args)
         policy = policy.to(args.device)
         policy.watch(log)
+        policy.set_env_ref(envs)
 
         # Setup algo
         algo.set_get_policy(self.get_policy, policy_args)

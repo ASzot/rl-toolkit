@@ -113,7 +113,7 @@ class Runner:
     def full_eval(self, create_traj_saver_fn):
         alg_env_settings = self.updater.get_env_settings(self.args)
 
-        return full_eval(self.train_eval_envs, self.policy, self.log,
+        return full_eval(self.envs, self.policy, self.log,
                 self.checkpointer, self.env_interface, self.args,
                 alg_env_settings, create_traj_saver_fn,
                 get_vec_normalize(self.envs))

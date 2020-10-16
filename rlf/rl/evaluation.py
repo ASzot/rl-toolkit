@@ -46,7 +46,7 @@ def full_eval(envs, policy, log, checkpointer, env_interface, args,
         alg_env_settings, create_traj_saver_fn, vec_norm):
     args.evaluation_mode = True
     ret_info, envs = evaluate(args, alg_env_settings, policy, vec_norm,
-                          env_interface, 0, 'final', None, log,
+                          env_interface, 0, 'final', envs, log,
                           create_traj_saver_fn)
     args.evaluation_mode = False
     envs.close()
