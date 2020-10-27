@@ -27,7 +27,13 @@ def get_env_attr(env, attr_name, max_calls=10):
     except Exception as e:
         if max_calls == 0:
             raise e
-        return get_env_attr(env.env, attr_name, max_calls-1)
+        if hasattr(env, 'env'):
+            return get_env_attr(env.env, attr_name, max_calls-1)
+        elif hasattr(env, '_env'):
+            return get_env_attr(env._env, attr_name, max_calls-1)
+        else:
+            raise ValueError(f"Could not find property {attr_name} of {env}")
+
 
 
 def plot_line(plot_vals, save_name, args, to_wb, update_iter=None, x_vals=None,
