@@ -100,6 +100,11 @@ def add_args(parser):
     #############################
     parser.add_argument('--eval-only', action='store_true', default=False)
     parser.add_argument('--render-metric', action='store_true', default=False)
+    parser.add_argument('--render-succ-fails', action='store_true',
+            default=False, help="""
+            Renders successes and failures separately. When true,
+            eval-num-processes must be 1.
+            """)
     parser.add_argument('--num-eval', type=int, default=5)
     parser.add_argument('--log-smooth-len', type=int, default=100,
             help="Smoothing window for all logged statistics")

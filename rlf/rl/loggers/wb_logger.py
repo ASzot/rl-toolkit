@@ -1,5 +1,4 @@
 import os.path as osp
-from tensorboardX import SummaryWriter
 import os
 from six.moves import shlex_quote
 from rlf.rl import utils
@@ -15,8 +14,14 @@ from rlf.exp_mgr import config_mgr
 from rlf.rl.loggers.base_logger import BaseLogger
 
 from collections import deque, defaultdict
-import wandb
 
+# Does not necessarily have WB installed
+try:
+    import wandb
+except:
+    pass
+
+# Does not necessarily have Ray installed
 try:
     from ray.tune.logger import DEFAULT_LOGGERS
     from ray.tune.integration.wandb import WandbLogger

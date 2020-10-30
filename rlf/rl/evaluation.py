@@ -99,6 +99,15 @@ def evaluate(args, alg_env_settings, policy, true_vec_norm, env_interface,
     # Measure the number of episodes completed
     pbar = tqdm(total=total_num_eval)
     evaluated_episode_count = 0
+    n_succs = 0
+    n_fails = 0
+    succ_frames = []
+    fail_frames = []
+    if args.render_succ_fails and args.eval_num_processes > 1:
+        raise ValueError("""
+                Can only render successes and failures when the number of
+                processes is 1.
+                """)
     while evaluated_episode_count < total_num_eval:
         step_info = get_empty_step_info()
         with torch.no_grad():
@@ -128,13 +137,31 @@ def evaluate(args, alg_env_settings, policy, true_vec_norm, env_interface,
             [[0.0] if done_ else [1.0] for done_ in done],
             dtype=torch.float32,
             device=args.device)
-        frames.extend(get_render_frames(eval_envs, env_interface, obs, next_obs,
-            ac_info.take_action, eval_masks, infos, args, evaluated_episode_count))
+
+        should_render = (args.num_render) is None or (evaluated_episode_count < args.num_render)
+        if args.render_succ_fails:
+            should_render = n_succs < args.num_render or n_fails < args.num_render
+
+        if should_render:
+            frames.extend(get_render_frames(eval_envs, env_interface, obs, next_obs,
+                ac_info.take_action, eval_masks, infos, args, evaluated_episode_count))
         obs = next_obs
 
         step_log_vals = utils.agg_ep_log_stats(infos, ac_info.extra)
         for k, v in step_log_vals.items():
             ep_stats[k].extend(v)
+
+        if 'ep_success' in step_log_vals and args.render_succ_fails:
+            is_succ = step_log_vals['ep_success'][0]
+            if is_succ == 1.0:
+                if n_succs < args.num_render:
+                    succ_frames.extend(frames)
+                n_succs += 1
+            else:
+                if n_fails < args.num_render:
+                    fail_frames.extend(frames)
+                n_fails += 1
+            frames = []
 
     pbar.close()
     info = {}
@@ -148,9 +175,14 @@ def evaluate(args, alg_env_settings, policy, true_vec_norm, env_interface,
         print(' - %s: %.5f' % (k, np.mean(v)))
         ret_info[k] = np.mean(v)
 
-    save_file = save_frames(frames, mode, num_steps, args)
-    if save_file is not None:
-        log.log_video(save_file, num_steps, args.vid_fps)
+    if args.render_succ_fails:
+        # Render the success and failures to two separate files.
+        save_frames(succ_frames, "succ_" + mode, num_steps, args)
+        save_frames(fail_frames, "fail_" + mode, num_steps, args)
+    else:
+        save_file = save_frames(frames, mode, num_steps, args)
+        if save_file is not None:
+            log.log_video(save_file, num_steps, args.vid_fps)
 
     # Switch policy back to train mode
     policy.train()
@@ -182,8 +214,6 @@ def save_frames(frames, mode, num_steps, args):
 
 def get_render_frames(eval_envs, env_interface, obs, next_obs, action, masks, infos,
             args, evaluated_episode_count):
-    if args.num_render is not None and (evaluated_episode_count >= args.num_render):
-        return []
     add_kwargs = {}
     if args.render_metric:
         add_kwargs = {
