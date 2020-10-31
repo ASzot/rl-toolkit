@@ -1,6 +1,12 @@
 import numpy as np
 import rlf.rl.utils as rutils
 import os
+import attr
+
+
+@attr.s(auto_attribs=True, slots=True)
+class RunResult:
+    prefix: str
 
 def run_policy(run_settings):
     runner = run_settings.create_runner()
@@ -64,5 +70,5 @@ def run_policy(run_settings):
 
         runner.close()
         # WB prefix of the run so we can later fetch the data.
-        return args.prefix
+        return RunResult(args.prefix)
 

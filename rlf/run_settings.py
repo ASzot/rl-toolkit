@@ -44,6 +44,10 @@ except:
 
 class RunSettings(MasterClass):
     def __init__(self, args_str=None, config=None, logger_creator=None):
+        """
+        - config: The config for tune.Trainable if used.
+        - logger_creator: Also used for tune.Trainble if used.
+        """
         self.args_str = args_str
         self.working_dir = os.getcwd()
 
