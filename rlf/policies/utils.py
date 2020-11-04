@@ -1,4 +1,4 @@
-from rlf.rl.model import MLPBasic, MLPBase, CNNBase, IdentityBase, TwoLayerMlpWithAction
+from rlf.rl.model import MLPBasic, MLPBase, CNNBase, IdentityBase, TwoLayerMlpWithAction, PassThroughBase
 from rlf.rl.distributions import DiagGaussian, MixedDist, Categorical
 from rlf.rl.model import def_mlp_weight_init, weight_init, reg_mlp_weight_init
 import torch.nn as nn
@@ -39,18 +39,22 @@ def get_mlp_net_var_out_fn(hidden_sizes):
             [*hidden_sizes, n_out],
             weight_init=reg_mlp_weight_init, no_last_act=True)
 
-def def_get_hidden_net(input_shape, hidden_size=64, num_layers=2):
+def def_get_hidden_net(input_shape, hidden_size=64, num_layers=2,
+        recurrent=False):
     if is_image_obs(input_shape):
         return CNNBase(input_shape[0], False, hidden_size)
     else:
         return MLPBasic(input_shape[0], hidden_size=hidden_size,
                 num_layers=num_layers)
 
-def get_img_encoder(obs_shape):
+def get_img_encoder(obs_shape, recurrent, hidden_size=64):
+    """
+    Gets the base encoder.
+    """
     if is_image_obs(obs_shape):
-        return def_get_hidden_net(obs_shape)
+        return def_get_hidden_net(obs_shape, recurrent=recurrent)
     else:
-        return IdentityBase(obs_shape)
+        return PassThroughBase(obs_shape, recurrent, hidden_size)
 
 
 def get_def_critic(obs_shape, input_shape, action_space):

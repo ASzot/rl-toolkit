@@ -3,6 +3,7 @@ from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 from rlf.storage.base_storage import BaseStorage
 import numpy as np
 import rlf.rl.utils as rutils
+from collections import defaultdict
 
 
 
@@ -32,6 +33,9 @@ def to_double(inp):
 class RolloutStorage(BaseStorage):
     def __init__(self, num_steps, num_processes, obs_space, action_space,
             args, value_dim=1, hidden_states={}):
+        """
+        - hidden_states: dict(key_name: str -> hidden_state_dim: int)
+        """
         super().__init__()
         self.value_dim = value_dim
         self.args = args
@@ -56,6 +60,8 @@ class RolloutStorage(BaseStorage):
                                             self.value_dim)
 
         self.hidden_states = {}
+        #if 'recurrent_policy' in args and args.recurrent_policy:
+        #    self.hidden_states['rnn_hxs'] =
         for k, dim in hidden_states.items():
             self.hidden_states[k] = torch.zeros(num_steps + 1, num_processes, dim)
 
@@ -222,7 +228,7 @@ class RolloutStorage(BaseStorage):
             mini_batch_size=None):
         if self.args.recurrent_policy:
             data_generator = self.recurrent_generator(
-                advantages, num_mini_batch, mini_batch_size)
+                advantages, num_mini_batch)
         else:
             data_generator = self.feed_forward_generator(
                 advantages, num_mini_batch, mini_batch_size)
@@ -325,26 +331,40 @@ class RolloutStorage(BaseStorage):
             "PPO requires the number of processes ({}) "
             "to be greater than or equal to the number of "
             "PPO mini batches ({}).".format(num_processes, num_mini_batch))
+
         num_envs_per_batch = num_processes // num_mini_batch
         perm = torch.randperm(num_processes)
         for start_ind in range(0, num_processes, num_envs_per_batch):
             obs_batch = []
-            recurrent_hidden_states_batch = []
+            hidden_states_batch = defaultdict(list)
+            obs_batch = defaultdict(list)
+            other_obs_batch = defaultdict(list)
             actions_batch = []
             value_preds_batch = []
             return_batch = []
             masks_batch = []
             old_action_log_probs_batch = []
             adv_targ = []
+            reward_batch = []
 
             for offset in range(num_envs_per_batch):
                 ind = perm[start_ind + offset]
-                obs_batch.append(self.obs[:-1, ind])
-                recurrent_hidden_states_batch.append(
-                    self.recurrent_hidden_states[0:1, ind])
+                for k, ob_shape in self.ob_keys.items():
+                    if k is None:
+                        obs_batch[None].append(self.obs[:-1, ind])
+                    elif k == self.args.policy_ob_key or k is None:
+                        obs_batch[k].append(self.obs[k][:-1, ind])
+                    else:
+                        other_obs_batch[k].append(self.obs[k][:-1, ind])
+
+                for k in self.hidden_states:
+                    hidden_states_batch[k].append(
+                            self.hidden_states[k][0:1, ind])
+
                 actions_batch.append(self.actions[:, ind])
                 value_preds_batch.append(self.value_preds[:-1, ind])
                 return_batch.append(self.returns[:-1, ind])
+                reward_batch.append(self.rewards[:, ind])
                 masks_batch.append(self.masks[:-1, ind])
                 old_action_log_probs_batch.append(
                     self.action_log_probs[:, ind])
@@ -352,31 +372,52 @@ class RolloutStorage(BaseStorage):
 
             T, N = self.num_steps, num_envs_per_batch
             # These are all tensors of size (T, N, -1)
-            obs_batch = torch.stack(obs_batch, 1)
             actions_batch = torch.stack(actions_batch, 1)
             value_preds_batch = torch.stack(value_preds_batch, 1)
             return_batch = torch.stack(return_batch, 1)
+            reward_batch = torch.stack(reward_batch, 1)
             masks_batch = torch.stack(masks_batch, 1)
             old_action_log_probs_batch = torch.stack(
                 old_action_log_probs_batch, 1)
             adv_targ = torch.stack(adv_targ, 1)
 
             # States is just a (N, -1) tensor
-            recurrent_hidden_states_batch = torch.stack(
-                recurrent_hidden_states_batch, 1).view(N, -1)
-
+            for k in hidden_states_batch:
+                hidden_states_batch[k] = torch.stack(hidden_states_batch[k], 1).view(N, -1)
             # Flatten the (T, N, ...) tensors to (T * N, ...)
-            obs_batch = _flatten_helper(T, N, obs_batch)
+            for k in obs_batch:
+                obs_batch[k] = torch.stack(obs_batch[k], 1)
+                obs_batch[k] = _flatten_helper(T, N, obs_batch[k])
+            for k in other_obs_batch:
+                other_obs_batch[k] = torch.stack(other_obs_batch[k], 1)
+                other_obs_batch[k] = _flatten_helper(T, N, other_obs_batch[k])
             actions_batch = _flatten_helper(T, N, actions_batch)
             value_preds_batch = _flatten_helper(T, N, value_preds_batch)
+            reward_batch = _flatten_helper(T, N, reward_batch)
             return_batch = _flatten_helper(T, N, return_batch)
             masks_batch = _flatten_helper(T, N, masks_batch)
             old_action_log_probs_batch = _flatten_helper(T, N,
                                                          old_action_log_probs_batch)
             adv_targ = _flatten_helper(T, N, adv_targ)
 
-            yield obs_batch, recurrent_hidden_states_batch, actions_batch, \
-                value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
+            # No need to return obs dict if there's only one thing in
+            # dictionary
+            if len(obs_batch) == 1:
+                obs_batch = next(iter(obs_batch.values()))
+
+            yield {
+                    'other_state': other_obs_batch,
+                    'reward': reward_batch,
+                    'hxs': hidden_states_batch,
+
+                    'state': obs_batch,
+                    'action': actions_batch,
+                    'value': value_preds_batch,
+                    'return': return_batch,
+                    'mask': masks_batch,
+                    'prev_log_prob': old_action_log_probs_batch,
+                    'adv': adv_targ,
+                    }
 
     def get_actions(self):
         actions = self.actions.view(-1, self.actions.size(-1))

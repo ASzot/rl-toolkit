@@ -71,9 +71,7 @@ And adapters for popular 3rd party RL environments.
   * `--gf-dense` whether the reward should be dense or sparse. 
 * DeepMind Control Suite: Adapts to the OpenAI Gym environment interface. `pip
   install dm_control` 
-* Gym Minigrid
-  * `--gw-flatten`: If True flattens the observation and ignores the mission
-    string. 
+* Gym Minigrid: See `rlf/envs/minigrid_interface.py`
 
 Also directly include 3rd party environments. 
 * `BitFlip-v0`

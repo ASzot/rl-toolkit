@@ -4,6 +4,7 @@ import torch
 import rlf.policies.utils as putils
 import rlf.rl.utils as rutils
 from rlf.policies.base_policy import BasePolicy
+from functools import partial
 
 
 class BaseNetPolicy(nn.Module, BasePolicy):
@@ -33,6 +34,8 @@ class BaseNetPolicy(nn.Module, BasePolicy):
 
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
+        self.get_base_net_fn = partial(self.get_base_net_fn,
+                recurrent=self.args.recurrent_policy)
         if self.use_goal:
             use_obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
             if len(use_obs_shape) != 1:
@@ -59,6 +62,19 @@ class BaseNetPolicy(nn.Module, BasePolicy):
         fuse_states = torch.cat([add_input[k] for k in self.fuse_states], dim=-1)
         fused = torch.cat([base_features, fuse_states], dim=-1)
         return fused
+
+    def get_add_args(self, parser):
+        super().get_add_args(parser)
+        parser.add_argument('--recurrent-policy',
+            action='store_true',
+            default=False,
+            help='use a recurrent policy')
+
+    def get_storage_hidden_states(self):
+        hxs = super().get_storage_hidden_states()
+        if self.args.recurrent_policy:
+            hxs['rnn_hxs'] = self.base_net.gru.hidden_size
+        return hxs
 
     def _apply_base_net(self, state, add_state, hxs, masks):
         if self.use_goal:

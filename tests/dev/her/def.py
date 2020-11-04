@@ -26,7 +26,7 @@ class HerRunSettings(TestRunSettings):
         hidden_size = 256
         if 'BitFlip' in self.base_args.env_name:
             return DQN(
-                    get_base_net_fn=lambda i_shape: MLPBase(
+                    get_base_net_fn=lambda i_shape, recurrent: MLPBase(
                         i_shape[0], False, (hidden_size,),
                         weight_init=reg_init,
                         get_activation=lambda: nn.ReLU()),

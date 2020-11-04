@@ -66,14 +66,15 @@ class BaseNet(nn.Module):
     def output_shape(self):
         return (self._hidden_size,)
 
-    def _forward_gru(self, x, hxs, masks):
-        if x.size(0) == hxs.size(0):
-            x, hxs = self.gru(x.unsqueeze(0), (hxs * masks).unsqueeze(0))
+    def _forward_gru(self, x, hidden_state, masks):
+        rnn_hxs = hidden_state['rnn_hxs']
+        if x.size(0) == rnn_hxs.size(0):
+            x, rnn_hxs = self.gru(x.unsqueeze(0), (rnn_hxs * masks).unsqueeze(0))
             x = x.squeeze(0)
-            hxs = hxs.squeeze(0)
+            rnn_hxs = rnn_hxs.squeeze(0)
         else:
             # x is a (T, N, -1) tensor that has been flatten to (T * N, -1)
-            N = hxs.size(0)
+            N = rnn_hxs.size(0)
             T = int(x.size(0) / N)
 
             # unflatten
@@ -100,7 +101,7 @@ class BaseNet(nn.Module):
             # add t=0 and t=T to the list
             has_zeros = [0] + has_zeros + [T]
 
-            hxs = hxs.unsqueeze(0)
+            rnn_hxs = rnn_hxs.unsqueeze(0)
             outputs = []
             for i in range(len(has_zeros) - 1):
                 # We can now process steps that don't have any zeros in masks together!
@@ -108,9 +109,9 @@ class BaseNet(nn.Module):
                 start_idx = has_zeros[i]
                 end_idx = has_zeros[i + 1]
 
-                rnn_scores, hxs = self.gru(
+                rnn_scores, rnn_hxs = self.gru(
                     x[start_idx:end_idx],
-                    hxs * masks[start_idx].view(1, -1, 1))
+                    rnn_hxs * masks[start_idx].view(1, -1, 1))
 
                 outputs.append(rnn_scores)
 
@@ -119,9 +120,10 @@ class BaseNet(nn.Module):
             x = torch.cat(outputs, dim=0)
             # flatten
             x = x.view(T * N, -1)
-            hxs = hxs.squeeze(0)
+            rnn_hxs = rnn_hxs.squeeze(0)
 
-        return x, hxs
+        hidden_state['rnn_hxs'] = rnn_hxs
+        return x, hidden_state
 
 
 class IdentityBase(BaseNet):
@@ -138,6 +140,29 @@ class IdentityBase(BaseNet):
 
     def forward(self, inputs, hxs, masks):
         return inputs, None
+
+class PassThroughBase(BaseNet):
+    """
+    If recurrent=True, will apply RNN layer, otherwise will just pass through
+    """
+    def __init__(self, input_shape, recurrent, hidden_size):
+        if len(input_shape) != 1:
+            raise ValueError("Possible RNN can only work on flat")
+        super().__init__(recurrent, input_shape[0], hidden_size)
+        self.input_shape = input_shape
+
+    @property
+    def output_shape(self):
+        if self.is_recurrent:
+            return (self._hidden_size,)
+        else:
+            return self.input_shape
+
+    def forward(self, inputs, hxs, masks):
+        x = inputs
+        if self.is_recurrent:
+            x, hxs = self._forward_gru(x, hxs, masks)
+        return x, hxs
 
 
 class CNNBase(BaseNet):

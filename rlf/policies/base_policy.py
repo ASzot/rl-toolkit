@@ -67,6 +67,9 @@ class BasePolicy(ABC):
         self.obs_space = obs_space
         self.args = args
 
+    def get_storage_hidden_states(self):
+        return {}
+
     def get_add_args(self, parser):
         parser.add_argument('--deterministic-policy', action='store_true',
                 default=False)

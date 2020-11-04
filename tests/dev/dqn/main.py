@@ -45,7 +45,7 @@ class GwImgEncoder(BaseNet):
 class DqnRunSettings(TestRunSettings):
     def get_policy(self):
         return DQN(
-                get_base_net_fn=lambda i_shape: GwImgEncoder(i_shape),
+                get_base_net_fn=lambda i_shape, recurrent: GwImgEncoder(i_shape),
                 )
 
     def get_algo(self):

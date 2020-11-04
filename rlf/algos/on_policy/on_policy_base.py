@@ -6,7 +6,8 @@ import rlf.rl.utils as rutils
 class OnPolicy(BaseNetAlgo):
     def get_storage_buffer(self, policy, envs, args):
         return RolloutStorage(args.num_steps, args.num_processes,
-                              envs.observation_space, envs.action_space, args)
+                              envs.observation_space, envs.action_space, args,
+                              hidden_states=policy.get_storage_hidden_states())
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
@@ -28,7 +29,7 @@ class OnPolicy(BaseNetAlgo):
             next_value = self.policy.get_value(
                 rutils.get_def_obs(rollouts.get_obs(-1), self.args.policy_ob_key),
                 rutils.get_other_obs(rollouts.get_obs(-1), self.args.policy_ob_key),
-                rollouts.recurrent_hidden_states[-1] if self.args.recurrent_policy else None,
+                rollouts.get_hidden_state(-1),
                 rollouts.masks[-1]).detach()
         return next_value
 

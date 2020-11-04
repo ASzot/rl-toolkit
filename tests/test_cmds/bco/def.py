@@ -11,7 +11,7 @@ class BcoRunSettings(TestRunSettings):
     def get_policy(self):
         return BasicPolicy(
                 is_stoch=self.base_args.stoch_policy,
-                get_base_net_fn=lambda i_shape: MLPBase(
+                get_base_net_fn=lambda i_shape, recurrent: MLPBase(
                     i_shape[0], False, (400, 300))
                 )
 

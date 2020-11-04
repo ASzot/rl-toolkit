@@ -134,11 +134,6 @@ def add_args(parser):
         type=str2bool,
         default=True,
         help='disables CUDA training')
-    parser.add_argument('--recurrent-policy',
-        action='store_true',
-        default=False,
-        help='use a recurrent policy')
-
     #############################
     # IMITATION LEARNING
     #############################
