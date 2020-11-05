@@ -49,6 +49,45 @@ class EnvInterface(object):
         """
         pass
 
+class EnvInterfaceWrapper(EnvInterface):
+    def __init__(self, args, wrapped_env_cls):
+        self.args = args
+        self.env_int = wrapped_env_cls(args)
+
+    def setup(self, args, task_id):
+        super().setup(args, task_id)
+        self.env_int.setup(args, task_id)
+
+    def env_trans_fn(self, env, set_eval):
+        return self.env_int.env_trans_fn(env, set_eval)
+
+    def final_trans_fn(self, env):
+        return self.env_int.final_trans_fn(env)
+
+    def get_special_stat_names(self):
+        return self.env_int.get_special_stat_names()
+
+    def get_render_args(self):
+        return self.env_int.get_render_args()
+
+    def mod_render_frames(self, cur_frame, **kwargs):
+        return self.env_int.mod_render_frames(cur_frame, **kwargs)
+
+    def create_from_id(self, env_id):
+        return self.env_int.create_from_id(env_id)
+
+    def get_setup_multiproc_fn(self, make_env, env_id, seed,
+            allow_early_resets, env_interface, set_eval, alg_env_settings,
+            args):
+        return self.env_int.get_setup_multiproc_fn(make_env, env_id,
+                seed, allow_early_resets, env_interface, set_eval,
+                alg_env_settings, args)
+
+
+    def get_add_args(self, parser):
+        self.env_int.get_add_args(parser)
+
+
 
 g_env_interface = OrderedDict()
 

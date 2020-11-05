@@ -81,7 +81,9 @@ def evaluate(args, alg_env_settings, policy, true_vec_norm, env_interface,
 
     obs = eval_envs.reset()
 
-    hidden_states = {}
+    hidden_states = { }
+    for k, dim in policy.get_storage_hidden_states().items():
+        hidden_states[k] = torch.zeros(num_processes, dim).to(args.device)
     eval_masks = torch.zeros(num_processes, 1, device=args.device)
 
     frames = []

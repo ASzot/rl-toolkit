@@ -11,11 +11,11 @@ class OnPolicy(BaseNetAlgo):
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
-        parser.add_argument('--num-epochs',
+        parser.add_argument(f"--{self.arg_prefix}num-epochs",
                             type=int,
                             default=4,
                             help='number of ppo epochs (default: 4)')
-        parser.add_argument('--num-mini-batch',
+        parser.add_argument(f"--{self.arg_prefix}num-mini-batch",
                             type=int,
                             default=4,
                             help='number of batches for ppo (default: 4)')
