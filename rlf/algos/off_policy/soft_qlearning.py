@@ -10,6 +10,9 @@ def sample_actions(self, policy, state, add_info, n_particles):
         for _ in range(n_particles)])
 
 class SoftQLearning(OffPolicy):
+    """
+    Implementation of https://arxiv.org/pdf/1702.08165.pdf
+    """
     def init(self, policy, args):
         super().init(policy, args)
         self.target_policy = self._copy_policy()
