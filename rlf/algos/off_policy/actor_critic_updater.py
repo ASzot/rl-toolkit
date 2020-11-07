@@ -1,4 +1,6 @@
 from rlf.algos.off_policy.off_policy_base import OffPolicy
+import torch.optim as optim
+
 
 class ActorCriticUpdater(OffPolicy):
     def init(self, policy, args):

@@ -3,6 +3,7 @@ from rlf.envs.env_interface import register_env_interface, get_env_interface
 from rlf.main import run_policy
 
 from rlf.policies.base_policy import BasePolicy
+from rlf.policies.base_net_policy import BaseNetPolicy
 from rlf.policies.basic_policy import BasicPolicy
 from rlf.policies.solve_policy import SolvePolicy
 from rlf.policies.random_policy import RandomPolicy

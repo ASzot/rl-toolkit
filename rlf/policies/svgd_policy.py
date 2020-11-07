@@ -10,66 +10,48 @@ from rlf.policies.base_policy import create_simple_action_data
 
 
 class SVGDPolicy(BaseNetPolicy):
-    def __init__(self,
-            get_actor_fn=None,
-            get_actor_head_fn=None,
-            get_critic_fn=None,
-            get_critic_head_fn=None,
+    """
+    Implementation of https://arxiv.org/pdf/1702.08165.pdf
+    """
+    def __init__(self, get_Q_base_fn=None,
             use_goal=False,
+            fuse_states=[],
             get_base_net_fn=None):
+        super().__init__(use_goal, fuse_states, get_base_net_fn)
 
-        super().__init__(use_goal, get_base_net_fn)
+        if get_Q_base_fn is None:
+            get_Q_base_fn = putils.get_def_actor_head
 
-        if get_critic_fn is None:
-            get_critic_fn = putils.get_def_ac_critic
-        if get_critic_head_fn is None:
-            get_critic_head_fn = putils.get_def_critic_head
-        if get_actor_fn is None:
-            get_actor_fn = putils.get_def_actor
-        if get_actor_head_fn is None:
-            get_actor_head_fn = putils.get_def_actor_head
-
-        self.get_critic_fn = get_critic_fn
-        self.get_critic_head_fn = get_critic_head_fn
-        self.get_actor_fn = get_actor_fn
-        self.get_actor_head_fn = get_actor_head_fn
+        self.get_Q_base_fn = get_Q_base_fn
 
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
-        if rutils.is_discrete(action_space):
-            raise ValueError(("Currently only support continuous actions. "
-                    "However it only requires a small coding change to fix."))
-
-        ac_dim = action_space.shape[0]
+        if not rutils.is_discrete(action_space):
+            raise ValueError("""
+                    Only supports discrete actions. Continuous actions is much
+                    harder in soft Q-learning.
+                    """)
         # Create networks.
-        self.actor_net = self.get_actor_fn(obs_space.shape, self.base_net.output_shape[0] + ac_dim)
-        self.actor_head = self.get_actor_head_fn(self.actor_net.output_shape[0], ac_dim)
-        self.critic = self.get_critic_fn(obs_shape, self.base_net.output_shape, action_space)
-        self.critic_head = self.get_critic_head_fn(self.critic.output_shape[0])
+        self.softQ = self.get_Q_base_fn(self.base_net.output_shape[0],
+                action_space.n)
 
-    def forward(self, state, add_state, hxs, masks):
+    def forward(self, state, add_state=None, hxs=None, masks=None):
         base_features, _ = self._apply_base_net(state, add_state, hxs, masks)
-        import ipdb; ipdb.set_trace()
-        xi = torch.randn([*state.shape, self.action.space.shape[0]])
-        base_features_with_xi = torch.cat([base_features, xi])
-        actor_features, _ = self.actor_net(base_features_with_xi, hxs, masks)
-        return self.actor_head(actor_features)
+        Q = self.softQ(base_features)
 
-    def get_value(self, state, action, add_state, hxs, masks):
-        base_features, hxs = self._apply_base_net(state, add_state, hxs, masks)
-        critic_features, hxs = self.critic(base_features, action, hxs, masks)
-        return self.critic_head(critic_features)
+        # Directly from Eq (5) for computing the value function
+        V = self.args.alpha * torch.log(torch.sum(torch.exp(Q / self.args.alpha), dim=1))
+        V = V.unsqueeze(1)
+
+        # Directly from Eq (6) for computing the policy
+        pi = torch.exp((Q - V) / self.args.alpha)
+        return pi
 
     def get_action(self, state, add_state, hxs, masks, step_info):
-        action = self.forward(state, add_state, hxs, masks)
+        dist = self.forward(state, add_state, hxs, masks)
+        if step_info.is_eval:
+            action = torch.argmax(dist, dim=1)
+        else:
+            action = torch.distributions.Categorical(dist).sample()
         return create_simple_action_data(action, hxs)
 
-    def get_critic_params(self):
-        return list(self.base_net.parameters()) + \
-                list(self.critic.parameters()) + \
-                list(self.critic_head.parameters())
-
-    def get_actor_params(self):
-        return list(self.base_net.parameters()) + \
-                list(self.actor_net.parameters()) + \
-                list(self.actor_head.parameters())

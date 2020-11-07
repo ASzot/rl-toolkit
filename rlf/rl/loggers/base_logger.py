@@ -32,6 +32,7 @@ class BaseLogger(object):
             print('In debug mode')
         self.is_printing = True
         self.prev_steps = 0
+        self.start = None
 
     def disable_print(self):
         self.is_printing = False
@@ -128,7 +129,12 @@ class BaseLogger(object):
         args.prefix = self.prefix
 
     def start_interval_log(self):
-        self.start = time.time()
+        """
+        Old functionality, really we want to measure the average over the last
+        time since logged, not over the single training step.
+        """
+        if self.start is None:
+            self.start = time.time()
 
     def log_vals(self, key_vals, step_count):
         """
@@ -146,11 +152,15 @@ class BaseLogger(object):
         pass
 
     def interval_log(self, j, total_num_steps, episode_count, updater_log_vals, args):
+        """
+        Printed FPS is all inclusive of updates, evaluations, logging and everything.
+        This is NOT the environment FPS.
+        """
         end = time.time()
 
         fps = int((total_num_steps - self.prev_steps) / (end - self.start))
         self.prev_steps = total_num_steps
-        self.num_frames = 0
+        self.start = time.time()
         num_eps = len(self._step_log_info.get('r', []))
         rewards = self._step_log_info.get('r', [0])
 

@@ -10,3 +10,5 @@ All under `tests/expert_demonstrations`
 - `dev` are under development and are being tested `--cfg ./tests/config_dev.yaml`. 
 - `test_cmds` are confirmed to work. To run commands specify `--cfg ./tests/config.yaml`. 
 
+# Sanity Checking Algorithms
+- Discrete: CartPole-v0 and get above 195.0 reward for over 100 episodes.

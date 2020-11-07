@@ -2,6 +2,7 @@ from rlf.rl.model import MLPBasic, MLPBase, CNNBase, IdentityBase, TwoLayerMlpWi
 from rlf.rl.distributions import DiagGaussian, MixedDist, Categorical
 from rlf.rl.model import def_mlp_weight_init, weight_init, reg_mlp_weight_init
 import torch.nn as nn
+import rlf.rl.utils as rutils
 
 def is_image_obs(obs_shape):
     if len(obs_shape) == 3:
@@ -67,7 +68,8 @@ def get_def_critic(obs_shape, input_shape, action_space):
 
 def get_def_ac_critic(obs_shape, input_shape, action_space, hidden_size=(64, 64)):
     assert len(input_shape) == 1
-    return TwoLayerMlpWithAction(input_shape[0], hidden_size, action_space.shape[0])
+    ac_dim = rutils.get_ac_dim(slf.action_space)
+    return TwoLayerMlpWithAction(input_shape[0], hidden_size, ac_dim)
 
 
 def get_def_actor(obs_shape, input_shape):

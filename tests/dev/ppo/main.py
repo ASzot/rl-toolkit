@@ -6,6 +6,7 @@ from tests.test_run_settings import TestRunSettings
 from rlf.policies.actor_critic.dist_actor_critic import DistActorCritic
 from rlf.envs.env_interface import EnvInterfaceWrapper, register_env_interface
 from rlf.envs.minigrid_interface import MinigridInterface
+from rlf.algos.nested_algo import NestedAlgo
 from abc import ABC, abstractmethod
 import gym
 from enum import IntEnum
@@ -83,17 +84,17 @@ class DoublePlayUpdater(NestedAlgo):
         super().__init__([updater1, updater2], 0)
 
 
-class SwitchingNestedStorage(NestedStorage):
-    def __init__(self, child_dict, main_key):
-        super().__init__(child_dict, main_key):)
-        self.all_keys = list(self.child_dict.values())
-        self.cur_idx = self.all_keys.index(main_key)
-
-    def after_update(self):
-        self.cur_idx += 1
-        if self.cur_idx >= len(self.all_keys):
-            self.cur_idx = 0
-        self.main_key = self.all_keys[self.cur_idx]
+#class SwitchingNestedStorage(NestedStorage):
+#    def __init__(self, child_dict, main_key):
+#        super().__init__(child_dict, main_key)
+#        self.all_keys = list(self.child_dict.values())
+#        self.cur_idx = self.all_keys.index(main_key)
+#
+#    def after_update(self):
+#        self.cur_idx += 1
+#        if self.cur_idx >= len(self.all_keys):
+#            self.cur_idx = 0
+#        self.main_key = self.all_keys[self.cur_idx]
 
 
 class DoublePolicy(BasePolicy):
