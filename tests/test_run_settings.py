@@ -11,7 +11,7 @@ class TestRunSettings(RunSettings):
         if self.base_args.tb:
             return TbLogger('./data/tb')
         elif self.base_args.plt:
-            return PltLogger("avg_r", "Steps", "Reward", "Reward Curve")
+            return PltLogger(["avg_r"], "Steps", "Reward", "Reward Curve")
         elif self.base_args.no_wb:
             return BaseLogger()
         else:
