@@ -118,12 +118,12 @@ class SAC(ActorCriticUpdater):
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
-        parser.add_argument('--actor-update-freq', type=int)
-        parser.add_argument('--critic-update-freq', type=int)
+        parser.add_argument('--actor-update-freq', type=int, default=1)
+        parser.add_argument('--critic-update-freq', type=int, default=2)
 
-        parser.add_argument('--critic-lr', type=float)
-        parser.add_argument('--alpha-lr', type=float)
+        parser.add_argument('--critic-lr', type=float, default=1e-4)
+        parser.add_argument('--alpha-lr', type=float, default=1e-4)
 
-        parser.add_argument('--init-temperature', type=float)
+        parser.add_argument('--init-temperature', type=float, default=0.1)
         parser.add_argument('--learnable-temp', type=str2bool, default=True)
 

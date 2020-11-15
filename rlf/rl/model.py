@@ -8,14 +8,19 @@ def weight_init(module, weight_init, bias_init, gain=1):
     bias_init(module.bias.data)
     return module
 
+def no_bias_weight_init(m):
+    if isinstance(m, nn.Linear):
+        nn.init.orthogonal_(m.weight.data)
+        if hasattr(m.bias, 'data'):
+            m.bias.data.fill_(0.0)
+    return m
 
 def def_mlp_weight_init(m):
     return weight_init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), np.sqrt(2))
 
 def reg_mlp_weight_init(m):
-    # Just return the default pytorch init
+    # Let PyTorch do the init
     return m
-
 
 class Flatten(nn.Module):
     def forward(self, x):
@@ -268,6 +273,34 @@ class InjectNet(nn.Module):
         return x
 
 
+class DoubleQCritic(BaseNet):
+    """
+    Code from https://github.com/denisyarats/pytorch_sac.
+    """
+    def __init__(self, obs_dim, action_dim, hidden_dim, hidden_depth):
+        super().__init__(False, None, hidden_dim)
 
+        dims = [hidden_dim] * hidden_depth
+        dims.append(1)
+
+        self.Q1 = MLPBase(obs_dim + action_dim, False, dims,
+                weight_init=no_bias_weight_init, get_activation=lambda: nn.ReLU(inplace=True),
+                no_last_act=True)
+        self.Q2 = MLPBase(obs_dim + action_dim, False, dims,
+                weight_init=no_bias_weight_init, get_activation=lambda: nn.ReLU(inplace=True),
+                no_last_act=True)
+
+    @property
+    def output_shape(self):
+        return (2,)
+
+    def forward(self, obs, action):
+        assert obs.size(0) == action.size(0)
+
+        obs_action = torch.cat([obs, action], dim=-1)
+        q1, _ = self.Q1(obs_action, None, None)
+        q2, _ = self.Q2(obs_action, None, None)
+
+        return q1, q2
 
 

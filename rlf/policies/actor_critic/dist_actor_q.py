@@ -7,7 +7,23 @@ from rlf.policies.actor_critic.base_actor_critic import ActorCritic
 import torch
 import rlf.policies.utils as putils
 from rlf.policies.base_net_policy import BaseNetPolicy
+from rlf.rl.model import DoubleQCritic, MLPBase
+from rlf.rl.distributions import SquashedDiagGaussian
 import rlf.rl.utils as rutils
+import torch.nn as nn
+
+def get_sac_dist(in_shape, ac_space, log_std_bounds):
+    return SquashedDiagGaussian(in_shape[0], ac_space.shape[0],
+            log_std_bounds)
+
+def get_sac_critic(obs_shape, in_shape, action_space, hidden_dim=64, depth=2):
+    return DoubleQCritic(in_shape[0], action_space.shape[0],
+            hidden_dim, depth)
+
+def get_sac_actor(obs_shape, i_shape, hidden_dim=64, depth=2):
+    return MLPBase(i_shape[0], False,
+            [hidden_dim] * depth,
+            get_activation=lambda: nn.ReLU(inplace=True))
 
 class DistActorQ(BaseNetPolicy):
     def __init__(self,
@@ -21,15 +37,15 @@ class DistActorQ(BaseNetPolicy):
             super().__init__(use_goal, fuse_states, get_base_net_fn)
 
             if get_critic_fn is None:
-                get_critic_fn = putils.get_def_ac_critic
+                get_critic_fn = get_sac_critic
             self.get_critic_fn = get_critic_fn
 
             if get_actor_fn is None:
-                get_actor_fn = putils.get_def_actor
+                get_actor_fn = get_sac_actor
             self.get_actor_fn = get_actor_fn
 
             if get_dist_fn is None:
-                get_dist_fn = putils.get_def_dist
+                get_dist_fn = get_sac_dist
             self.get_dist_fn = get_dist_fn
 
     def init(self, obs_space, action_space, args):

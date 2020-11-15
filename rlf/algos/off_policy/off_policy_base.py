@@ -6,7 +6,7 @@ import rlf.rl.utils as rutils
 class OffPolicy(BaseNetAlgo):
     def __init__(self, get_storage_fn=None):
         """
-        get_storage_fn: ((int) -> TransitionStorage)
+        get_storage_fn: (buff_size: int, args -> TransitionStorage)
         """
 
         super().__init__()

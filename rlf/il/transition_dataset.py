@@ -13,6 +13,7 @@ class TransitionDataset(ImitationLearningDataset):
         self.trajs['obs'] = self.trajs['obs'].float()
         self.trajs['done'] = self.trajs['done'].float()
         self.trajs['actions'] = self.trajs['actions'].float()
+        self.trajs['next_obs'] = self.trajs['next_obs'].float()
 
         self.state_mean = torch.mean(self.trajs['obs'], dim=0)
         self.state_std = torch.std(self.trajs['obs'], dim=0)
@@ -42,6 +43,7 @@ class TransitionDataset(ImitationLearningDataset):
     def __getitem__(self, i):
         return {
                 'state': self.trajs['obs'][i],
+                'next_state': self.trajs['next_obs'][i],
                 'done': self.trajs['done'][i],
                 'actions': self.trajs['actions'][i]
                 }
