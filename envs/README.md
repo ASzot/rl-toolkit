@@ -13,5 +13,7 @@ Instructions for common environments. Sometimes it's as easy as pip install.
   - To run these environments use format `--env-name dm.domain.task`
 - `robosuite`
   - `pip install robosuite`
-
+- PyBullet clone of OpenAI Gym MuJoCo tasks
+  - `sh envs/install_pybulllet_gym.sh` 
+  - Don't forget to import with `import pybulletgym`
 

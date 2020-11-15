@@ -8,6 +8,7 @@ class OffPolicy(BaseNetAlgo):
         """
         get_storage_fn: ((int) -> TransitionStorage)
         """
+
         super().__init__()
 
         if get_storage_fn is None:
@@ -16,6 +17,7 @@ class OffPolicy(BaseNetAlgo):
 
 
     def init(self, policy, args):
+        args.trans_buffer_size = int(args.trans_buffer_size)
         super().init(policy, args)
 
     def get_storage_buffer(self, policy, envs, args):
@@ -41,7 +43,7 @@ class OffPolicy(BaseNetAlgo):
 
         #########################################
         # New args
-        parser.add_argument('--trans-buffer-size', type=int, default=10000)
+        parser.add_argument('--trans-buffer-size', type=float, default=10000)
         parser.add_argument('--batch-size', type=int, default=128)
 
         #########################################

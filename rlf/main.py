@@ -8,8 +8,9 @@ import attr
 class RunResult:
     prefix: str
 
-def run_policy(run_settings):
-    runner = run_settings.create_runner()
+def run_policy(run_settings, runner=None):
+    if runner is None:
+        runner = run_settings.create_runner()
     end_update = runner.updater.get_num_updates()
     args = runner.args
 

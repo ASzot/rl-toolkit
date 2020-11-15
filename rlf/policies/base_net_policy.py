@@ -5,6 +5,7 @@ import rlf.policies.utils as putils
 import rlf.rl.utils as rutils
 from rlf.policies.base_policy import BasePolicy
 from functools import partial
+import inspect
 
 
 class BaseNetPolicy(nn.Module, BasePolicy):
@@ -19,9 +20,11 @@ class BaseNetPolicy(nn.Module, BasePolicy):
             fuse_states=[],
             get_base_net_fn=None):
         """
-        - get_base_fn: (tuple(int) -> rlf.rl.model.BaseNet)
+        - get_base_fn: (ishape: tuple(int), recurrent: bool -> rlf.rl.model.BaseNet)
             returned module should take as input size of observation space and
-            return the size `hidden_size`.
+            return the size `hidden_size`. NOTE if recurrent parameter is
+            optional, if it is not specified, it will not be passed. The naming
+            of the parameter has to be EXACTLY `recurrent`.
           default: none, use the default
         """
         super().__init__()
@@ -34,8 +37,9 @@ class BaseNetPolicy(nn.Module, BasePolicy):
 
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
-        self.get_base_net_fn = partial(self.get_base_net_fn,
-                recurrent=self.args.recurrent_policy)
+        if 'recurrent' in inspect.getargspec(self.get_base_net_fn).args:
+            self.get_base_net_fn = partial(self.get_base_net_fn,
+                    recurrent=self.args.recurrent_policy)
         if self.use_goal:
             use_obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
             if len(use_obs_shape) != 1:

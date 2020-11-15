@@ -1,19 +1,6 @@
 # RL Toolkit (RLT)
 
-Code I use to to quickly and flexibly implement RL algorithms
-
-- Custom policies. 
-- Custom update functions.
-- Configurable replay buffer or trajectory storage. Control how you collect
-  agent experience. 
-- Custom loggers. Default integration for TensorBoard and W&B.
-- Define environment wrappers. Use this to log custom environment statistics,
-  define and pass command line arguments, and add wrappers. 
-- Environment multi-processing.
-- Integration with Ray auto hyperparameter tuning. 
-- Automated experiment runner. Includes command templates, multiple seed
-  runner, and tmux integration. 
-- Auto figure creation.
+Codebase I use to to implement RL algorithms.
 
 ## Algorithms
 - On policy:
@@ -23,6 +10,7 @@ Code I use to to quickly and flexibly implement RL algorithms
 - Off policy:
   - Deep Q-Networks (DQN)
   - Deep Deterministic Policy Gradients (DDPG)
+  - Soft Actor Critic (SAC) 
   - Hindsight Experience Replay (HER)
 - Hierarchical RL: 
   - Option Critic
@@ -35,7 +23,20 @@ Code I use to to quickly and flexibly implement RL algorithms
 
 See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks)
 
-Many more to be added soon! 
+
+## Code Features
+- Custom policies. 
+- Custom update functions.
+- Configurable replay buffer or trajectory storage. Control how you collect
+  agent experience. 
+- Custom loggers. Default integration for TensorBoard and W&B.
+- Define environment wrappers. Use this to log custom environment statistics,
+  define and pass command line arguments, and add wrappers. 
+- Environment multi-processing.
+- Integration with Ray auto hyperparameter tuning. 
+- Automated experiment runner. Includes command templates, multiple seed
+  runner, and tmux integration. 
+- Auto figure creation.
 
 ## Installation
 Requires Python 3.7. With conda: 
@@ -121,5 +122,7 @@ Commit: `95bb3a7d0bf1945e414a0e77de8a749bd79dc554`
 ![HER](https://github.com/ASzot/rl-toolkit/blob/master/bench_plots/her.png)
 
 # Sources
+* The SAC code is a clone of https://github.com/denisyarats/pytorch_sac.
+  The license is at `rlf/algos/off_policy/denis_yarats_LICENSE.md`
 * The PPO and rollout storage code is based on https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail.
 * The environment preprocessing uses a stripped down version of https://github.com/openai/baselines.

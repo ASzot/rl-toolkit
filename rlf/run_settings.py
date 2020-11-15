@@ -137,10 +137,7 @@ class RunSettings(MasterClass):
         del self.ray_runner
         del self.ray_args
 
-    def create_runner(self, add_args={}, ray_create=False):
-        policy = self.get_policy()
-        algo = self.get_algo()
-
+    def _sys_setup(self, add_args, ray_create, algo, policy):
         # Set up args used for training
         args = self.get_args(algo, policy)
         args.cwd = self.working_dir
@@ -156,7 +153,7 @@ class RunSettings(MasterClass):
             log = BaseLogger()
         else:
             if ray_create:
-                return None
+                return None, None
             log = self.get_logger()
         log.init(args)
         log.set_prefix(args)
@@ -165,6 +162,15 @@ class RunSettings(MasterClass):
 
         args.device = torch.device("cuda:0" if args.cuda else "cpu")
         init_seeds(args)
+        return args, log
+
+    def create_runner(self, add_args={}, ray_create=False):
+        policy = self.get_policy()
+        algo = self.get_algo()
+
+        args, log = self._sys_setup(add_args, ray_create, algo, policy)
+        if args is None:
+            return None
 
         env_interface = self._get_env_interface(args)
 
