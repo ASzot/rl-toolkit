@@ -95,10 +95,10 @@ class DoubleQCritic(BaseNet):
         dims.append(1)
 
         self.Q1 = MLPBase(obs_dim + action_dim, False, dims,
-                weight_init=weight_init, get_activation=lambda: nn.ReLU(),
+                weight_init=weight_init, get_activation=lambda: nn.ReLU(inplace=True),
                 no_last_act=True)
         self.Q2 = MLPBase(obs_dim + action_dim, False, dims,
-                weight_init=weight_init, get_activation=lambda: nn.ReLU(),
+                weight_init=weight_init, get_activation=lambda: nn.ReLU(inplace=True),
                 no_last_act=True)
 
     @property
@@ -121,15 +121,18 @@ class SACRunSettings(TestRunSettings):
             return SquashedDiagGaussian(in_shape[0], ac_space.shape[0],
                     log_std_bounds)
         def get_sac_critic(obs_shape, in_shape, action_space):
-            return DoubleQCritic(in_shape[0], action_space.shape[0], 1024, 2)
-        def get_base_net(i_shape):
-            return MLPBase(i_shape[0], False, (1024, 1024), get_activation=lambda: nn.ReLU())
+            return DoubleQCritic(in_shape[0], action_space.shape[0],
+                    self.base_args.hidden_dim, 2)
+        def get_actor(obs_shape, i_shape):
+            return MLPBase(i_shape[0], False,
+                    (self.base_args.hidden_dim, self.base_args.hidden_dim),
+                    get_activation=lambda: nn.ReLU(inplace=True))
 
 
         return DistActorQ(
                 get_dist_fn=get_sac_dist,
 				get_critic_fn=get_sac_critic,
-                get_base_net_fn=get_base_net
+                get_actor_fn=get_actor
                 )
 
     def get_algo(self):
@@ -137,6 +140,7 @@ class SACRunSettings(TestRunSettings):
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
+        parser.add_argument('--hidden-dim', type=int, default=1024)
 
 if __name__ == "__main__":
     run_policy(SACRunSettings())
