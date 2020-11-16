@@ -81,12 +81,12 @@ class SAC(ActorCriticUpdater):
             alpha_loss = (self.alpha *
                           (-log_prob - self.target_entropy).detach()).mean()
             self._standard_step(alpha_loss, 'alpha_opt')
-            log_vals['alpha_loss'] = alpha_loss,
-            log_vals['alpha_value'] = self.alpha
+            log_vals['alpha_loss'] = alpha_loss.item()
+            log_vals['alpha_value'] = self.alpha.item()
 
         return {
                 **log_vals,
-                'actor_loss': actor_loss,
+                'actor_loss': actor_loss.item(),
                 'actor_target_entropy': self.target_entropy,
                 'actor_entropy': -log_prob.mean()
                 }
@@ -107,8 +107,19 @@ class SAC(ActorCriticUpdater):
         all_log.update(critic_log)
 
         if self.update_i % self.args.actor_update_freq == 0:
-            actor_log = self.update_actor_and_alpha(state)
-            all_log.update(actor_log)
+            avg_d = {}
+            for _ in range(self.args.actor_update_epochs):
+                actor_log = self.update_actor_and_alpha(state)
+                for k,v in actor_log.items():
+                    if k not in avg_d:
+                        avg_d[k] = v
+                    else:
+                        avg_d[k] += v
+
+            for k in avg_d:
+                avg_d[k] /= self.args.actor_update_epochs
+
+            all_log.update(avg_d)
 
         if self.update_i % self.args.critic_update_freq == 0:
             autils.soft_update(self.policy, self.target_policy, self.args.tau)
@@ -119,6 +130,7 @@ class SAC(ActorCriticUpdater):
     def get_add_args(self, parser):
         super().get_add_args(parser)
         parser.add_argument('--actor-update-freq', type=int, default=1)
+        parser.add_argument('--actor-update-epochs', type=int, default=1)
         parser.add_argument('--critic-update-freq', type=int, default=2)
 
         parser.add_argument('--critic-lr', type=float, default=1e-4)
