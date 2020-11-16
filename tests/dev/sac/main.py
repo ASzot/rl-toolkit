@@ -15,6 +15,7 @@ from rlf.policies.actor_critic.dist_actor_q import DistActorQ, get_sac_actor, ge
 import torch
 import math
 import pybulletgym
+from functools import partial
 
 
 class SACRunSettings(TestRunSettings):

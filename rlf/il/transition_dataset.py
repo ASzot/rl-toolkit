@@ -31,6 +31,11 @@ class TransitionDataset(ImitationLearningDataset):
                 low_val, high_val)
         self._compute_action_stats()
 
+    def to(self, device):
+        for k in self.trajs:
+            self.trajs[k] = self.trajs[k].to(device)
+        return self
+
     def get_expert_stats(self, device):
         return {
                 'state': (self.state_mean.to(device), self.state_std.to(device)),
@@ -47,7 +52,6 @@ class TransitionDataset(ImitationLearningDataset):
                 'done': self.trajs['done'][i],
                 'actions': self.trajs['actions'][i]
                 }
-
 
     def compute_split(self, traj_frac):
         use_count = int(len(self) * traj_frac)

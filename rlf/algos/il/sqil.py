@@ -38,7 +38,7 @@ class SqilTransitionStorage(TransitionStorage):
         states, next_states, actions, rewards, cur_add, next_add = super().sample_tensors(sample_size)
         expert_sample = self.get_next_expert_batch()
 
-        next_add['masks'] = torch.cat([next_add['masks'], expert_sample['done'].unsqueeze(-1)], dim=0)
+        next_add['masks'] = torch.cat([next_add['masks'].to(self.args.device), expert_sample['done'].unsqueeze(-1)], dim=0)
         states = torch.cat([states, expert_sample['state']], dim=0)
         next_states = torch.cat([next_states, expert_sample['next_state']], dim=0)
         rewards = torch.cat([rewards, torch.ones(rewards.shape).to(rewards.device)], dim=0)

@@ -33,6 +33,7 @@ class BaseILAlgo(BaseNetAlgo):
         self.args = args
         self.orig_dataset = self._get_traj_dataset(osp.join(args.cwd,
             args.traj_load_path))
+        self.orig_dataset = self.orig_dataset.to(args.device)
         num_trajs = self._create_train_loader(args)
 
         trans_count_str = utils.human_format_int(len(self.expert_train_loader) * args.traj_batch_size)

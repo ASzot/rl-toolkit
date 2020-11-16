@@ -19,3 +19,6 @@ class ImitationLearningDataset(torch.utils.data.Dataset, ABC):
 
     def clip_actions(self, low_val, high_val):
         pass
+
+    def to(self, device):
+        return self
