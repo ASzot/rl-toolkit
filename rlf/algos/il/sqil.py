@@ -16,11 +16,6 @@ class SqilTransitionStorage(TransitionStorage):
         self.expert_batch_iter = None
         super().__init__(capacity, args)
 
-    def insert(self, obs, next_obs, reward, done, infos, ac_info):
-        # 0 out the reward for any agent experience
-        reward = torch.zeros(reward.shape).to(reward.device)
-        super().insert(obs, next_obs, reward, done, infos, ac_info)
-
     def get_next_expert_batch(self):
         batch = None
         if self.expert_batch_iter is not None:
@@ -38,15 +33,18 @@ class SqilTransitionStorage(TransitionStorage):
         states, next_states, actions, rewards, cur_add, next_add = super().sample_tensors(sample_size)
         expert_sample = self.get_next_expert_batch()
 
-        next_add['masks'] = torch.cat([next_add['masks'].to(self.args.device), expert_sample['done'].unsqueeze(-1)], dim=0)
-        states = torch.cat([states, expert_sample['state']], dim=0)
-        next_states = torch.cat([next_states, expert_sample['next_state']], dim=0)
-        rewards = torch.cat([rewards, torch.ones(rewards.shape).to(rewards.device)], dim=0)
-        actions = torch.cat([actions, expert_sample['actions']], dim=0)
+        expert_states = self._norm_expert_state(expert_sample['state'])
+        expert_next_states = self._norm_expert_state(expert_sample['next_state'])
+        expert_actions = self.il_algo._adjust_action(expert_sample['actions'])
 
-        states = self._norm_expert_state(states)
-        next_states = self._norm_expert_state(next_states)
-        actions = self.il_algo._adjust_action(actions)
+        next_add['masks'] = torch.cat([next_add['masks'].to(self.args.device), expert_sample['done'].unsqueeze(-1)], dim=0)
+        states = torch.cat([states, expert_states], dim=0)
+        next_states = torch.cat([next_states, expert_next_states], dim=0)
+        rewards = torch.cat([
+            torch.zeros(reward.shape).to(reward.device),
+            torch.ones(rewards.shape).to(rewards.device)
+            ], dim=0)
+        actions = torch.cat([actions, expert_actions], dim=0)
 
         return states, next_states, actions, rewards, cur_add, next_add
 
