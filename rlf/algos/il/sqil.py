@@ -41,7 +41,7 @@ class SqilTransitionStorage(TransitionStorage):
         states = torch.cat([states, expert_states], dim=0)
         next_states = torch.cat([next_states, expert_next_states], dim=0)
         rewards = torch.cat([
-            torch.zeros(reward.shape).to(reward.device),
+            torch.zeros(rewards.shape).to(rewards.device),
             torch.ones(rewards.shape).to(rewards.device)
             ], dim=0)
         actions = torch.cat([actions, expert_actions], dim=0)
