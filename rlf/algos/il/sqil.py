@@ -6,7 +6,7 @@ from rlf.algos.il.base_il import BaseILAlgo
 
 
 class SqilTransitionStorage(TransitionStorage):
-    def __init__(self, capacity, args, il_algo):
+    def __init__(self, obs_space, action_space, capacity, args, il_algo):
         if args.traj_batch_size != args.batch_size:
             raise ValueError(
                     """
@@ -14,7 +14,7 @@ class SqilTransitionStorage(TransitionStorage):
                     """)
         self.il_algo = il_algo
         self.expert_batch_iter = None
-        super().__init__(capacity, args)
+        super().__init__(obs_space, action_space, capacity, args)
 
     def get_next_expert_batch(self):
         batch = None
@@ -65,9 +65,11 @@ class SqilTransitionStorage(TransitionStorage):
 class SQIL(SAC):
     def __init__(self):
         self.il_algo = BaseILAlgo()
-        def get_sqil_storage(buff_size, args):
-            return SqilTransitionStorage(buff_size, args, self.il_algo)
-        super().__init__(get_storage_fn=get_sqil_storage)
+        super().__init__()
+
+    def get_storage_buffer(self, policy, envs, args):
+        return SqilTransitionStorage(policy.obs_space, policy.action_space,
+                args.trans_buffer_size, args, self.il_algo)
 
     def init(self, policy, args):
         super().init(policy, args)

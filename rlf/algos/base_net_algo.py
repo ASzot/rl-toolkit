@@ -91,7 +91,11 @@ class BaseNetAlgo(BaseAlgo):
         parser.add_argument(f"--{self.arg_prefix}lr-env-steps", type=float,
                             default=None, help='only used for lr schedule')
         parser.add_argument(f"--{self.arg_prefix}eps", type=float, default=1e-5,
-                            help='optimizer epsilon (default: 1e-5)')
+                            help="""
+                            optimizer epsilon (default: 1e-5)
+                            NOTE: The PyTorch default is 1e-8 see
+                            https://pytorch.org/docs/stable/_modules/torch/optim/adam.html#Adam
+                            """)
         parser.add_argument(f"--{self.arg_prefix}lr", type=float, default=1e-3,
                             help='learning rate (default: 1e-3)')
 

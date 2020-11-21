@@ -17,3 +17,14 @@ Instructions for common environments. Sometimes it's as easy as pip install.
   - `sh envs/install_pybulllet_gym.sh` 
   - Don't forget to import with `import pybulletgym`
 
+# Existing Adapters
+These adapters are built in by default and provide easier ways to configure
+environments.
+* OpenAI Gym Fetch: 
+  * `--gf-dense` whether the reward should be dense or sparse. 
+* Gym Minigrid: See `rlf/envs/minigrid_interface.py`
+
+# Included Environments
+* `BitFlip-v0`
+
+

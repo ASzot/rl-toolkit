@@ -66,16 +66,7 @@ Easily run templated commands. Start by defining a `.cmd` file.
 - Choose to log to W&B. 
 
 ## Custom Environments
-
-And adapters for popular 3rd party RL environments.
-* OpenAI Gym Fetch: 
-  * `--gf-dense` whether the reward should be dense or sparse. 
-* DeepMind Control Suite: Adapts to the OpenAI Gym environment interface. `pip
-  install dm_control` 
-* Gym Minigrid: See `rlf/envs/minigrid_interface.py`
-
-Also directly include 3rd party environments. 
-* `BitFlip-v0`
+See `envs/README.md`
 
 ## Ray
 

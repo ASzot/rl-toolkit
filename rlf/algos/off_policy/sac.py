@@ -139,3 +139,5 @@ class SAC(ActorCriticUpdater):
         parser.add_argument('--init-temperature', type=float, default=0.1)
         parser.add_argument('--learnable-temp', type=str2bool, default=True)
 
+        # Override
+        parser.add_argument('--tau', type=float, default=0.005)

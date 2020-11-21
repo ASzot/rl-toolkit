@@ -60,8 +60,6 @@ class RolloutStorage(BaseStorage):
                                             self.value_dim)
 
         self.hidden_states = {}
-        #if 'recurrent_policy' in args and args.recurrent_policy:
-        #    self.hidden_states['rnn_hxs'] =
         for k, dim in hidden_states.items():
             self.hidden_states[k] = torch.zeros(num_steps + 1, num_processes, dim)
 

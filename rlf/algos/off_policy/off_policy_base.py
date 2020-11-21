@@ -4,24 +4,16 @@ from rlf.algos.base_net_algo import BaseNetAlgo
 import rlf.rl.utils as rutils
 
 class OffPolicy(BaseNetAlgo):
-    def __init__(self, get_storage_fn=None):
-        """
-        get_storage_fn: (buff_size: int, args -> TransitionStorage)
-        """
-
+    def __init__(self):
         super().__init__()
-
-        if get_storage_fn is None:
-            get_storage_fn = lambda buff_size, args: TransitionStorage(buff_size, args)
-        self.get_storage_fn = get_storage_fn
-
 
     def init(self, policy, args):
         args.trans_buffer_size = int(args.trans_buffer_size)
         super().init(policy, args)
 
     def get_storage_buffer(self, policy, envs, args):
-        return self.get_storage_fn(args.trans_buffer_size, args)
+        return TransitionStorage(policy.obs_space, policy.action_space,
+                args.trans_buffer_size, args)
 
     def _sample_transitions(self, storage):
         return storage.sample_tensors(self.args.batch_size)

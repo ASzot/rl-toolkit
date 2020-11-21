@@ -1,5 +1,6 @@
 import gym
-from gym.spaces import Box, Discrete, Dict
+from gym.spaces import Box, Discrete
+from rlf.baselines.dict import Dict
 from rlf.envs.env_interface import EnvInterface, register_env_interface
 import numpy as np
 

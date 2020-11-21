@@ -6,7 +6,10 @@ import numpy as np
 
 class TransitionDataset(ImitationLearningDataset):
     def __init__(self, load_path, transform_dem_dataset_fn):
-        self.trajs = torch.load(load_path)
+        if load_path.endswith(".npz"):
+            self.trajs = self._load_npz(load_path)
+        else:
+            self.trajs = self._load_pt(load_path)
         self.trajs = transform_dem_dataset_fn(self.trajs)
 
         # Convert all to floats
@@ -18,6 +21,30 @@ class TransitionDataset(ImitationLearningDataset):
         self.state_mean = torch.mean(self.trajs['obs'], dim=0)
         self.state_std = torch.std(self.trajs['obs'], dim=0)
         self._compute_action_stats()
+
+    def _load_npz(self, load_path):
+        x = np.load(load_path)
+        n_trajs, traj_len, _ = x['obs'].shape
+        N = n_trajs * traj_len
+        done = torch.zeros(N)
+        for i in range(n_trajs):
+            done[(i+1)*traj_len-1] = 1
+
+        obs = x['obs'].reshape(N, -1)
+        this_obs = obs[:-1]
+        next_obs = obs[1:]
+        return {
+                'obs': torch.tensor(this_obs),
+                'rewards': torch.tensor(x['rews'].reshape(N, -1))[:-1],
+                'actions': torch.tensor(x['acs'].reshape(N, -1))[:-1],
+                # 1 if the transition resulted in termination
+                'done': done[1:],
+                'next_obs': torch.tensor(next_obs)
+                }
+
+
+    def _load_pt(self, load_path):
+        return torch.load(load_path)
 
     def get_num_trajs(self):
         return int((self.trajs['done'] == 1).sum())
