@@ -35,7 +35,7 @@ class SAC(ActorCriticUpdater):
 
     def update_critic(self, state, n_state, action, reward, add_info, n_add_info):
         dist = self.policy(n_state, None, None, None)
-        not_done = n_add_info['masks'].to(self.args.device)
+        not_done = n_add_info['masks']
         n_action = dist.rsample()
         log_prob = dist.log_prob(n_action).sum(-1, keepdim=True)
 

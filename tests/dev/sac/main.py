@@ -14,7 +14,6 @@ from rlf.rl.model import BaseNet, IdentityBase, MLPBase
 from rlf.policies.actor_critic.dist_actor_q import DistActorQ, get_sac_actor, get_sac_critic
 import torch
 import math
-import pybulletgym
 from functools import partial
 
 

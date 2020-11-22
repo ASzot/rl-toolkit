@@ -8,27 +8,21 @@ import torch
 import rlf.policies.utils as putils
 from rlf.policies.base_net_policy import BaseNetPolicy
 from rlf.rl.model import DoubleQCritic, MLPBase
-from rlf.rl.distributions import SquashedDiagGaussian
+from rlf.rl.distributions import DiagGaussianActor
 import rlf.rl.utils as rutils
 import torch.nn as nn
-
-def get_sac_dist(in_shape, ac_space, log_std_bounds):
-    return SquashedDiagGaussian(in_shape[0], ac_space.shape[0],
-            log_std_bounds)
 
 def get_sac_critic(obs_shape, in_shape, action_space, hidden_dim=64, depth=2):
     return DoubleQCritic(in_shape[0], action_space.shape[0],
             hidden_dim, depth)
 
-def get_sac_actor(obs_shape, i_shape, hidden_dim=64, depth=2):
-    return MLPBase(i_shape[0], False,
-            [hidden_dim] * depth,
-            get_activation=lambda: nn.ReLU(inplace=True))
+def get_sac_actor(obs_shape, i_shape, ac_space, log_std_bounds, hidden_dim=64, depth=2):
+    return DiagGaussianActor(i_shape[0], ac_space.shape[0], hidden_dim, depth,
+            log_std_bounds)
 
 class DistActorQ(BaseNetPolicy):
     def __init__(self,
                 get_actor_fn=None,
-                get_dist_fn=None,
                 get_critic_fn=None,
                 use_goal=False,
                 fuse_states=[],
@@ -44,23 +38,19 @@ class DistActorQ(BaseNetPolicy):
                 get_actor_fn = get_sac_actor
             self.get_actor_fn = get_actor_fn
 
-            if get_dist_fn is None:
-                get_dist_fn = get_sac_dist
-            self.get_dist_fn = get_dist_fn
 
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
 
         obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
+
         self.critic = self.get_critic_fn(obs_shape, self._get_base_out_shape(),
                 action_space)
-        self.actor = self.get_actor_fn(
-            rutils.get_obs_shape(obs_space, args.policy_ob_key),
-            self._get_base_out_shape())
 
         log_std_bounds = [float(x) for x in self.args.log_std_bounds.split(',')]
-        self.dist = self.get_dist_fn(
-            self.actor.output_shape, self.action_space,
+
+        self.actor = self.get_actor_fn(rutils.get_obs_shape(obs_space,
+            args.policy_ob_key), self._get_base_out_shape(), action_space,
             log_std_bounds)
 
         self.ac_low_bound = torch.tensor(self.action_space.low).to(args.device)
@@ -70,8 +60,7 @@ class DistActorQ(BaseNetPolicy):
         base_features, hxs = self._apply_base_net(state, add_state, hxs, masks)
         base_features = self._fuse_base_out(base_features, add_state)
 
-        actor_features, _ = self.actor(base_features, hxs, masks)
-        dist = self.dist(actor_features)
+        dist = self.actor(base_features, hxs, masks)
 
         return dist
 
@@ -101,7 +90,7 @@ class DistActorQ(BaseNetPolicy):
 
     def get_actor_params(self):
         return list(self.base_net.parameters()) + \
-                list(self.dist.parameters()) + list(self.actor.parameters())
+                list(self.actor.parameters())
 
     def get_critic_params(self):
         return list(self.base_net.parameters()) + \

@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from rlf.rl.model import weight_init, no_bias_weight_init
+from rlf.rl.model import weight_init, no_bias_weight_init, reg_mlp_weight_init, MLPBase
 from functools import partial
 import numpy as np
 from torch import distributions as pyd
@@ -176,22 +176,37 @@ class SquashedNormal(pyd.transformed_distribution.TransformedDistribution):
             mu = tr(mu)
         return mu
 
-class SquashedDiagGaussian(nn.Module):
+class DiagGaussianActor(nn.Module):
     """
     Code from https://github.com/denisyarats/pytorch_sac.
     """
-    def __init__(self, num_inputs, num_outputs, log_std_bounds):
+    def __init__(self, num_inputs, num_outputs, hidden_dim, hidden_depth,
+                 log_std_bounds):
         super().__init__()
+
+        dims = [hidden_dim] * hidden_depth
+        dims.append(2*num_outputs)
+
         self.log_std_bounds = log_std_bounds
+        self.trunk = MLPBase(num_inputs, False, dims,
+                weight_init=reg_mlp_weight_init,
+                get_activation=lambda: nn.ReLU(inplace=True),
+                no_last_act=True)
 
-        self.fc_dist = no_bias_weight_init(nn.Linear(num_inputs, 2*num_outputs))
+        self.apply(no_bias_weight_init)
 
-    def forward(self, x):
-        mu, log_std = self.fc_dist(x).chunk(2, dim=-1)
+    def forward(self, obs, hxs, masks):
+        x, _ = self.trunk(obs, hxs, masks)
+        mu, log_std = x.chunk(2, dim=-1)
+
+        # constrain log_std inside [log_std_min, log_std_max]
         log_std = torch.tanh(log_std)
         log_std_min, log_std_max = self.log_std_bounds
-        log_std = log_std_min + 0.5 * (log_std_max - log_std_min) * (log_std + 1)
-        std = log_std.exp()
-        return SquashedNormal(mu, std)
+        log_std = log_std_min + 0.5 * (log_std_max - log_std_min) * (log_std +
+                                                                     1)
 
+        std = log_std.exp()
+
+        dist = SquashedNormal(mu, std)
+        return dist
 

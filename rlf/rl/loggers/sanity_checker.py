@@ -32,7 +32,7 @@ class SanityChecker:
         if not self.should_check:
             return
         weight = nn.Linear(3,2).weight
-        print(f"{key}:Rnd", weight.view(-1).detach())
+        print(f"{key}:Rnd", weight.view(-1).detach()[0].item())
 
 
     def get_str(self, k,v, indent=""):
@@ -70,8 +70,17 @@ def set_sanity_checker(args):
     sanity_checker = SanityChecker(args.sanity, args.sanity_verbose, stop_key,
             stop_iters)
 
+def set_sanity_checker_simple():
+    global sanity_checker
+    sanity_checker = SanityChecker(True, True, "", 1000000000)
+
+
 def check(*args, **kwargs):
     get_sanity_checker().check(*args, **kwargs)
+
+def c(v):
+    get_sanity_checker().check("tmp", v=v)
+
 
 def check_rand_state(key=""):
     get_sanity_checker().check_rnd_state(key)

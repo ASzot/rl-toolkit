@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from rlf.rl.loggers import sanity_checker
 
 def weight_init(module, weight_init, bias_init, gain=1):
     weight_init(module.weight.data, gain=gain)
@@ -284,11 +285,14 @@ class DoubleQCritic(BaseNet):
         dims.append(1)
 
         self.Q1 = MLPBase(obs_dim + action_dim, False, dims,
-                weight_init=no_bias_weight_init, get_activation=lambda: nn.ReLU(inplace=True),
+                weight_init=reg_mlp_weight_init, get_activation=lambda: nn.ReLU(inplace=True),
                 no_last_act=True)
         self.Q2 = MLPBase(obs_dim + action_dim, False, dims,
-                weight_init=no_bias_weight_init, get_activation=lambda: nn.ReLU(inplace=True),
+                weight_init=reg_mlp_weight_init, get_activation=lambda: nn.ReLU(inplace=True),
                 no_last_act=True)
+
+        # Apply the weight init exactly the same way as @denisyarats
+        self.apply(no_bias_weight_init)
 
     @property
     def output_shape(self):
