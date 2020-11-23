@@ -45,6 +45,7 @@ def make_env(rank, env_id, seed, allow_early_resets, env_interface,
             env = TimeLimitMask(env)
 
         env.seed(seed + rank)
+        env.action_space.seed(seed+rank)
 
         env = Monitor(env, None,
                 allow_early_resets=allow_early_resets)

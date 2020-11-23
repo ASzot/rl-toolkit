@@ -11,6 +11,7 @@ from rlf.rl.model import DoubleQCritic, MLPBase
 from rlf.rl.distributions import DiagGaussianActor
 import rlf.rl.utils as rutils
 import torch.nn as nn
+from rlf.rl.loggers import sanity_checker
 
 def get_sac_critic(obs_shape, in_shape, action_space, hidden_dim=64, depth=2):
     return DoubleQCritic(in_shape[0], action_space.shape[0],
@@ -52,6 +53,8 @@ class DistActorQ(BaseNetPolicy):
         self.actor = self.get_actor_fn(rutils.get_obs_shape(obs_space,
             args.policy_ob_key), self._get_base_out_shape(), action_space,
             log_std_bounds)
+        sanity_checker.check('critic', critic=self.critic)
+        sanity_checker.check('actor', actor=self.actor)
 
         self.ac_low_bound = torch.tensor(self.action_space.low).to(args.device)
         self.ac_high_bound = torch.tensor(self.action_space.high).to(args.device)

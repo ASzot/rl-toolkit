@@ -31,6 +31,7 @@ class Runner:
 
             step_info = get_step_info(update_iter, step, self.episode_count, self.args)
             with torch.no_grad():
+                sanity_checker.check_rand_state()
                 ac_info = self.policy.get_action(
                         utils.get_def_obs(obs, self.args.policy_ob_key),
                         utils.get_other_obs(obs),
@@ -51,9 +52,7 @@ class Runner:
 
             self.storage.insert(obs, next_obs, reward, done, infos, ac_info)
 
-        sanity_checker.check("pre_update", model=self.policy)
         updater_log_vals = self.updater.update(self.storage)
-        sanity_checker.check("update", model=self.policy)
         self.storage.after_update()
 
         return updater_log_vals

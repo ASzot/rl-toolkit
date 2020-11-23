@@ -3,7 +3,7 @@ import random
 import torch
 import rlf.rl.utils as rutils
 from collections import defaultdict
-from rlf.rl.utils import get_ac_dim
+import numpy as np
 
 
 class TransitionStorage(BaseStorage):
@@ -19,10 +19,13 @@ class TransitionStorage(BaseStorage):
         self.d = self.args.device
 
         obs_shape = obs_space.shape
-        action_shape = (get_ac_dim(action_space),)
+        if rutils.is_discrete(action_space):
+            self.actions = torch.empty((capacity, 1),
+                    dtype=torch.long)
+        else:
+            self.actions = torch.empty((capacity, action_space.shape[0]),
+                    dtype=torch.float32)
 
-        self.actions = torch.empty((capacity, *action_shape),
-                dtype=torch.float32)
         self.rewards = torch.empty((capacity, 1), dtype=torch.float32)
         self.masks = torch.empty((capacity, 1), dtype=torch.float32)
         # Hidden states
@@ -92,31 +95,32 @@ class TransitionStorage(BaseStorage):
         return random.sample(self.memory, batch_size)
 
     def sample_tensors(self, sample_size):
-        idxs = torch.randint(0, len(self), size=(sample_size,))
+        #idxs = torch.randint(0, len(self), size=(sample_size,))
+        idxs = np.random.randint(0, len(self), size=sample_size)
         obs = {}
         next_obs = {}
         other_obs = {}
         other_next_obs = {}
         for k in self.ob_keys:
             if k is None:
-                obs = torch.as_tensor(self.obs[idxs], device=self.d).float()
-                next_obs = torch.as_tensor(self.next_obs[idxs], device=self.d).float()
+                obs = self.obs[idxs].to(self.d)
+                next_obs = self.next_obs[idxs].to(self.d)
             else:
                 if k == self.args.policy_ob_key:
-                    obs[k] = torch.as_tensor(self.obs[k][idxs], device=self.d).float()
-                    next_obs[k] = torch.as_tensor(self.next_obs[k][idxs], device=self.d).float()
+                    obs[k] = self.obs[k][idxs].to(self.d)
+                    next_obs[k] = self.next_obs[k][idxs].to(self.d)
                 else:
-                    other_obs[k] = torch.as_tensor(self.obs[k][idxs], device=self.d).float()
-                    other_next_obs[k] = torch.as_tensor(self.next_obs[k][idxs], device=self.d).float()
+                    other_obs[k] = self.obs[k][idxs].to(self.d)
+                    other_next_obs[k] = self.next_obs[k][idxs].to(self.d)
 
         hxs = {}
         for k, dim in self.hidden_states.items():
             hxs[k] = torch.as_tensor(self.hidden_states[k][idxs],
                     device=self.d).float()
 
-        actions = torch.as_tensor(self.actions[idxs], device=self.d).float()
-        rewards = torch.as_tensor(self.rewards[idxs], device=self.d).float()
-        masks = torch.as_tensor(self.masks[idxs], device=self.d).float()
+        actions = self.actions[idxs].to(self.d)
+        rewards = self.rewards[idxs].to(self.d)
+        masks = self.masks[idxs].to(self.d)
 
         cur_add = {
             'hxs': None,

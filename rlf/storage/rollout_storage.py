@@ -173,7 +173,7 @@ class RolloutStorage(BaseStorage):
         gamma = self.args.gamma
         if self.args.use_proper_time_limits:
             # Use the "bad_masks" to properly account for early terminations.
-            # This is the case in mujoco type tasks.
+            # This is the case in mujoco OpenAI gym tasks.
             if self.args.use_gae:
                 self.value_preds[-1] = next_value
                 gae = 0

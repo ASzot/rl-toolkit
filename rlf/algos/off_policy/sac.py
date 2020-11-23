@@ -11,9 +11,10 @@ from rlf.args import str2bool
 import torch.optim as optim
 import numpy as np
 import rlf.rl.utils as rutils
+from rlf.rl.loggers import sanity_checker
 
 
-class SAC(ActorCriticUpdater):
+class SAC(OffPolicy):
     def init(self, policy, args):
         # Need to set up the parameter before we set up the optimizers
         self.log_alpha = torch.tensor(np.log(args.init_temperature)).to(args.device)
@@ -24,13 +25,31 @@ class SAC(ActorCriticUpdater):
         # set target entropy to -|A|
         self.target_entropy = -rutils.get_ac_dim(policy.action_space)
 
+        self.target_critic = self.policy.get_critic_fn(self.policy.obs_space,
+                self.policy._get_base_out_shape(),
+                self.policy.action_space)
+        autils.hard_update(self.policy.critic, self.target_critic)
+        sanity_checker.check('critic_target', critic_target=self.target_critic)
+
     def _get_optimizers(self):
         opts = super()._get_optimizers()
         opts['alpha_opt'] = (
                 optim.Adam([self.log_alpha], lr=self._arg('alpha_lr'), eps=self._arg('eps')),
                 lambda: self.policy.parameters(),
                 self._arg('alpha_lr')
-            )
+                )
+        opts['actor_opt'] = (
+                optim.Adam(self.policy.get_actor_params(), lr=self.args.lr,
+                    eps=self.args.eps),
+                self.policy.get_actor_params,
+                self.args.lr
+                )
+        opts['critic_opt'] = (
+                optim.Adam(self.policy.get_critic_params(), lr=self.args.critic_lr,
+                    eps=self.args.eps),
+                self.policy.get_critic_params,
+                self.args.critic_lr
+                )
         return opts
 
     def update_critic(self, state, n_state, action, reward, add_info, n_add_info):
@@ -39,8 +58,7 @@ class SAC(ActorCriticUpdater):
         n_action = dist.rsample()
         log_prob = dist.log_prob(n_action).sum(-1, keepdim=True)
 
-        target_Q1, target_Q2 = self.target_policy.get_value(n_state,
-                n_action, None, None, None)
+        target_Q1, target_Q2  =self.target_critic(n_state, n_action)
         target_V = torch.min(target_Q1,
                              target_Q2) - self.alpha.detach() * log_prob
         target_Q = reward + (not_done * self.args.gamma * target_V)
@@ -67,7 +85,7 @@ class SAC(ActorCriticUpdater):
         dist = self.policy(state, None, None, None)
         action = dist.rsample()
         log_prob = dist.log_prob(action).sum(-1, keepdim=True)
-        actor_Q1, actor_Q2 = self.policy.get_value(state, action, None, None, None)
+        actor_Q1, actor_Q2 = self.policy.critic(state, action)
 
         actor_Q = torch.min(actor_Q1, actor_Q2)
         actor_loss = (self.alpha.detach() * log_prob - actor_Q).mean()
@@ -96,15 +114,17 @@ class SAC(ActorCriticUpdater):
         super().update(storage)
         if len(storage) < self.args.batch_size:
             return {}
-        if self.update_i < self.args.n_rnd_steps:
+        if self.update_i <= self.args.n_rnd_steps:
             return {}
 
+        sanity_checker.check_rand_state()
         state, n_state, action, reward, add_info, n_add_info = self._sample_transitions(storage)
 
         all_log = {}
 
         critic_log = self.update_critic(state, n_state, action, reward, add_info, n_add_info)
         all_log.update(critic_log)
+        sanity_checker.check("x", critic=self.policy.critic)
 
         if self.update_i % self.args.actor_update_freq == 0:
             avg_d = {}
@@ -120,9 +140,11 @@ class SAC(ActorCriticUpdater):
                 avg_d[k] /= self.args.actor_update_epochs
 
             all_log.update(avg_d)
+            sanity_checker.check("x", actor=self.policy.actor)
 
         if self.update_i % self.args.critic_update_freq == 0:
-            autils.soft_update(self.policy, self.target_policy, self.args.tau)
+            autils.soft_update(self.policy.critic, self.target_critic, self.args.tau)
+            sanity_checker.check("x", critic_target=self.target_critic)
 
         return all_log
 
