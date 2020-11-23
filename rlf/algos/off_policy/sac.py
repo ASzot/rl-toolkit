@@ -58,15 +58,14 @@ class SAC(OffPolicy):
         n_action = dist.rsample()
         log_prob = dist.log_prob(n_action).sum(-1, keepdim=True)
 
-        target_Q1, target_Q2  =self.target_critic(n_state, n_action)
+        target_Q1, target_Q2 = self.target_critic(n_state, n_action)
         target_V = torch.min(target_Q1,
                              target_Q2) - self.alpha.detach() * log_prob
         target_Q = reward + (not_done * self.args.gamma * target_V)
         target_Q = target_Q.detach()
 
         # get current Q estimates
-        current_Q1, current_Q2 = self.policy.get_value(state, action, None, None,
-                None)
+        current_Q1, current_Q2 = self.policy.critic(state, action)
         critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(
             current_Q2, target_Q)
 

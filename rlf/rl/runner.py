@@ -41,6 +41,7 @@ class Runner:
                     ac_info.clip_action(*self.ac_tensor)
 
             next_obs, reward, done, infos = self.envs.step(ac_info.take_action)
+
             sanity_checker.check("env_step", obs=obs, action=ac_info.take_action,
                     next_obs=next_obs)
             reward += ac_info.add_reward

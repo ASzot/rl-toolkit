@@ -70,11 +70,14 @@ class TransitionStorage(BaseStorage):
 
     def insert(self, obs, next_obs, reward, done, infos, ac_info):
         super().insert(obs, next_obs, reward, done, infos, ac_info)
+
         masks, bad_masks = self.compute_masks(done, infos)
 
         batch_size = rutils.get_def_obs(obs).shape[0]
         for i in range(batch_size):
-            #print('Pushing', rutils.deep_dict_select(ac_info.hxs, i))
+            if bad_masks[i] == 0 and self.args.use_proper_time_limits:
+                # we are not actually done.
+                masks[i] = 1.0
             self._push_transition({
                     'action': ac_info.action[i],
                     'state': rutils.obs_select(obs, i),
