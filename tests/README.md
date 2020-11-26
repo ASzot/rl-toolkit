@@ -7,7 +7,7 @@ All under `tests/expert_demonstrations`
 * `halfcheetah_50ep.pt` 50 episodes (1k transitions each), 6678 average reward
 
 # Directory Structure
-- `dev` are under development and are being tested `--cfg ./tests/config_dev.yaml`. 
+- `dev` are under development and for my personal use `--cfg ./tests/config_dev.yaml`. 
 - `test_cmds` are confirmed to work. To run commands specify `--cfg ./tests/config.yaml`. 
 
 # Sanity Checking Algorithms
