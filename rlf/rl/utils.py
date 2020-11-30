@@ -409,24 +409,32 @@ def update_args(args, update_dict, check_exist=False):
 
 CACHE_PATH = './data/cache'
 class CacheHelper:
-    def __init__(self, cache_name, lookup_val):
+    def __init__(self, cache_name, lookup_val, def_val=None, verbose=False):
         if not osp.exists(CACHE_PATH):
             os.makedirs(CACHE_PATH)
         sec_hash = hashlib.md5(str(lookup_val).encode('utf-8')).hexdigest()
         cache_id = f"{cache_name}_{sec_hash}.pickle"
         self.cache_id = osp.join(CACHE_PATH, cache_id)
+        self.def_val = def_val
+        self.verbose = verbose
 
     def exists(self):
         return osp.exists(self.cache_id)
 
     def load(self):
-        with open(self.cache_id, 'rb') as f:
-            print(f"Loaded cache path {self.cache_id}")
-            return pickle.load(f)
+        if self.exists():
+            with open(self.cache_id, 'rb') as f:
+                if self.verbose:
+                    print('Loading cache @', self.cache_id)
+                return pickle.load(f)
+        else:
+            return self.def_val
+
 
     def save(self, val):
         with open(self.cache_id, 'wb') as f:
+            if self.verbose:
+                print('Saving cache @', self.cache_id)
             pickle.dump(val, f)
-        print(f"Cached to {self.cache_id}")
 
 

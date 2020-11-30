@@ -64,7 +64,7 @@ def save_mp4(frames, vid_dir, name, fps=60.0, no_frame_drop=False):
     w, h = frames[0].shape[:-1]
     videodims = (h, w)
     fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
-    video = cv2.VideoWriter(vid_file, fourcc, 60, videodims)
+    video = cv2.VideoWriter(vid_file, fourcc, fps, videodims)
     for frame in frames:
         frame = frame[..., 0:3][..., ::-1]
         video.write(frame)
