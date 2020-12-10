@@ -52,7 +52,7 @@ class DummyVecEnv(VecEnv):
             obs, self.buf_rews[e], self.buf_dones[e], self.buf_infos[e] = self.envs[e].step(action)
             if self.buf_dones[e]:
                 final_obs = obs
-                if isinstance(obs, dict):
+                if isinstance(obs, dict) and 'observation' in obs:
                     final_obs = obs['observation']
                 self.buf_infos[e]['final_obs'] = final_obs
                 obs = self.envs[e].reset()

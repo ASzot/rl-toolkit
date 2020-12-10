@@ -11,6 +11,9 @@ class EnvInterface(object):
     def setup(self, args, task_id):
         self.task_id = task_id
 
+    def requires_tensor_wrap(self):
+        return True
+
     def env_trans_fn(self, env, set_eval):
         return env
 

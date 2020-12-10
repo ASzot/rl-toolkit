@@ -62,7 +62,7 @@ def make_env(rank, env_id, seed, allow_early_resets, env_interface,
         keys = rutils.get_ob_keys(env.observation_space)
         transpose_keys = [k for k in keys
                 if len(rutils.get_ob_shape(env.observation_space, k)) == 3]
-        if len(transpose_keys) > 0:
+        if len(transpose_keys) > 0 and args.transpose_frame:
             env = TransposeImage(env, op=[2, 0, 1], transpose_keys=transpose_keys)
 
         if set_eval and args.render_metric:
@@ -84,6 +84,7 @@ def make_vec_envs_easy(env_name, num_processes, env_interface, alg_env_settings,
                          args.gamma, args.device,
                          False, env_interface, args,
                          alg_env_settings)
+
 
 def make_vec_envs(env_name,
                   seed,
@@ -130,13 +131,14 @@ def make_vec_envs(env_name,
             envs = VecNormalize(envs, gamma=gamma,
                     ret_raw_obs=alg_env_settings.ret_raw_obs)
 
-    envs = VecPyTorch(envs, device)
+    if env_interface.requires_tensor_wrap():
+        envs = VecPyTorch(envs, device)
 
-    triple_shapes = {k:v for k,v in ob_shapes.items() if len(v) == 3}
-    if num_frame_stack is not None and args.frame_stack:
-        envs = VecPyTorchFrameStack(envs, num_frame_stack, device)
-    elif len(triple_shapes) > 0 and args.frame_stack:
-        envs = VecPyTorchFrameStack(envs, 4, device)
+        triple_shapes = {k:v for k,v in ob_shapes.items() if len(v) == 3}
+        if num_frame_stack is not None and args.frame_stack:
+            envs = VecPyTorchFrameStack(envs, num_frame_stack, device)
+        elif len(triple_shapes) > 0 and args.frame_stack:
+            envs = VecPyTorchFrameStack(envs, 4, device)
 
     if (alg_env_settings.state_fn is not None) or (alg_env_settings.action_fn is not None):
         if use_env_norm and alg_env_settings.state_fn is not None:

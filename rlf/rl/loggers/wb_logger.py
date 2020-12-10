@@ -65,7 +65,7 @@ class WbLogger(BaseLogger):
         self.wandb = self._create_wandb(args)
 
     def log_vals(self, key_vals, step_count):
-        wandb.log(key_vals, step=step_count)
+        wandb.log(key_vals, step=int(step_count))
 
     def watch_model(self, model):
         wandb.watch(model)

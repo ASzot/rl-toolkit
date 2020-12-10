@@ -158,6 +158,7 @@ def add_args(parser):
             "spawn", "forkserver". "fork" will not work if you are doing
             rendering in MuJoCo.
             """)
+    parser.add_argument('--transpose-frame', type=str2bool, default=True)
     parser.add_argument('--warp-frame', type=str2bool, default=False,
             help="""
             Resizes to 84x84 and makes grayscale

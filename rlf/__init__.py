@@ -2,6 +2,9 @@ from rlf.envs.env_interface import EnvInterface
 from rlf.envs.env_interface import register_env_interface, get_env_interface
 from rlf.main import run_policy
 
+from rlf.rl.loggers.wb_logger import WbLogger
+from rlf.rl.loggers.base_logger import BaseLogger
+
 from rlf.policies.base_policy import BasePolicy
 from rlf.policies.base_net_policy import BaseNetPolicy
 from rlf.policies.basic_policy import BasicPolicy
