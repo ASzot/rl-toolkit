@@ -25,6 +25,9 @@ def get_arg_parser():
     parser.add_argument('--g', type=int, default=1, help="""
             Number of gpus for SLURM job
             """)
+    parser.add_argument('--nodes', type=int, default=1, help="""
+            Number of nodes for SLURM job
+            """)
     parser.add_argument('--cd', default='1', type=str,
                         help='String of CUDA_VISIBLE_DEVICES=(example: \"1 2\")')
     parser.add_argument('--cfg', type=str, default='./config.yaml')
@@ -150,31 +153,70 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
                 parts = cmd.split(" ")
                 prefix = None
                 for i,x in enumerate(parts):
-                    if x == '--prefix':
+                    if x == '--prefix' or x == 'PREFIX':
                         prefix = parts[i+1].replace('"','')
                         break
 
-                cmd += f" --log-dir {osp.join(base_data_dir, 'log')}"
-                cmd += f" --vid-dir {osp.join(base_data_dir, 'vids')}"
-                cmd += f" --save-dir {osp.join(base_data_dir, 'trained_models')}"
+                new_log_dir = osp.join(base_data_dir, 'log')
+                new_vids_dir = osp.join(base_data_dir, 'vids')
+                new_save_dir = osp.join(base_data_dir, 'trained_models')
                 ident = str(uuid.uuid4())[:8]
                 log_file = osp.join(runs_dir, ident) + ".log"
-                srun_settings = f"--gres=gpu:{args.g} " + \
-                        f"-p {args.st} " + \
-                        f"-c {args.c} " + \
-                        f"-J {prefix}_{ident} " + \
-                        f"-o {log_file}"
 
                 last_pane = new_window.attached_pane
                 last_pane.send_keys(f"tail -f {log_file}", enter=False)
                 pane = new_window.split_window(attach=False)
                 pane.set_height(height=10)
 
-                # This assumes the command begins with "python ..."
-                cmd = f"srun {srun_settings} {python_path}/{cmd}"
-                pane.send_keys(cmd)
+                if 'habitat_baselines.run' in cmd:
+                    run_file = generate_hab_run_file(new_log_dir, new_vids_dir,
+                            new_save_dir, log_file, ident, python_path, cmd,
+                            prefix, args)
+                    print(f"Running file at {run_file}")
+                    pane.send_keys(f"sbatch {run_file}")
+                else:
+                    cmd += f" --log-dir {new_log_dir}"
+                    cmd += f" --vid-dir {new_vids_dir}"
+                    cmd += f" --save-dir {new_save_dir}"
+                    srun_settings = f"--gres=gpu:{args.g} " + \
+                            f"-p {args.st} " + \
+                            f"-c {args.c} " + \
+                            f"-J {prefix}_{ident} " + \
+                            f"-o {log_file}"
+
+                    # This assumes the command begins with "python ..."
+                    cmd = f"srun {srun_settings} {python_path}/{cmd}"
+                    pane.send_keys(cmd)
 
         print('everything should be running...')
+
+def generate_hab_run_file(log_dir, vids_dir, save_dir, log_file, ident,
+        python_path, cmd, prefix, args):
+    fcontents = """#!/bin/bash
+#SBATCH --job-name=%s
+#SBATCH --output=%s
+#SBATCH --gres gpu:%i
+#SBATCH --nodes %i
+#SBATCH --cpus-per-task %i
+#SBATCH --ntasks-per-node 1
+#SBATCH -p %s
+
+export GLOG_minloglevel=2
+export MAGNUM_LOG=quiet
+
+export MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
+
+set -x
+srun %s/%s"""
+    job_name = prefix + '_' + ident
+    log_file_loc = '/'.join(log_file.split('/')[:-1])
+    fcontents = fcontents % (job_name, log_file, args.g, args.nodes, args.c,
+            args.st, python_path, cmd)
+    job_file = osp.join(log_file_loc, job_name + '.sh')
+    with open(job_file, 'w') as f:
+        f.write(fcontents)
+    return job_file
+
 
 
 def full_execute_command_file():
