@@ -114,8 +114,11 @@ class BaseLogger(object):
         d = datetime.datetime.today()
         date_id = '%i%i' % (d.month, d.day)
         env_id = self._get_env_id(args)
-        rnd_id = ''.join(random.sample(
-            string.ascii_uppercase + string.digits, k=2))
+
+        chars = [x for x in string.ascii_uppercase + string.digits]
+        rnd_id = np.random.RandomState().choice(chars, 2)
+        rnd_id = ''.join(rnd_id)
+
         before = ('%s-%s-%s-%s-' %
                   (date_id, env_id, args.seed, rnd_id))
 
