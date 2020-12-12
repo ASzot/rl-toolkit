@@ -31,6 +31,7 @@ def get_arg_parser():
     parser.add_argument('--cd', default='1', type=str,
                         help='String of CUDA_VISIBLE_DEVICES=(example: \"1 2\")')
     parser.add_argument('--cfg', type=str, default='./config.yaml')
+    parser.add_argument('--pt-proc', type=int, default=-1)
     return parser
 
 
@@ -106,6 +107,24 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
     elif seed is not None:
         cmds = [x + f" --seed {seed}" for x in cmds]
     add_on = ''
+
+    if args.pt_proc != -1:
+        pt_dist_str = f"python -u -m torch.distributed.launch --use_env --nproc_per_node {args.pt_proc} "
+        def make_dist_cmd(x):
+            parts = x.split(' ')
+            runf = None
+            for i, part in enumerate(parts):
+                if '.py' in part:
+                    runf = i
+                    break
+
+            if runf is None:
+                raise ValueError('Could not split command')
+
+            rest = ' '.join(parts[runf:])
+            return pt_dist_str + rest
+
+        cmds = [make_dist_cmd(x) for x in cmds]
 
     if sess_id == -1:
         if len(cmds) == 1:
