@@ -157,6 +157,9 @@ class PassThroughBase(BaseNet):
         super().__init__(recurrent, input_shape[0], hidden_size)
         self.input_shape = input_shape
 
+    def net(self, x):
+        return x
+
     @property
     def output_shape(self):
         if self.is_recurrent:

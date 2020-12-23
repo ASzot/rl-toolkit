@@ -25,8 +25,8 @@ def get_arg_parser():
     parser.add_argument('--g', type=int, default=1, help="""
             Number of gpus for SLURM job
             """)
-    parser.add_argument('--nodes', type=int, default=1, help="""
-            Number of nodes for SLURM job
+    parser.add_argument('--ntasks', type=int, default=1, help="""
+            Number of processes for SLURM job
             """)
     parser.add_argument('--cd', default='1', type=str,
                         help='String of CUDA_VISIBLE_DEVICES=(example: \"1 2\")')
@@ -229,9 +229,9 @@ def generate_hab_run_file(log_dir, vids_dir, save_dir, log_file, ident,
 #SBATCH --job-name=%s
 #SBATCH --output=%s
 #SBATCH --gres gpu:%i
-#SBATCH --nodes %i
+#SBATCH --nodes 1
 #SBATCH --cpus-per-task %i
-#SBATCH --ntasks-per-node 1
+#SBATCH --ntasks-per-node %i
 #SBATCH -p %s
 
 export GLOG_minloglevel=2
@@ -243,8 +243,8 @@ set -x
 srun %s/%s"""
     job_name = prefix + '_' + ident
     log_file_loc = '/'.join(log_file.split('/')[:-1])
-    fcontents = fcontents % (job_name, log_file, args.g, args.nodes, args.c,
-            args.st, python_path, cmd)
+    fcontents = fcontents % (job_name, log_file, args.g, args.c,
+            args.ntasks, args.st, python_path, cmd)
     job_file = osp.join(log_file_loc, job_name + '.sh')
     with open(job_file, 'w') as f:
         f.write(fcontents)
