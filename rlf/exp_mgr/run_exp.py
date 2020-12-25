@@ -102,17 +102,19 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         args):
     cmds = get_cmds(cmd_path, add_args_str)
 
+    n_seeds = 1
     if seed is not None and len(seed.split(',')) > 1:
         seeds = seed.split(',')
         common_id = ''.join(random.sample(string.ascii_uppercase + string.digits, k=2))
 
         cmds = [transform_prefix(cmd, common_id) for cmd in cmds]
         cmds = [cmd + f" --seed {seed}"  for cmd in cmds for seed in seeds]
+        n_seeds = len(seeds)
     elif seed is not None:
         cmds = [x + f" --seed {seed}" for x in cmds]
     add_on = ''
 
-    if len(cmds) > 0:
+    if (len(cmds) // n_seeds) > 1:
         # Make sure all the commands share the last part of the prefix so they can
         # find each other. The name is long because its really bad if a job
         # finds the wrong other job.
