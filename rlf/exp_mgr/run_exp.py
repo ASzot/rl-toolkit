@@ -28,10 +28,13 @@ def get_arg_parser():
     parser.add_argument('--ntasks', type=int, default=1, help="""
             Number of processes for SLURM job
             """)
-    parser.add_argument('--cd', default='1', type=str,
-                        help='String of CUDA_VISIBLE_DEVICES=(example: \"1 2\")')
+    parser.add_argument('--cd', default='-1', type=str, help="""
+            String of CUDA_VISIBLE_DEVICES. A value of "-1" will not set
+            CUDA_VISIBLE_DEVICES at all.
+            """)
     parser.add_argument('--cfg', type=str, default='./config.yaml')
     parser.add_argument('--pt-proc', type=int, default=-1)
+    parser.add_argument('--debug', action='store_true')
     return parser
 
 
@@ -136,6 +139,12 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
             return pt_dist_str + rest
 
         cmds = [make_dist_cmd(x) for x in cmds]
+
+    if args.debug:
+        print('IN DEBUG MODE')
+        if sess_id != -1:
+            raise ValueError('Cannot run in different session for debug mode')
+        cmds = cmds[:1]
 
     if sess_id == -1:
         if len(cmds) == 1:
