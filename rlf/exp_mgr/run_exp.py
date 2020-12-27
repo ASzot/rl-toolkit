@@ -7,6 +7,7 @@ import sys
 import random
 import string
 import uuid
+import time
 
 
 def get_arg_parser():
@@ -105,17 +106,19 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         args):
     cmds = get_cmds(cmd_path, add_args_str)
 
+    n_seeds = 1
     if seed is not None and len(seed.split(',')) > 1:
         seeds = seed.split(',')
         common_id = ''.join(random.sample(string.ascii_uppercase + string.digits, k=2))
 
         cmds = [transform_prefix(cmd, common_id) for cmd in cmds]
         cmds = [cmd + f" --seed {seed}"  for cmd in cmds for seed in seeds]
+        n_seeds = len(seeds)
     elif seed is not None:
         cmds = [x + f" --seed {seed}" for x in cmds]
     add_on = ''
 
-    if len(cmds) > 0:
+    if (len(cmds) // n_seeds) > 1:
         # Make sure all the commands share the last part of the prefix so they can
         # find each other. The name is long because its really bad if a job
         # finds the wrong other job.
@@ -158,6 +161,19 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         else:
             raise ValueError('Running multiple jobs. You must specify tmux session id')
     else:
+        def as_list(x):
+            if isinstance(x, int):
+                return [x for _ in cmds]
+            x = x.split(',')
+            if len(x) == 1:
+                x = [x[0] for _ in cmds]
+            return x
+
+        cd = as_list(cd)
+        ntasks = as_list(args.ntasks)
+        g = as_list(args.g)
+        c = as_list(args.c)
+
         exp_files = []
         cd = cd.split(',')
         if len(cd) == 1:
@@ -210,16 +226,19 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
                 pane = new_window.split_window(attach=False)
                 pane.set_height(height=10)
 
+                new_dirs = []
+                for k, v in config_mgr.get_prop('change_cmds').items():
+                    new_dirs.append(k +" "+osp.join(base_data_dir, v))
+                cmd += " " + (" ".join(new_dirs))
+
                 if 'habitat_baselines.run' in cmd:
-                    run_file = generate_hab_run_file(new_log_dir, new_vids_dir,
-                            new_save_dir, log_file, ident, python_path, cmd,
-                            prefix, args)
+                    run_file,run_name = generate_hab_run_file(log_file, ident, python_path, cmd,
+                            prefix, args.st, ntasks[cmd_idx], g[cmd_idx], c[cmd_idx])
                     print(f"Running file at {run_file}")
                     pane.send_keys(f"sbatch {run_file}")
+                    time.sleep(2)
+                    pane.send_keys(f"scancel {run_name}", enter=False)
                 else:
-                    cmd += f" --log-dir {new_log_dir}"
-                    cmd += f" --vid-dir {new_vids_dir}"
-                    cmd += f" --save-dir {new_save_dir}"
                     srun_settings = f"--gres=gpu:{args.g} " + \
                             f"-p {args.st} " + \
                             f"-c {args.c} " + \
@@ -232,8 +251,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
 
         print('everything should be running...')
 
-def generate_hab_run_file(log_dir, vids_dir, save_dir, log_file, ident,
-        python_path, cmd, prefix, args):
+def generate_hab_run_file(log_file, ident,
+        python_path, cmd, prefix, st, ntasks, g, c):
     fcontents = """#!/bin/bash
 #SBATCH --job-name=%s
 #SBATCH --output=%s
@@ -252,12 +271,12 @@ set -x
 srun %s/%s"""
     job_name = prefix + '_' + ident
     log_file_loc = '/'.join(log_file.split('/')[:-1])
-    fcontents = fcontents % (job_name, log_file, args.g, args.c,
-            args.ntasks, args.st, python_path, cmd)
+    fcontents = fcontents % (job_name, log_file, g, c,
+            ntasks, st, python_path, cmd)
     job_file = osp.join(log_file_loc, job_name + '.sh')
     with open(job_file, 'w') as f:
         f.write(fcontents)
-    return job_file
+    return job_file, job_name
 
 
 
