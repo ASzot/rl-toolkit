@@ -85,31 +85,37 @@ def get_tmux_window(sess_name, sess_id):
 
     return sess.new_window(attach=False, window_name="auto_proc")
 
+def transform_prefix(s, common_id):
+    if '--prefix' in s:
+        use_split = '--prefix '
+    else:
+        use_split = 'PREFIX '
+
+    prefix_parts = s.split(use_split)
+    before_prefix = use_split.join(prefix_parts[:-1])
+    prefix = prefix_parts[-1]
+    parts = prefix.split(' ')
+    prefix = parts[0]
+    after_prefix = ' '.join(parts[1:])
+    return before_prefix + f"{use_split} {prefix}-{common_id} " + after_prefix
 
 def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         args):
     cmds = get_cmds(cmd_path, add_args_str)
 
+    n_seeds = 1
     if seed is not None and len(seed.split(',')) > 1:
         seeds = seed.split(',')
         common_id = ''.join(random.sample(string.ascii_uppercase + string.digits, k=2))
 
-        def transform_prefix(s, common_id):
-            prefix_parts = s.split('--prefix ')
-            before_prefix = '--prefix '.join(prefix_parts[:-1])
-            prefix = prefix_parts[-1]
-            parts = prefix.split(' ')
-            prefix = parts[0]
-            after_prefix = ' '.join(parts[1:])
-            return before_prefix + f"--prefix {prefix}-{common_id} " + after_prefix
         cmds = [transform_prefix(cmd, common_id) for cmd in cmds]
         cmds = [cmd + f" --seed {seed}"  for cmd in cmds for seed in seeds]
-        rnd_id = ''.join(random.sample(string.ascii_uppercase + string.digits, k=2))
+        n_seeds = len(seeds)
     elif seed is not None:
         cmds = [x + f" --seed {seed}" for x in cmds]
     add_on = ''
 
-    if len(cmds) > 1:
+    if (len(cmds) // n_seeds) > 1:
         # Make sure all the commands share the last part of the prefix so they can
         # find each other. The name is long because its really bad if a job
         # finds the wrong other job.
@@ -160,7 +166,10 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         c = as_list(args.c)
 
         exp_files = []
-        for cmd_idx, cmd in enumerate(cmds):
+        cd = cd.split(',')
+        if len(cd) == 1:
+            cd = [cd[0] for _ in cmds]
+        for i, cmd in enumerate(cmds):
             new_window = get_tmux_window(sess_name, sess_id)
             cmd += ' ' + add_on
             print('running full command %s\n' % cmd)
@@ -176,8 +185,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
 
                 pane.send_keys('source activate ' + conda_env)
                 pane.enter()
-                if cd[cmd_idx] != '-1':
-                    pane.send_keys('export CUDA_VISIBLE_DEVICES=' + cd[cmd_idx])
+                if cd[i] != '-1':
+                    pane.send_keys('export CUDA_VISIBLE_DEVICES=' + cd[i])
                     pane.enter()
                 pane.send_keys(cmd)
                 pane.enter()
