@@ -6,6 +6,7 @@ import numpy as np
 import os.path as osp
 #import moviepy.editor as mpy
 import gym
+import time
 import matplotlib.pyplot as plt
 import pickle
 
@@ -15,6 +16,8 @@ from collections import defaultdict
 from PIL import Image
 import cv2
 import hashlib
+from contextlib import ContextDecorator
+from abc import ABC
 
 try:
     import wandb
@@ -84,19 +87,6 @@ def save_model(model, save_name, args):
     torch.save(model.state_dict(), save_path)
     print(f"Saved model to {save_path}")
 
-
-@contextmanager
-def elapsed_timer():
-    """
-    Measure time elapsed in a block of code. Used for debugging.
-    Taken from:
-    https://stackoverflow.com/questions/7370801/measure-time-elapsed-in-python
-    """
-    start = default_timer()
-    elapser = lambda: default_timer() - start
-    yield lambda: elapser()
-    end = default_timer()
-    elapser = lambda: end-start
 
 def human_format_int(num, round_pos=2):
     magnitude = 0
@@ -440,3 +430,56 @@ class CacheHelper:
             pickle.dump(val, f)
 
 
+@contextmanager
+def elapsed_timer():
+    """
+    Measure time elapsed in a block of code. Used for debugging.
+    Taken from:
+    https://stackoverflow.com/questions/7370801/measure-time-elapsed-in-python
+    """
+    start = default_timer()
+    elapser = lambda: default_timer() - start
+    yield lambda: elapser()
+    end = default_timer()
+    elapser = lambda: end-start
+
+class TimeProfiler(ContextDecorator):
+    def __init__(self, timer_name, timee=None):
+        self.timer_name = timer_name
+        if timee is not None:
+            self.add_time_f = timee.timer.add_time
+        else:
+            self.add_time_f = None
+
+    def __enter__(self):
+        self.start_time = time.time()
+        return self
+
+    def __call__(self, f):
+        def wrapper(*args):
+            other_self = args[0]
+            self.add_time_f = other_self.timer.add_time
+            return f(*args)
+        return super().__call__(wrapper)
+
+    def __exit__(self, *exc):
+        elapsed = time.time() - self.start_time
+        self.add_time_f(self.timer_name, elapsed)
+        return False
+
+
+class TimeProfilee:
+    def __init__(self):
+        self.clear()
+
+    def add_time(self, timer_name, timer_val):
+        self.timers[timer_name] += timer_val
+        self.timer_call_count[timer_name] += 1
+
+    def get_time(self, timer_name):
+        return (self.timers[timer_name],
+                self.timer_call_count[timer_name])
+
+    def clear(self):
+        self.timers = defaultdict(lambda: 0)
+        self.timer_call_count = defaultdict(lambda: 0)

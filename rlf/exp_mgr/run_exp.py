@@ -174,10 +174,6 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         g = as_list(args.g)
         c = as_list(args.c)
 
-        exp_files = []
-        cd = cd.split(',')
-        if len(cd) == 1:
-            cd = [cd[0] for _ in cmds]
         for i, cmd in enumerate(cmds):
             new_window = get_tmux_window(sess_name, sess_id)
             cmd += ' ' + add_on
