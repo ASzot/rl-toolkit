@@ -20,13 +20,13 @@ def get_arg_parser():
                         help='list of commands to run')
     parser.add_argument('--seed', type=str, default=None)
     parser.add_argument('--st', type=str, default=None, help="Slum type [long, short]")
-    parser.add_argument('--c', type=int, default=6, help="""
+    parser.add_argument('--c', type=str, default='6', help="""
             Number of cpus for SLURM job
             """)
-    parser.add_argument('--g', type=int, default=1, help="""
+    parser.add_argument('--g', type=str, default='1', help="""
             Number of gpus for SLURM job
             """)
-    parser.add_argument('--ntasks', type=int, default=1, help="""
+    parser.add_argument('--ntasks', type=str, default='1', help="""
             Number of processes for SLURM job
             """)
     parser.add_argument('--cd', default='-1', type=str, help="""
@@ -174,7 +174,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         g = as_list(args.g)
         c = as_list(args.c)
 
-        for i, cmd in enumerate(cmds):
+        for cmd_idx, cmd in enumerate(cmds):
             new_window = get_tmux_window(sess_name, sess_id)
             cmd += ' ' + add_on
             print('running full command %s\n' % cmd)
@@ -190,8 +190,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
 
                 pane.send_keys('source activate ' + conda_env)
                 pane.enter()
-                if cd[i] != '-1':
-                    pane.send_keys('export CUDA_VISIBLE_DEVICES=' + cd[i])
+                if cd[cmd_idx] != '-1':
+                    pane.send_keys('export CUDA_VISIBLE_DEVICES=' + cd[cmd_idx])
                     pane.enter()
                 pane.send_keys(cmd)
                 pane.enter()
@@ -267,8 +267,8 @@ set -x
 srun %s/%s"""
     job_name = prefix + '_' + ident
     log_file_loc = '/'.join(log_file.split('/')[:-1])
-    fcontents = fcontents % (job_name, log_file, g, c,
-            ntasks, st, python_path, cmd)
+    fcontents = fcontents % (job_name, log_file, int(g), int(c),
+            int(ntasks), st, python_path, cmd)
     job_file = osp.join(log_file_loc, job_name + '.sh')
     with open(job_file, 'w') as f:
         f.write(fcontents)
