@@ -145,8 +145,6 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
 
     if args.debug:
         print('IN DEBUG MODE')
-        if sess_id != -1:
-            raise ValueError('Cannot run in different session for debug mode')
         cmds = cmds[:1]
 
     if sess_id == -1:
@@ -249,6 +247,10 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
 
 def generate_hab_run_file(log_file, ident,
         python_path, cmd, prefix, st, ntasks, g, c):
+    ignore_nodes_s = ",".join(config_mgr.get_prop("slurm_ignore_nodes", []))
+    if len(ignore_nodes_s) != 0:
+        ignore_nodes_s = '#SBATCH -x ' + ignore_nodes_s
+
     fcontents = """#!/bin/bash
 #SBATCH --job-name=%s
 #SBATCH --output=%s
@@ -257,6 +259,7 @@ def generate_hab_run_file(log_file, ident,
 #SBATCH --cpus-per-task %i
 #SBATCH --ntasks-per-node %i
 #SBATCH -p %s
+%s
 
 export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet
@@ -268,7 +271,7 @@ srun %s/%s"""
     job_name = prefix + '_' + ident
     log_file_loc = '/'.join(log_file.split('/')[:-1])
     fcontents = fcontents % (job_name, log_file, int(g), int(c),
-            int(ntasks), st, python_path, cmd)
+            int(ntasks), st, ignore_nodes_s, python_path, cmd)
     job_file = osp.join(log_file_loc, job_name + '.sh')
     with open(job_file, 'w') as f:
         f.write(fcontents)

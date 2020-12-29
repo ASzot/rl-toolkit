@@ -6,8 +6,11 @@ g_settings = None
 def get_cached_settings():
     return g_settings
 
-def get_prop(name):
-    return get_cached_settings()[name]
+def get_prop(name, def_val=None):
+    if def_val is None:
+        return get_cached_settings()[name]
+    else:
+        return get_cached_settings().get(name, def_val)
 
 def init(cfg_path):
     global g_settings
