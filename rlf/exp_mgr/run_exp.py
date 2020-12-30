@@ -141,7 +141,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
             rest = ' '.join(parts[runf:])
             return pt_dist_str + rest
 
-        cmds = [make_dist_cmd(x) for x in cmds]
+        cmds[0] = make_dist_cmd(cmds[0])
 
     if args.debug:
         print('IN DEBUG MODE')
@@ -162,7 +162,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         def as_list(x):
             if isinstance(x, int):
                 return [x for _ in cmds]
-            x = x.split(',')
+            x = x.split('|')
             if len(x) == 1:
                 x = [x[0] for _ in cmds]
             return x
