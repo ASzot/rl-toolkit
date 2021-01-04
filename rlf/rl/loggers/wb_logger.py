@@ -46,7 +46,8 @@ class WbLogger(BaseLogger):
     Logger for logging to the weights and W&B online service.
     """
 
-    def __init__(self, wb_proj_name=None, should_log_vids=False, wb_entity=None):
+    def __init__(self, wb_proj_name=None, should_log_vids=False,
+            wb_entity=None, skip_create_wb=False):
         """
         - wb_proj_name: (string) if None, will use the proj_name provided in
           the `config.yaml` file.
@@ -59,9 +60,12 @@ class WbLogger(BaseLogger):
         self.wb_proj_name = wb_proj_name
         self.wb_entity = wb_entity
         self.should_log_vids = should_log_vids
+        self.skip_create_wb = skip_create_wb
 
     def init(self, args):
         super().init(args)
+        if self.skip_create_wb:
+            return
         self.wandb = self._create_wandb(args)
 
     def log_vals(self, key_vals, step_count):
