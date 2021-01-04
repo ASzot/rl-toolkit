@@ -114,7 +114,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
     n_seeds = 1
     if args.cmd_format == 'reg':
         cmd_format = '--'
-        spacer = ''
+        spacer = ' '
     elif args.cmd_format == 'nodash':
         cmd_format = ''
         spacer = '='
