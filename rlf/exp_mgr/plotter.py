@@ -36,6 +36,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
                 y_bounds=None, y_disp_bounds=None, x_disp_bounds=None,
                 group_colors=None, xtick_fn=None, ytick_fn=None, legend=False,
                rename_map={}, title=None, axes_font_size=14, title_font_size=18,
+               legend_font_size='x-large',
                 tight=False):
     plot_df = plot_df.copy()
     if tight:
@@ -91,7 +92,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
 
     if legend:
         labs = [l[0].get_label() for l in lines]
-        plt.legend(lines, labs, fontsize='x-large')
+        plt.legend(lines, labs, fontsize=legend_font_size)
 
     ax.grid(b=True, which='major', color='lightgray', linestyle='--')
 
