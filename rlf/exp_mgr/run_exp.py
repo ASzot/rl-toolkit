@@ -36,6 +36,9 @@ def get_arg_parser():
     parser.add_argument('--cfg', type=str, default='./config.yaml')
     parser.add_argument('--pt-proc', type=int, default=-1)
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--cmd-format', type=str, default='reg', help="""
+            Options are [reg, nodash]
+            """)
     return parser
 
 
@@ -91,8 +94,10 @@ def get_tmux_window(sess_name, sess_id):
 def transform_prefix(s, common_id):
     if '--prefix' in s:
         use_split = '--prefix '
-    else:
+    elif 'PREFIX' in s:
         use_split = 'PREFIX '
+    else:
+        return s
 
     prefix_parts = s.split(use_split)
     before_prefix = use_split.join(prefix_parts[:-1])
@@ -107,15 +112,24 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
     cmds = get_cmds(cmd_path, add_args_str)
 
     n_seeds = 1
+    if args.cmd_format == 'reg':
+        cmd_format = '--'
+        spacer = ' '
+    elif args.cmd_format == 'nodash':
+        cmd_format = ''
+        spacer = '='
+    else:
+        raise ValueError(f"{args.cmd_format} does not match anything")
+
     if seed is not None and len(seed.split(',')) > 1:
         seeds = seed.split(',')
         common_id = ''.join(random.sample(string.ascii_uppercase + string.digits, k=2))
 
         cmds = [transform_prefix(cmd, common_id) for cmd in cmds]
-        cmds = [cmd + f" --seed {seed}"  for cmd in cmds for seed in seeds]
+        cmds = [cmd + f" {cmd_format}seed{spacer}{seed}"  for cmd in cmds for seed in seeds]
         n_seeds = len(seeds)
     elif seed is not None:
-        cmds = [x + f" --seed {seed}" for x in cmds]
+        cmds = [x + f" {cmd_format}seed{spacer}{seed}" for x in cmds]
     add_on = ''
 
     if (len(cmds) // n_seeds) > 1:
