@@ -415,10 +415,14 @@ class CacheHelper:
 
     def load(self):
         if self.exists():
-            with open(self.cache_id, 'rb') as f:
-                if self.verbose:
-                    print('Loading cache @', self.cache_id)
-                return pickle.load(f)
+            try:
+                with open(self.cache_id, 'rb') as f:
+                    if self.verbose:
+                        print('Loading cache @', self.cache_id)
+                    return pickle.load(f)
+            except EOFError as e:
+                return self.def_val
+            return self.def_val
         else:
             return self.def_val
 
