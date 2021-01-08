@@ -36,7 +36,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
                 y_bounds=None, y_disp_bounds=None, x_disp_bounds=None,
                 group_colors=None, xtick_fn=None, ytick_fn=None, legend=False,
                rename_map={}, title=None, axes_font_size=14, title_font_size=18,
-               legend_font_size='x-large',
+               legend_font_size='x-large', method_idxs={},
                 tight=False):
     plot_df = plot_df.copy()
     if tight:
@@ -53,7 +53,6 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
     std_y_df = plot_df.groupby([group_key, x_name]).std()
     avg_y_df['std'] = std_y_df[y_name]
 
-    midx = 0
     lines = []
     for name, sub_df in avg_y_df.groupby(level=0):
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
@@ -61,10 +60,10 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         y_std = sub_df['std'].fillna(0).to_numpy()
         l = ax.plot(x_vals, y_vals)
         sel_vals = [int(x) for x in np.linspace(0, len(x_vals)-1, num=8)]
+        midx = method_idxs[name] % len(MARKER_ORDER)
         ladd = ax.plot(x_vals[sel_vals], y_vals[sel_vals], MARKER_ORDER[midx],
                 label=rename_map.get(name, name), color=group_colors[name],
                 markersize=8)
-        midx += 1
 
         lines.append((ladd[0], l[0]))
 

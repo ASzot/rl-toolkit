@@ -146,6 +146,7 @@ def plot_from_file(plot_cfg_path):
                     legend=plot_section['legend'],
                     title=title,
                     group_colors=group_colors,
+                    method_idxs=plot_settings['colors'],
                     tight=True,
                     legend_font_size=use_legend_font_size,
                     rename_map={
