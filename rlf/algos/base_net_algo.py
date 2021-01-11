@@ -56,10 +56,8 @@ class BaseNetAlgo(BaseAlgo):
         super().pre_update(cur_update)
         if self._arg('linear_lr_decay'):
             for k, (opt, _, initial_lr) in self.optimizers.items():
-                lr = initial_lr - \
-                    (initial_lr * (cur_update / float(self.lr_updates)))
-                for param_group in opt.param_groups:
-                    param_group['lr'] = lr
+                autils.linear_lr_schedule(cur_update, self.lr_updates,
+                        initial_lr, opt)
 
     def _clip_grad(self, params):
         """

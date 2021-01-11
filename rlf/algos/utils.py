@@ -4,6 +4,12 @@ import gym.spaces as spaces
 from torch import autograd
 import numpy as np
 
+def linear_lr_schedule(cur_update, total_updates, initial_lr, opt):
+    lr = initial_lr - \
+        (initial_lr * (cur_update / float(total_updates)))
+    for param_group in opt.param_groups:
+        param_group['lr'] = lr
+
 def td_loss(target, policy, cur_states, cur_actions, add_info={}, cont_actions=False):
     """
     Computes the mean squared error between the Q values for the current states
