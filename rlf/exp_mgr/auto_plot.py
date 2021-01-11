@@ -75,11 +75,14 @@ def plot_from_file(plot_cfg_path):
 
         for plot_section in plot_settings['plot_sections']:
             plot_key = plot_section.get('plot_key', plot_settings['plot_key'])
+            match_pat = plot_section.get('name_match_pat',
+                    plot_settings.get('name_match_pat', None))
             print(f"Getting data for {plot_section['report_name']}")
             plot_df = get_report_data(plot_section['report_name'],
                     plot_key,
                     plot_section['plot_sections'],
                     get_setting(plot_section,'force_reload', False),
+                    match_pat,
                     plot_settings['config_yaml'])
 
             if 'line_sections' in plot_section:
@@ -94,6 +97,7 @@ def plot_from_file(plot_cfg_path):
                         fetch_keys,
                         plot_section['line_sections'],
                         get_setting(plot_section,'force_reload', False),
+                        match_pat,
                         plot_settings['config_yaml'])
                 line_df = line_df[line_df[line_plot_key].notna()]
                 uniq_step = plot_df['_step'].unique()
@@ -119,7 +123,8 @@ def plot_from_file(plot_cfg_path):
                 use_line_df = use_line_df.rename(columns={line_plot_key: plot_key})
                 plot_df = pd.concat([plot_df, use_line_df])
 
-            fig, ax = plt.subplots(figsize=(5, 4))
+            use_fig_dims = plot_section.get('fig_dims', plot_settings.get('fig_dims', (5,4)))
+            fig, ax = plt.subplots(figsize=use_fig_dims)
             def get_nums_from_str(s):
                 return [float(x) for x in s.split(',')]
 
@@ -130,6 +135,8 @@ def plot_from_file(plot_cfg_path):
             title = plot_section['plot_title']
             if 'scale_factor' in plot_settings:
                 plot_df[plot_key] *= plot_settings['scale_factor']
+            use_legend_font_size = plot_section.get('legend_font_size',
+                    plot_settings.get('legend_font_size', 'x-large'))
             uncert_plot(plot_df, ax, '_step', plot_key, 'run', 'method',
                     float(plot_settings['smooth_factor']),
                     y_bounds=get_nums_from_str(plot_section['y_bounds']),
@@ -139,7 +146,9 @@ def plot_from_file(plot_cfg_path):
                     legend=plot_section['legend'],
                     title=title,
                     group_colors=group_colors,
+                    method_idxs=plot_settings['colors'],
                     tight=True,
+                    legend_font_size=use_legend_font_size,
                     rename_map={
                         **plot_settings['global_renames'],
                         **local_renames,

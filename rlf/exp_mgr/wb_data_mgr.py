@@ -52,8 +52,8 @@ def get_run_data(run_names, plot_field, method_name,
 
     return all_df
 
-def get_run_ids_from_report(wb_entity, wb_proj_name, report_name, get_sections, api):
-    reports = api.reports(wb_entity + '/' + wb_proj_name)
+def get_run_ids_from_report(wb_search, report_name, get_sections, api):
+    reports = api.reports(wb_search)
     report = None
     for cur_report in reports:
         id_parts = cur_report.description.split('ID:')
@@ -83,7 +83,7 @@ def get_run_ids_from_report(wb_entity, wb_proj_name, report_name, get_sections, 
     return run_ids
 
 def get_report_data(report_name, plot_field, plot_sections,
-        force_refresh=False, cfg='./config.yaml'):
+        force_refresh=False, match_pat=None, cfg='./config.yaml'):
     """
     Converts the selected data sets in a W&B report into a Pandas DataFrame.
     Fetches only the plot_field you specify.
@@ -92,6 +92,7 @@ def get_report_data(report_name, plot_field, plot_sections,
 
     wb_proj_name = config_mgr.get_prop('proj_name')
     wb_entity = config_mgr.get_prop('wb_entity')
+    wb_search = config_mgr.get_prop('wb_search', wb_entity+'/'+wb_proj_name)
 
     save_report_name = report_name.replace(' ', '-').replace("/", "-")
     cacher = CacheHelper(f"{wb_entity}_{wb_proj_name}_{save_report_name}",
@@ -108,9 +109,17 @@ def get_report_data(report_name, plot_field, plot_sections,
             return all_df
 
     api = wandb.Api()
-    run_ids = get_run_ids_from_report(wb_entity, wb_proj_name, report_name, plot_sections, api)
+    run_ids = get_run_ids_from_report(wb_search, report_name, plot_sections, api)
     for report_section, run_id in run_ids:
         wbrun = api.run(f"{wb_entity}/{wb_proj_name}/{run_id}")
+        if match_pat is not None:
+            any_matches = False
+            for x in match_pat:
+                if x in wbrun.name:
+                    any_matches = True
+                    break
+            if not any_matches:
+                continue
         df = wbrun.history(samples=15000)
         if not isinstance(plot_field, str):
             df = df[['_step', *plot_field]]
