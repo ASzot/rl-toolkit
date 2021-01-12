@@ -421,7 +421,8 @@ class CacheHelper:
                         print('Loading cache @', self.cache_id)
                     return pickle.load(f)
             except EOFError as e:
-                return self.def_val
+                print("Cache size is ", osp.getsize(self.cache_id))
+                raise e
             return self.def_val
         else:
             return self.def_val
