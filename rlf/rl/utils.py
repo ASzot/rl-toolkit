@@ -331,7 +331,7 @@ def is_discrete(ac):
     elif ac.__class__.__name__ == "Box":
         return False
     else:
-        raise ValueError("Action space {ac} not supported")
+        raise ValueError(f"Action space {ac} not supported")
 
 def agg_ep_log_stats(env_infos, alg_info):
     """
