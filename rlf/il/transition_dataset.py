@@ -5,6 +5,10 @@ import numpy as np
 
 
 class TransitionDataset(ImitationLearningDataset):
+    """
+    See `rlf/il/il_dataset.py` for notes about the demonstration dataset
+    format.
+    """
     def __init__(self, load_path, transform_dem_dataset_fn):
         if load_path.endswith(".npz"):
             self.trajs = self._load_npz(load_path)

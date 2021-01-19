@@ -4,6 +4,10 @@ import rlf.rl.utils as rutils
 from rlf.il.il_dataset import ImitationLearningDataset
 
 class TrajDataset(ImitationLearningDataset):
+    """
+    See `rlf/il/il_dataset.py` for notes about the demonstration dataset
+    format.
+    """
     def __init__(self, load_path):
         trajs = torch.load(load_path)
 
