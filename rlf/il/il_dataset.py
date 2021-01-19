@@ -2,6 +2,16 @@ import torch.utils.data
 from abc import ABC, abstractmethod
 
 class ImitationLearningDataset(torch.utils.data.Dataset, ABC):
+    """
+    The data should be a dictionary saved with `torch.save`, consisting of
+        {
+        'done': torch.tensor
+        'obs': torch.tensor
+        'next_obs': torch.tensor
+        'actions': torch.tensor
+        }
+        All lists should be exactly the same length.
+    """
     def viz(self, args):
         pass
 
