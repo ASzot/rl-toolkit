@@ -17,9 +17,13 @@ class BaseLogger(object):
     def __init__(self):
         pass
 
-    def init(self, args):
+    def init(self, args, mod_prefix=lambda x: x):
+        """
+        - mod_prefix: Function that takes as input the prefix and returns the
+          transformed prefix.
+        """
         self.is_debug_mode = args.prefix == 'debug'
-        self._create_prefix(args)
+        self._create_prefix(args, mod_prefix)
 
         print('Smooth len is %i' % args.log_smooth_len)
 
@@ -109,7 +113,7 @@ class BaseLogger(object):
         else:
             return ''.join(upper_case)
 
-    def _create_prefix(self, args):
+    def _create_prefix(self, args, mod_prefix):
         assert args.prefix is not None and args.prefix != '', 'Must specify a prefix'
         d = datetime.datetime.today()
         date_id = '%i%i' % (d.month, d.day)
@@ -121,6 +125,8 @@ class BaseLogger(object):
 
         before = ('%s-%s-%s-%s-' %
                   (date_id, env_id, args.seed, rnd_id))
+
+        before = mod_prefix(before)
 
         if args.prefix != 'debug' and args.prefix != 'NONE':
             self.prefix = before + args.prefix
