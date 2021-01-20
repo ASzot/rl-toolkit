@@ -155,6 +155,9 @@ class RunSettings(MasterClass):
             if ray_create:
                 return None, None
             log = self.get_logger()
+        for k,v in vars(self.base_args).items():
+            if k not in args:
+                setattr(args, k, v)
         log.init(args)
         log.set_prefix(args)
 
