@@ -62,8 +62,8 @@ class WbLogger(BaseLogger):
         self.should_log_vids = should_log_vids
         self.skip_create_wb = skip_create_wb
 
-    def init(self, args):
-        super().init(args)
+    def init(self, args, mod_prefix=lambda x: x):
+        super().init(args, mod_prefix)
         if self.skip_create_wb:
             return
         self.wandb = self._create_wandb(args)
