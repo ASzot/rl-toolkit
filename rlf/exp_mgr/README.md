@@ -35,6 +35,7 @@ Here is an illustrative plot settings YAML file.
 
 ```
 ---
+# You can specify multiple elements in the plot  sections list to create multiple plots at once. 
 plot_sections:
     - plot_title: "Fridge"
       save_name: "pick_fridge"
@@ -45,45 +46,38 @@ plot_sections:
       legend: True
       line_sections:
           - "mpg"
-          - "blind"
-          - "mpg margin"
-          - "mpg obj"
       plot_sections:
-          - "img old"
-          - "state old"
+          - "img"
+          - "state"
       force_reload: False
 global_renames: 
     "eval_metrics/ep_success": "Success (%)"
     _step: "Step"
-    'img old': 'Image'
-    'state old': 'State Only'
-    'img': 'Image'
-    'state': 'State'
-    "blind": 'Blind'
-    "mpg": 'MP+Geom'
-    "mpg margin": 'MP+Geom+Margin'
-    "mpg obj": 'MP+Geom+Obj'
+    'img': 'Image Method'
+    'state': 'State Only Method'
+    "mpg": 'Motion Planning Method'
 plot_key: "eval_metrics/ep_success"
 line_plot_key: "eval_metrics/ep_success"
 smooth_factor: 0.95
+# Multiplies the Y axis values by this amount. Helpful if you want to turn
+# something into a percen.
 scale_factor: 100
+# These configure how a run should be converted into a line (single value). 
 line_op: 'max'
 line_val_key: "eval_metrics/ep_success"
 line_plot_key: "eval_metrics/ep_success"
 config_yaml: "./config.yaml"
 save_loc: "./data/plot/figs/"
+# Make the figure wider, this is optional. 
 fig_dims: [6,4]
+# Make legend font size smaller. 
 legend_font_size: 'medium'
+# This will ignore names from W&B which don't contain one of these substrings.
 name_match_pat: ['_eval', 'mpg', 'blind']
 colors:
-    "img old": 0 
-    "state old": 1
     "img": 0 
     "state": 1
-    "blind": 2
-    "mpg": 3
-    "mpg margin": 4
-    "mpg obj": 5
+    "mpg": 2
 ```
 
 There is also a utility for creating a separate PDF file containing just the
