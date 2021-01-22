@@ -23,9 +23,15 @@ The settings that need to go into `config.yaml` are:
 - `wb_proj_name`
 
 ## Plotting 
-To plot, use `auto_plot.py`. This will automatically fetch and plot runs from reports on W&B. It has support for plotting horizontal lines, specifying the color, axes, and which key to plot. **The report on W&B has to follow [this naming convention from point 2](https://github.com/ASzot/rl-toolkit/tree/master/rlf/exp_mgr#getting-data-from-wb)**. Typically this is run as `python rl-toolkit/rlf/exp_mgr/auto_plot.py --plot-cfg my_plot_cfgs/plot.yaml`. 
+To plot, use `auto_plot.py`. This will automatically fetch and plot runs from
+reports on W&B. It has support for plotting horizontal lines, specifying the
+color, axes, and which key to plot. **The report on W&B has to follow [this
+naming convention from point
+2](https://github.com/ASzot/rl-toolkit/tree/master/rlf/exp_mgr#getting-data-from-wb)**.
+Typically this is run as `python rl-toolkit/rlf/exp_mgr/auto_plot.py --plot-cfg
+my_plot_cfgs/plot.yaml`. 
 
-Here is an illustrative plot settings yaml file. 
+Here is an illustrative plot settings YAML file. 
 
 ```
 ---
@@ -80,3 +86,27 @@ colors:
     "mpg obj": 5
 ```
 
+There is also a utility for creating a separate PDF file containing just the
+legend. This is run as `python rl-toolkit/rlf/exp_mgr/auto_plot.py --plot-cfg
+my_plot_cfgs/my_legend.yaml` --legend. An example of a legend YAML file is
+below. The marker attributes refer to the characteristics of the line next to
+the name. 
+
+```
+---
+plot_sections:
+    ablate: "ours,gaifo,gaifo-s"
+save_loc: "./data/plot/figs/final"
+marker_size: 12
+marker_width: 0.0
+marker_darkness: 0.1
+line_width: 3.0
+name_map:
+    ours: "Ours"
+    gaifo: "GAIfO"
+    gail-s: "GAIfO-s"
+colors:
+    ours: 0 
+    gaifo: 1
+    gail-s: 2
+```
