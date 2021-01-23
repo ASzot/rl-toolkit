@@ -72,7 +72,6 @@ class DDPG(ActorCriticUpdater):
         #########################################
         # Overrides
         parser.add_argument('--lr', type=float, default=1e-4)
-        parser.add_argument('--trans-buffer-size', type=int, default=int(1e6))
         parser.add_argument('--batch-size', type=int, default=int(64))
 
         #########################################
@@ -84,14 +83,21 @@ class DDPG(ActorCriticUpdater):
 
         parser.add_argument('--target-delay',
             type=int,
-            default=1)
+            default=1, help="""
+            Frequency of updating the target network
+            """)
 
         parser.add_argument('--update-every',
             type=int,
             default=int(50),
-            help='How many environment steps to do every update')
+            help="""
+                Update frequency. If 50 this will only actually the network
+                every 50 calls to the update function
+                """)
 
         parser.add_argument('--updates-per-batch',
             type=int,
             default=None,
-            help='Defaults to --update-every')
+            help="""
+            The number of epochs per update. Defaults to `update-every`
+            """)

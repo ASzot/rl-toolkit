@@ -80,6 +80,14 @@ def get_run_ids_from_report(wb_search, report_name, get_sections, api):
         report_runs = run_set['selections']['tree']
         for run_id in report_runs:
             run_ids.append((report_section, run_id))
+    if len(run_ids) == 0:
+        raise ValueError("""
+                Could not find runs %s from report. Check:
+                - There is only one section.
+                - The names don't have trailing spaces.
+                - The report is saved.
+                """ % str(get_sections))
+
     return run_ids
 
 def get_report_data(report_name, plot_field, plot_sections,

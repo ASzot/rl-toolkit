@@ -2,6 +2,10 @@ from rlf.storage.transition_storage import TransitionStorage
 import torch
 import rlf.rl.utils as rutils
 import numpy as np
+import rlf.envs.gym_hand
+
+def create_her_storage_buff(obs_space, action_space, buff_size, args):
+    return HerStorage(obs_space, action_space, buff_size, args)
 
 class HerStorage(TransitionStorage):
     """

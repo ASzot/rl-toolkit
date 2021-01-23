@@ -50,6 +50,11 @@ Requires Python 3.7. With conda:
 
 If you want to install MuJoCo as well: `mujoco-py==2.0.2.5` 
 
+## Usage
+See `tests/test_cmds/ppo/main.py` for an example of using PPO. Example
+commands for training PPO are in the same folder in the `.cmd` files. See the
+`tests/test_cmds/` for more examples.
+
 ## Run Tests
 The most important principle in this code is **working RL algorithms**.
 Automated benchmarking scripts are included under `tests/test_cmds` so you can
@@ -69,7 +74,6 @@ Easily run templated commands. Start by defining a `.cmd` file.
 See `envs/README.md`
 
 ## Ray
-
 Install with `pip install ray` and `pip install "ray[tune]"`. To run a job with
 Ray specify `--ray` and specify your hyperparam search for Ray tune using
 Python syntax in the command line argument with `--ray-config "{'lr':
