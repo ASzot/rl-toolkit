@@ -21,7 +21,7 @@ def get_arg_parser():
 
 def export_legend(ax, line_width, filename="legend.pdf"):
     fig2 = plt.figure()
-    ax2 = fig2.add_subplot()
+    ax2 = fig2.add_subplot(111)
     ax2.axis('off')
     legend = ax2.legend(*ax.get_legend_handles_labels(), frameon=False, loc='lower center', ncol=10,)
     for line in legend.get_lines():
@@ -37,14 +37,15 @@ def plot_legend(plot_cfg_path):
         colors = sns.color_palette()
         group_colors = {name: colors[idx] for name, idx in
                 plot_settings['colors'].items()}
+
         for section_name, section in plot_settings['plot_sections'].items():
             fig, ax = plt.subplots(figsize=(5, 4))
             names = section.split(',')
             darkness = plot_settings['marker_darkness']
-            name_to_ms = {n: MARKER_ORDER[i] for i, n in enumerate(sorted(names))}
             for name in names:
                 disp_name = plot_settings['name_map'][name]
-                ax.plot([0], [1], marker=name_to_ms[name], label=disp_name,
+                midx = plot_settings['colors'][name] % len(MARKER_ORDER)
+                ax.plot([0], [1], marker=MARKER_ORDER[midx], label=disp_name,
                         color=group_colors[name],
                         markersize=plot_settings['marker_size'],
                         markeredgewidth=plot_settings['marker_width'],
@@ -83,6 +84,7 @@ def plot_from_file(plot_cfg_path):
                     plot_section['plot_sections'],
                     get_setting(plot_section,'force_reload', False),
                     match_pat,
+                    plot_settings.get('other_plot_keys', []),
                     plot_settings['config_yaml'])
 
             if 'line_sections' in plot_section:
@@ -108,6 +110,8 @@ def plot_from_file(plot_cfg_path):
                         use_idx = np.argmin(df[line_val_key])
                     elif take_operation == 'max':
                         use_idx = np.argmax(df[line_val_key])
+                    elif take_operation == 'final':
+                        use_idx = -1
                     else:
                         raise ValueError('Unrecognized line reduce')
                     df = df.iloc[np.array([use_idx]).repeat(len(uniq_step))]
@@ -149,6 +153,7 @@ def plot_from_file(plot_cfg_path):
                     method_idxs=plot_settings['colors'],
                     tight=True,
                     legend_font_size=use_legend_font_size,
+                    num_marker_points=plot_settings.get('num_marker_points', {}),
                     rename_map={
                         **plot_settings['global_renames'],
                         **local_renames,
