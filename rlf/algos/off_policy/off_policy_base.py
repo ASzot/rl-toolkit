@@ -3,17 +3,22 @@ import torch
 from rlf.algos.base_net_algo import BaseNetAlgo
 import rlf.rl.utils as rutils
 
+
+def create_storage_buff(obs_space, action_space, buff_size, args):
+    return TransitionStorage(obs_space, action_space, buff_size, args)
+
 class OffPolicy(BaseNetAlgo):
-    def __init__(self):
+    def __init__(self, create_storage_buff_fn=create_storage_buff):
         super().__init__()
+        self.create_storage_buff_fn = create_storage_buff_fn
 
     def init(self, policy, args):
         args.trans_buffer_size = int(args.trans_buffer_size)
         super().init(policy, args)
 
     def get_storage_buffer(self, policy, envs, args):
-        return TransitionStorage(policy.obs_space, policy.action_space,
-                args.trans_buffer_size, args)
+        return self.create_storage_buff_fn(policy.obs_space,
+                policy.action_space, args.trans_buffer_size, args)
 
     def _sample_transitions(self, storage):
         return storage.sample_tensors(self.args.batch_size)
@@ -21,7 +26,7 @@ class OffPolicy(BaseNetAlgo):
     def get_add_args(self, parser):
         super().get_add_args(parser)
         #########################################
-        # Overrides
+        # Overrides to more reasonable defaults
         parser.add_argument('--num-processes', type=int, default=1)
         parser.add_argument('--num-steps', type=int, default=1)
         # Off-policy algorithms have far more frequent updates.

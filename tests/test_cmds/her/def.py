@@ -2,7 +2,7 @@ import sys
 sys.path.insert(0, './')
 from rlf import DDPG
 from rlf import QLearning
-from rlf.algos.off_policy.her import HerStorage
+from rlf.algos.off_policy.her import create_her_storage_buff
 from rlf import run_policy
 from tests.test_run_settings import TestRunSettings
 from rlf import RegActorCritic
@@ -50,8 +50,7 @@ class HerRunSettings(TestRunSettings):
     def get_algo(self):
         pass_kwargs = {}
         if self.base_args.use_her:
-            pass_kwargs['get_storage_fn'] = lambda buff_size, args: \
-                HerStorage(buff_size, args)
+            pass_kwargs['create_storage_buff_fn'] = create_her_storage_buff
         if 'BitFlip' in self.base_args.env_name:
             return QLearning(**pass_kwargs)
         else:

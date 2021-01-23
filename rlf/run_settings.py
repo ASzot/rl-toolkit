@@ -16,6 +16,7 @@ import random
 import os.path as osp
 from gym.spaces import Box
 import os
+import sys
 from rlf.rl.loggers import sanity_checker
 
 # Import the env interfaces
@@ -124,6 +125,13 @@ class RunSettings(MasterClass):
 
         # Check that there are no arguments not accounted for in `base_args`
         _, rest_of_args = self._get_base_parser().parse_known_args(rest)
+        if '-v' in rest_of_args:
+            del rest_of_args[rest_of_args.index('-v')]
+            print("Env args:")
+            env_parser.print_help()
+            print("Alg args:")
+            parser.print_help()
+            sys.exit(0)
         if len(rest_of_args) != 0:
             raise ValueError('Unrecognized arguments %s' % str(rest_of_args))
 

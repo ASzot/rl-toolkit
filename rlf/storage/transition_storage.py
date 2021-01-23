@@ -100,8 +100,8 @@ class TransitionStorage(BaseStorage):
     def sample_tensors(self, sample_size):
         #idxs = torch.randint(0, len(self), size=(sample_size,))
         idxs = np.random.randint(0, len(self), size=sample_size)
-        obs = {}
-        next_obs = {}
+        obs = None
+        next_obs = None
         other_obs = {}
         other_next_obs = {}
         for k in self.ob_keys:
@@ -110,11 +110,12 @@ class TransitionStorage(BaseStorage):
                 next_obs = self.next_obs[idxs].to(self.d)
             else:
                 if k == self.args.policy_ob_key:
-                    obs[k] = self.obs[k][idxs].to(self.d)
-                    next_obs[k] = self.next_obs[k][idxs].to(self.d)
+                    obs = self.obs[k][idxs].to(self.d)
+                    next_obs = self.next_obs[k][idxs].to(self.d)
                 else:
                     other_obs[k] = self.obs[k][idxs].to(self.d)
                     other_next_obs[k] = self.next_obs[k][idxs].to(self.d)
+        assert obs is not None, f"Found not find {self.args.policy_ob_key}"
 
         hxs = {}
         for k, dim in self.hidden_states.items():
