@@ -142,7 +142,7 @@ def plot_from_file(plot_cfg_path):
             use_legend_font_size = plot_section.get('legend_font_size',
                     plot_settings.get('legend_font_size', 'x-large'))
             uncert_plot(plot_df, ax, '_step', plot_key, 'run', 'method',
-                    float(plot_settings['smooth_factor']),
+                    get_setting(plot_section, 'smooth_factor'),
                     y_bounds=get_nums_from_str(plot_section['y_bounds']),
                     x_disp_bounds=get_nums_from_str(plot_section['x_disp_bounds']),
                     y_disp_bounds=get_nums_from_str(plot_section['y_disp_bounds']),

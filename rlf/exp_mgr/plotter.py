@@ -17,11 +17,19 @@ def smooth_arr(scalars, weight):  # Weight between 0 and 1
 
     return smoothed
 
-def smooth_data(df, smooth, value, gp_keys=['method', 'run']):
+def smooth_data(df, smooth_vals, value, gp_keys=['method', 'run']):
     gp_df = df.groupby(gp_keys)
 
     ret_dfs = []
+    if not isinstance(smooth_vals, dict):
+        smooth_vals = {'default': float(smooth_vals)}
     for sub_df in [gp_df.get_group(k) for k in gp_df.indices]:
+
+        df_method_name = sub_df['method'][0]
+        if df_method_name in smooth_vals:
+            smooth = smooth_vals[sub_df['method'][0]]
+        else:
+            smooth = smooth_vals['default']
         use_df = sub_df.copy()
         use_df = use_df.dropna()
         use_df[value] = smooth_arr(use_df[value].tolist(), smooth)
@@ -62,6 +70,10 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
         y_std = sub_df['std'].fillna(0).to_numpy()
+        if name == 'sqil':
+            x_vals = x_vals[::1]
+            y_vals = y_vals[::1]
+            y_std = y_std[::1]
         l = ax.plot(x_vals, y_vals)
         sel_vals = [int(x) for x in np.linspace(0, len(x_vals)-1,
             num=num_marker_points.get(name, 8))]
