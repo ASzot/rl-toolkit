@@ -13,8 +13,17 @@ class GymHandWrapper(gym.core.Wrapper):
 
 class GymHandInterface(EnvInterface):
     def create_from_id(self, env_id):
-        env = gym.make(env_id)
+        if self.args.hand_dense:
+            reward_type = 'dense'
+        else:
+            reward_type = 'sparse'
+
+        env = gym.make(env_id, reward_type=reward_type)
         return GymHandWrapper(env)
+
+    def get_add_args(self, parser):
+        parser.add_argument('--hand-dense', action='store_true',
+                default=False)
 
 
 GYM_HAND_REGISTER_STR = "^(HandReach|HandManipulateBlock|HandManipulateEgg|HandManipulatePen)"
