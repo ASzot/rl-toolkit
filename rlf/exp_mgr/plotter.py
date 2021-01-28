@@ -45,7 +45,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
                 group_colors=None, xtick_fn=None, ytick_fn=None, legend=False,
                rename_map={}, title=None, axes_font_size=14, title_font_size=18,
                legend_font_size='x-large', method_idxs={}, num_marker_points={},
-                tight=False):
+               line_styles={}, tight=False):
     """
     - num_marker_points: int, The number of markers drawn on the line, NOT the
       number of points that are plotted!
@@ -70,11 +70,15 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
         y_std = sub_df['std'].fillna(0).to_numpy()
+
+        add_kwargs = {}
+        if name in line_styles:
+            add_kwargs['linestyle'] = line_styles[name]
         if name == 'sqil':
             x_vals = x_vals[::1]
             y_vals = y_vals[::1]
             y_std = y_std[::1]
-        l = ax.plot(x_vals, y_vals)
+        l = ax.plot(x_vals, y_vals, **add_kwargs)
         sel_vals = [int(x) for x in np.linspace(0, len(x_vals)-1,
             num=num_marker_points.get(name, 8))]
         midx = method_idxs[name] % len(MARKER_ORDER)

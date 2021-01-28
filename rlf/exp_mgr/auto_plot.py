@@ -23,7 +23,8 @@ def export_legend(ax, line_width, filename="legend.pdf"):
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
     ax2.axis('off')
-    legend = ax2.legend(*ax.get_legend_handles_labels(), frameon=False, loc='lower center', ncol=10,)
+    legend = ax2.legend(*ax.get_legend_handles_labels(), frameon=False,
+            loc='lower center', ncol=10, handlelength=2)
     for line in legend.get_lines():
         line.set_linewidth(line_width)
     fig  = legend.figure
@@ -43,13 +44,23 @@ def plot_legend(plot_cfg_path):
             names = section.split(',')
             darkness = plot_settings['marker_darkness']
             for name in names:
+                add_kwargs = {}
+                if name in plot_settings['linestyles']:
+                    linestyle = plot_settings['linestyles'][name]
+                    if isinstance(linestyle, list):
+                        add_kwargs['linestyle'] = linestyle[0]
+                        add_kwargs['dashes'] = linestyle[1]
+                    else:
+                        add_kwargs['linestyle'] = linestyle
+
                 disp_name = plot_settings['name_map'][name]
                 midx = plot_settings['colors'][name] % len(MARKER_ORDER)
                 ax.plot([0], [1], marker=MARKER_ORDER[midx], label=disp_name,
                         color=group_colors[name],
                         markersize=plot_settings['marker_size'],
                         markeredgewidth=plot_settings['marker_width'],
-                        markeredgecolor=(darkness, darkness, darkness, 1))
+                        markeredgecolor=(darkness, darkness, darkness, 1),
+                        **add_kwargs)
             export_legend(ax, plot_settings['line_width'],
                     osp.join(plot_settings['save_loc'], section_name + '_legend.pdf'))
             plt.clf()
@@ -154,6 +165,7 @@ def plot_from_file(plot_cfg_path):
                     tight=True,
                     legend_font_size=use_legend_font_size,
                     num_marker_points=plot_settings.get('num_marker_points', {}),
+                    line_styles=plot_settings.get('linestyles', {}),
                     rename_map={
                         **plot_settings['global_renames'],
                         **local_renames,
