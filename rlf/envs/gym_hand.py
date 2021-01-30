@@ -6,9 +6,10 @@ import gym
 
 
 class GymHandWrapper(gym.core.Wrapper):
-    def __init__(self, env, inc_goal):
+    def __init__(self, env, inc_goal, end_on_succ):
         super().__init__(env)
         self.inc_goal = inc_goal
+        self.end_on_succ = end_on_succ
         if self.inc_goal:
             o_shape = env.observation_space
             new_shape = o_shape['observation'].shape[0] + o_shape['desired_goal'].shape[0]
@@ -35,7 +36,7 @@ class GymHandWrapper(gym.core.Wrapper):
         obs,reward,done,info = super().step(a)
         obs = self._trans_obs(obs)
         info['ep_found_goal'] = info['is_success']
-        if info['is_success'] == 1:
+        if self.end_on_succ and info['is_success'] == 1:
             done = True
         return obs,reward,done,info
 
@@ -47,12 +48,15 @@ class GymHandInterface(EnvInterface):
             reward_type = 'sparse'
 
         env = gym.make(env_id, reward_type=reward_type)
-        return GymHandWrapper(env, self.args.hand_inc_goal)
+        return GymHandWrapper(env, self.args.hand_inc_goal,
+                self.args.hand_end_on_succ)
 
     def get_add_args(self, parser):
         parser.add_argument('--hand-dense', action='store_true',
                 default=False)
         parser.add_argument('--hand-inc-goal', action='store_true',
+                default=False)
+        parser.add_argument('--hand-end-on-succ', action='store_true',
                 default=False)
 
 
