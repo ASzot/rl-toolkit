@@ -13,7 +13,9 @@ class AlgorithmSettings:
         A raw observation is before any preprocessing or normalization
         is applied. This raw observation is returned in the info
         dictionary of the environment.
-    - mod_render_frames_fn: passes the RAW observation.
+    - mod_render_frames_fn: (frame, last_obs, last_reward, **kwargs ->
+      updated_frame) Render algorithm information on the render output. Must
+      specify `--render-metric` for this to be called.
     """
     ret_raw_obs: bool
     state_fn: Callable[[np.ndarray], np.ndarray]

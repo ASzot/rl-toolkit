@@ -170,7 +170,8 @@ class RenderWrapper(gym.Wrapper):
 
     def render(self, mode, **kwargs):
         frame = super().render(mode)
-        return self.render_modify_fn(frame, **kwargs)
+        return self.render_modify_fn(frame, last_obs=self.last_obs,
+                last_reward=self.last_reward, **kwargs)
 
 class EnvNormFnWrapper(VecEnvWrapper):
     def __init__(self, venv, device, state_fn, action_fn):
