@@ -35,6 +35,8 @@ class GymHandWrapper(gym.core.Wrapper):
         obs,reward,done,info = super().step(a)
         obs = self._trans_obs(obs)
         info['ep_found_goal'] = info['is_success']
+        if info['is_success'] == 1:
+            done = True
         return obs,reward,done,info
 
 class GymHandInterface(EnvInterface):
