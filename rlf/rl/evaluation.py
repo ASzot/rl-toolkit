@@ -110,6 +110,11 @@ def evaluate(args, alg_env_settings, policy, true_vec_norm, env_interface,
                 Can only render successes and failures when the number of
                 processes is 1.
                 """)
+
+    if args.num_render is None or args.num_render > 0:
+        frames.extend(get_render_frames(eval_envs, env_interface, None, None,
+            None, None, None, args, evaluated_episode_count))
+
     while evaluated_episode_count < total_num_eval:
         step_info = get_empty_step_info()
         with torch.no_grad():
@@ -218,13 +223,15 @@ def get_render_frames(eval_envs, env_interface, obs, next_obs, action, masks, in
             args, evaluated_episode_count):
     add_kwargs = {}
     if args.render_metric:
-        add_kwargs = {
-                "obs": utils.ob_to_cpu(obs),
-                "action": action.cpu(),
-                "next_obs": utils.ob_to_cpu(next_obs),
-                "info": infos,
-                "next_mask": masks.cpu()
-                }
+        add_kwargs = {}
+        if obs is not None:
+            add_kwargs = {
+                    "obs": utils.ob_to_cpu(obs),
+                    "action": action.cpu(),
+                    "next_obs": utils.ob_to_cpu(next_obs),
+                    "info": infos,
+                    "next_mask": masks.cpu()
+                    }
 
     try:
         cur_frame = eval_envs.render(**env_interface.get_render_args(),
