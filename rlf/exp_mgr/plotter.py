@@ -4,7 +4,8 @@ import pathlib
 import seaborn as sns
 import numpy as np
 
-MARKER_ORDER = ['^', 'o', 'v', 'D', 's',]
+#MARKER_ORDER = ['^', 'o', 'v', 'D', 's',]
+MARKER_ORDER = ['^', '<', 'v', 'd', 's', 'x', 'o', '>']
 
 # Taken from the answer here https://stackoverflow.com/questions/42281844/what-is-the-mathematics-behind-the-smoothing-parameter-in-tensorboards-scalar
 def smooth_arr(scalars, weight):  # Weight between 0 and 1

@@ -55,11 +55,18 @@ def plot_legend(plot_cfg_path):
 
                 disp_name = plot_settings['name_map'][name]
                 midx = plot_settings['colors'][name] % len(MARKER_ORDER)
-                ax.plot([0], [1], marker=MARKER_ORDER[midx], label=disp_name,
+                marker = MARKER_ORDER[midx]
+                if marker == 'x':
+                    marker_width = 2.0
+                else:
+                    marker_width = plot_settings['marker_width']
+
+                ax.plot([0], [1], marker=marker, label=disp_name,
                         color=group_colors[name],
                         markersize=plot_settings['marker_size'],
-                        markeredgewidth=plot_settings['marker_width'],
-                        markeredgecolor=(darkness, darkness, darkness, 1),
+                        markeredgewidth=marker_width,
+                        #markeredgecolor=(darkness, darkness, darkness, 1),
+                        markeredgecolor=group_colors[name],
                         **add_kwargs)
             export_legend(ax, plot_settings['line_width'],
                     osp.join(plot_settings['save_loc'], section_name + '_legend.pdf'))
