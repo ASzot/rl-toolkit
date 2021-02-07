@@ -4,6 +4,13 @@ import os.path as osp
 import os
 
 def append_text_to_image(image, lines):
+    """
+    Parameters:
+        image: (np.array): The frame to add the text to.
+        lines (list):
+    Returns:
+        image: (np.array): The modified image with the text appended.
+    """
     h, w, c = image.shape
     font_size = 0.5
     font_thickness = 1

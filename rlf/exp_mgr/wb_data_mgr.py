@@ -80,10 +80,18 @@ def get_run_ids_from_report(wb_search, report_name, get_sections, api):
         report_runs = run_set['selections']['tree']
         for run_id in report_runs:
             run_ids.append((report_section, run_id))
+    if len(run_ids) == 0:
+        raise ValueError("""
+                Could not find runs %s from report. Check:
+                - There is only one section.
+                - The names don't have trailing spaces.
+                - The report is saved.
+                """ % str(get_sections))
+
     return run_ids
 
 def get_report_data(report_name, plot_field, plot_sections,
-        force_refresh=False, match_pat=None, cfg='./config.yaml'):
+        force_refresh=False, match_pat=None, other_plot_fields=[], cfg='./config.yaml'):
     """
     Converts the selected data sets in a W&B report into a Pandas DataFrame.
     Fetches only the plot_field you specify.
@@ -121,9 +129,21 @@ def get_report_data(report_name, plot_field, plot_sections,
             if not any_matches:
                 continue
         df = wbrun.history(samples=15000)
+
         if not isinstance(plot_field, str):
             df = df[['_step', *plot_field]]
         else:
+            if plot_field not in df.columns:
+                match_other_plot = None
+                for k in other_plot_fields:
+                    if k in df.columns:
+                        match_other_plot = k
+                        break
+                if match_other_plot is None:
+                    raise ValueError("""
+                            Could not find colums from %s in %s containing %s
+                            """ % (str(other_plot_fields), report_section, str(df.columns)))
+                df = df.rename(columns={match_other_plot: plot_field})
             df = df[['_step', plot_field]]
         df['method'] = report_section
         df['run'] = run_id

@@ -259,17 +259,17 @@ class RolloutStorage(BaseStorage):
             drop_last=True)
 
         for indices in sampler:
-            obs_batch = {}
+            obs_batch = None
             other_obs_batch = {}
             for k, ob_shape in self.ob_keys.items():
                 if k is None:
                     obs_batch = self.obs[:-1].view(-1, *ob_shape)[indices]
                 elif k == self.args.policy_ob_key:
-                    obs_batch[k] = self.obs[k][:-1].view(-1, *ob_shape)[indices]
+                    obs_batch = self.obs[k][:-1].view(-1, *ob_shape)[indices]
                 else:
                     other_obs_batch[k] = self.obs[k][:-1].view(-1, *ob_shape)[indices]
-            if len(obs_batch) == 1:
-                obs_batch = next(iter(obs_batch.values()))
+
+            assert obs_batch is not None, f"Found not find {self.args.policy_ob_key}"
 
             actions_batch = self.actions.view(-1,
                                               self.actions.size(-1))[indices]

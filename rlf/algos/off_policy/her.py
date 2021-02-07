@@ -3,6 +3,9 @@ import torch
 import rlf.rl.utils as rutils
 import numpy as np
 
+def create_her_storage_buff(obs_space, action_space, buff_size, args):
+    return HerStorage(obs_space, action_space, buff_size, args)
+
 class HerStorage(TransitionStorage):
     """
     Uses the "final" HER strategy which uses the state achieved at the end of

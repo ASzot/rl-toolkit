@@ -159,18 +159,31 @@ class RenderWrapper(gym.Wrapper):
 
     def reset(self):
         obs = super().reset()
-        self.last_obs = obs
+        self.env_cur_obs = obs
+        self.env_cur_action = None
+        self.env_next_obs = None
+        self.env_cur_reward = None
+        self.was_reset = True
         return obs
 
     def step(self, a):
         obs, reward, done, info = super().step(a)
-        self.last_obs = obs
-        self.last_reward = reward
+        self.env_cur_action = a
+        if self.was_reset:
+            self.env_next_obs = obs
+            self.was_reset = False
+        else:
+            self.env_cur_obs = self.env_next_obs
+            self.env_next_obs = obs
+        self.env_cur_reward = reward
         return obs, reward, done, info
 
     def render(self, mode, **kwargs):
         frame = super().render(mode)
-        return self.render_modify_fn(frame, **kwargs)
+        return self.render_modify_fn(frame, env_cur_obs=self.env_cur_obs,
+                env_next_obs=self.env_next_obs,
+                env_cur_action=self.env_cur_action,
+                env_cur_reward=self.env_cur_reward, **kwargs)
 
 class EnvNormFnWrapper(VecEnvWrapper):
     def __init__(self, venv, device, state_fn, action_fn):
