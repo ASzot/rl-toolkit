@@ -81,3 +81,6 @@ colors:
     "mpg obj": 5
 ```
 
+## Plotting Utilities
+This can help make good looking plots. 
+* Line plots use `uncert_plot` from `rlf/exp_mgr/plotter.py`. 
