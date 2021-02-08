@@ -4,7 +4,8 @@ import pathlib
 import seaborn as sns
 import numpy as np
 
-MARKER_ORDER = ['X', '^', 'o', 'v', 'D', 's',]
+#MARKER_ORDER = ['^', 'o', 'v', 'D', 's',]
+MARKER_ORDER = ['^', '<', 'v', 'd', 's', 'x', 'o', '>']
 
 # Taken from the answer here https://stackoverflow.com/questions/42281844/what-is-the-mathematics-behind-the-smoothing-parameter-in-tensorboards-scalar
 def smooth_arr(scalars, weight):  # Weight between 0 and 1
@@ -17,11 +18,19 @@ def smooth_arr(scalars, weight):  # Weight between 0 and 1
 
     return smoothed
 
-def smooth_data(df, smooth, value, gp_keys=['method', 'run']):
+def smooth_data(df, smooth_vals, value, gp_keys=['method', 'run']):
     gp_df = df.groupby(gp_keys)
 
     ret_dfs = []
+    if not isinstance(smooth_vals, dict):
+        smooth_vals = {'default': float(smooth_vals)}
     for sub_df in [gp_df.get_group(k) for k in gp_df.indices]:
+
+        df_method_name = sub_df['method'][0]
+        if df_method_name in smooth_vals:
+            smooth = smooth_vals[sub_df['method'][0]]
+        else:
+            smooth = smooth_vals['default']
         use_df = sub_df.copy()
         use_df = use_df.dropna()
         use_df[value] = smooth_arr(use_df[value].tolist(), smooth)
@@ -36,8 +45,12 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
                 y_bounds=None, y_disp_bounds=None, x_disp_bounds=None,
                 group_colors=None, xtick_fn=None, ytick_fn=None, legend=False,
                rename_map={}, title=None, axes_font_size=14, title_font_size=18,
-               legend_font_size='x-large', method_idxs={},
-                tight=False):
+               legend_font_size='x-large', method_idxs={}, num_marker_points={},
+               line_styles={}, tight=False):
+    """
+    - num_marker_points: int, The number of markers drawn on the line, NOT the
+      number of points that are plotted!
+    """
     plot_df = plot_df.copy()
     if tight:
         plt.tight_layout(pad=2.2)
@@ -58,8 +71,17 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
         y_std = sub_df['std'].fillna(0).to_numpy()
-        l = ax.plot(x_vals, y_vals)
-        sel_vals = [int(x) for x in np.linspace(0, len(x_vals)-1, num=8)]
+
+        add_kwargs = {}
+        if name in line_styles:
+            add_kwargs['linestyle'] = line_styles[name]
+        if name == 'sqil':
+            x_vals = x_vals[::1]
+            y_vals = y_vals[::1]
+            y_std = y_std[::1]
+        l = ax.plot(x_vals, y_vals, **add_kwargs)
+        sel_vals = [int(x) for x in np.linspace(0, len(x_vals)-1,
+            num=num_marker_points.get(name, 8))]
         midx = method_idxs[name] % len(MARKER_ORDER)
         ladd = ax.plot(x_vals[sel_vals], y_vals[sel_vals], MARKER_ORDER[midx],
                 label=rename_map.get(name, name), color=group_colors[name],

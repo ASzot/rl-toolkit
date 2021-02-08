@@ -15,6 +15,7 @@ from rlf.rl.model import ConcatLayer
 from rlf.rl.model import InjectNet
 from functools import partial
 from rlf.rl.loggers import sanity_checker
+from rlf.exp_mgr.viz_utils import append_text_to_image
 
 
 def get_default_discrim():
@@ -81,7 +82,25 @@ class GailDiscrim(BaseIRLAlgo):
         settings = super().get_env_settings(args)
         if not args.gail_state_norm:
             settings.ret_raw_obs = True
+        settings.mod_render_frames_fn = self.mod_render_frames
         return settings
+
+    def mod_render_frames(self, frame, env_cur_obs, env_cur_action, env_cur_reward,
+            env_next_obs, **kwargs):
+        use_cur_obs = rutils.get_def_obs(env_cur_obs)
+        use_cur_obs = torch.FloatTensor(use_cur_obs).unsqueeze(0).to(self.args.device)
+
+        if env_cur_action is not None:
+            use_action = torch.FloatTensor(env_cur_action).unsqueeze(0).to(self.args.device)
+            disc_val = self._compute_disc_val(use_cur_obs, use_action).item()
+        else:
+            disc_val = 0.0
+
+        frame = append_text_to_image(frame, [
+            "Discrim: %.3f" % disc_val,
+            "Reward: %.3f" % (env_cur_reward if env_cur_reward is not None else 0.0)
+            ])
+        return frame
 
     def _norm_expert_state(self, state, obsfilt):
         if not self.args.gail_state_norm:

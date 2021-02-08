@@ -51,6 +51,7 @@ class BaseIRLAlgo(BaseILAlgo):
             for i in range(self.args.num_processes):
                 for k in ep_log_vals:
                     self.culm_log_vals[k][i] += ep_log_vals[k][i].item()
+
                 if storage.masks[step, i] == 0.0:
                     for k in ep_log_vals:
                         self.ep_log_vals[k].append(self.culm_log_vals[k][i])
