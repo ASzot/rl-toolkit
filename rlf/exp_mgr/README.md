@@ -80,6 +80,10 @@ colors:
     "mpg": 2
 ```
 
+## Plotting Utilities
+This can help make good looking plots. 
+* Line plots use `uncert_plot` from `rlf/exp_mgr/plotter.py`. 
+=======
 There is also a utility for creating a separate PDF file containing just the
 legend. This is run as `python rl-toolkit/rlf/exp_mgr/auto_plot.py --plot-cfg
 my_plot_cfgs/my_legend.yaml` --legend. An example of a legend YAML file is
