@@ -36,6 +36,7 @@ def get_arg_parser():
     parser.add_argument('--cfg', type=str, default='./config.yaml')
     parser.add_argument('--pt-proc', type=int, default=-1)
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--overcap', action='store_true')
     parser.add_argument('--cmd-format', type=str, default='reg', help="""
             Options are [reg, nodash]
             """)
@@ -241,7 +242,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
 
                 if 'habitat_baselines.run' in cmd:
                     run_file,run_name = generate_hab_run_file(log_file, ident, python_path, cmd,
-                            prefix, args.st, ntasks[cmd_idx], g[cmd_idx], c[cmd_idx])
+                            prefix, args.st, ntasks[cmd_idx], g[cmd_idx],
+                            c[cmd_idx], args.overcap)
                     print(f"Running file at {run_file}")
                     pane.send_keys(f"sbatch {run_file}")
                     time.sleep(2)
@@ -260,10 +262,15 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         print('everything should be running...')
 
 def generate_hab_run_file(log_file, ident,
-        python_path, cmd, prefix, st, ntasks, g, c):
+        python_path, cmd, prefix, st, ntasks, g, c, use_overcap):
     ignore_nodes_s = ",".join(config_mgr.get_prop("slurm_ignore_nodes", []))
     if len(ignore_nodes_s) != 0:
         ignore_nodes_s = '#SBATCH -x ' + ignore_nodes_s
+
+    add_options = [ignore_nodes_s]
+    if use_overcap:
+        add_options.append('#SBATCH --account=overcap')
+    add_options = '\n'.join(add_options)
 
     fcontents = """#!/bin/bash
 #SBATCH --job-name=%s
@@ -285,7 +292,7 @@ srun %s/%s"""
     job_name = prefix + '_' + ident
     log_file_loc = '/'.join(log_file.split('/')[:-1])
     fcontents = fcontents % (job_name, log_file, int(g), int(c),
-            int(ntasks), st, ignore_nodes_s, python_path, cmd)
+            int(ntasks), st, add_options, python_path, cmd)
     job_file = osp.join(log_file_loc, job_name + '.sh')
     with open(job_file, 'w') as f:
         f.write(fcontents)

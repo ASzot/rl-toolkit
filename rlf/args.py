@@ -98,7 +98,10 @@ def add_args(parser):
     #############################
     # EVAL / RETRAIN
     #############################
-    parser.add_argument('--eval-only', action='store_true', default=False)
+    parser.add_argument('--eval-only', action='store_true', default=False, help="""
+            Enables rendering text to the observation from `mod_render_frames`
+            of the env interface or the alg_env_settings.
+            """)
     parser.add_argument('--render-metric', action='store_true', default=False)
     parser.add_argument('--render-succ-fails', action='store_true',
             default=False, help="""

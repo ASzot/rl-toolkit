@@ -131,7 +131,12 @@ class BaseILAlgo(BaseNetAlgo):
         super().get_add_args(parser)
         parser.add_argument('--traj-load-path', type=str, default=None)
         parser.add_argument('--traj-batch-size', type=int, default=128)
-        parser.add_argument('--traj-val-ratio', type=float, default=0.0)
+        parser.add_argument('--traj-val-ratio', type=float, default=0.0, help= """
+                Ratio of the dataset which is used for validation. This is only
+                supported for algorithms where there is some supervised
+                objective and this makes sense (i.e. for
+                something like BC where training is performed offline).
+                """)
         parser.add_argument('--traj-frac', type=float, default=1.0,
                 help="The fraction of trajectories to use")
         parser.add_argument('--traj-viz', action='store_true', default=False)
