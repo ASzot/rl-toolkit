@@ -35,6 +35,7 @@ def get_arg_parser():
             """)
     parser.add_argument('--cfg', type=str, default='./config.yaml')
     parser.add_argument('--pt-proc', type=int, default=-1)
+    parser.add_argument('--mp-offset', type=int, default=0)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--cmd-format', type=str, default='reg', help="""
             Options are [reg, nodash]
@@ -140,7 +141,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         cmds = [transform_prefix(cmd, common_id) for cmd in cmds]
 
     if args.pt_proc != -1:
-        pt_dist_str = f"python -u -m torch.distributed.launch --use_env --nproc_per_node {args.pt_proc} "
+        pt_dist_str = f"MULTI_PROC_OFFSET={args.mp_offset} python -u -m torch.distributed.launch --use_env --nproc_per_node {args.pt_proc} "
         def make_dist_cmd(x):
             parts = x.split(' ')
             runf = None
