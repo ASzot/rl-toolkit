@@ -7,6 +7,7 @@ from rlf.rl.envs import get_vec_normalize
 from rlf.algos.base_net_algo import BaseNetAlgo
 import numpy as np
 from rlf.rl.loggers import sanity_checker
+from rlf.rl.envs import make_vec_envs
 
 
 class Runner:
@@ -113,10 +114,21 @@ class Runner:
     def full_eval(self, create_traj_saver_fn):
         alg_env_settings = self.updater.get_env_settings(self.args)
 
+        tmp_env = make_vec_envs(self.args.env_name, self.args.seed, 1,
+                             self.args.gamma, self.args.device,
+                             False, self.env_interface, self.args,
+                             alg_env_settings, set_eval=False)
+        vec_norm = None
+        if self.checkpointer.has_load_key('ob_rms'):
+            ob_rms_dict = self.checkpointer.get_key('ob_rms')
+            vec_norm = get_vec_normalize(tmp_env)
+            if vec_norm is not None:
+                vec_norm.ob_rms_dict = ob_rms_dict
+
         return full_eval(self.envs, self.policy, self.log,
                 self.checkpointer, self.env_interface, self.args,
                 alg_env_settings, create_traj_saver_fn,
-                get_vec_normalize(self.envs))
+                vec_norm)
 
     def load_from_checkpoint(self):
         self.policy.load_state_dict(self.checkpointer.get_key('policy'))

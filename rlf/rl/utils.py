@@ -453,8 +453,13 @@ def elapsed_timer():
     elapser = lambda: end-start
 
 class TimeProfiler(ContextDecorator):
-    def __init__(self, timer_name, timee=None):
+    def __init__(self, timer_name, timee=None, timer_prop=None):
+        """
+        - timer_prop: str The code that is used to access `self` when using the
+          this as a method decorator.
+        """
         self.timer_name = timer_name
+        self.timer_prop = timer_prop
         if timee is not None:
             self.add_time_f = timee.timer.add_time
         else:
@@ -467,7 +472,10 @@ class TimeProfiler(ContextDecorator):
     def __call__(self, f):
         def wrapper(*args):
             other_self = args[0]
-            self.add_time_f = other_self.timer.add_time
+            if self.timer_prop is not None:
+                self.add_time_f = eval(f"other_self.{self.timer_prop}.timer.add_time")
+            else:
+                self.add_time_f = other_self.timer.add_time
             return f(*args)
         return super().__call__(wrapper)
 

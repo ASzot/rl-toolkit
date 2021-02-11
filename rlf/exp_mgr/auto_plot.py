@@ -21,9 +21,10 @@ def get_arg_parser():
 
 def export_legend(ax, line_width, filename="legend.pdf"):
     fig2 = plt.figure()
-    ax2 = fig2.add_subplot()
+    ax2 = fig2.add_subplot(111)
     ax2.axis('off')
-    legend = ax2.legend(*ax.get_legend_handles_labels(), frameon=False, loc='lower center', ncol=10,)
+    legend = ax2.legend(*ax.get_legend_handles_labels(), frameon=False,
+            loc='lower center', ncol=10, handlelength=2)
     for line in legend.get_lines():
         line.set_linewidth(line_width)
     fig  = legend.figure
@@ -37,18 +38,36 @@ def plot_legend(plot_cfg_path):
         colors = sns.color_palette()
         group_colors = {name: colors[idx] for name, idx in
                 plot_settings['colors'].items()}
+
         for section_name, section in plot_settings['plot_sections'].items():
             fig, ax = plt.subplots(figsize=(5, 4))
             names = section.split(',')
             darkness = plot_settings['marker_darkness']
-            name_to_ms = {n: MARKER_ORDER[i] for i, n in enumerate(sorted(names))}
             for name in names:
+                add_kwargs = {}
+                if name in plot_settings['linestyles']:
+                    linestyle = plot_settings['linestyles'][name]
+                    if isinstance(linestyle, list):
+                        add_kwargs['linestyle'] = linestyle[0]
+                        add_kwargs['dashes'] = linestyle[1]
+                    else:
+                        add_kwargs['linestyle'] = linestyle
+
                 disp_name = plot_settings['name_map'][name]
-                ax.plot([0], [1], marker=name_to_ms[name], label=disp_name,
+                midx = plot_settings['colors'][name] % len(MARKER_ORDER)
+                marker = MARKER_ORDER[midx]
+                if marker == 'x':
+                    marker_width = 2.0
+                else:
+                    marker_width = plot_settings['marker_width']
+
+                ax.plot([0], [1], marker=marker, label=disp_name,
                         color=group_colors[name],
                         markersize=plot_settings['marker_size'],
-                        markeredgewidth=plot_settings['marker_width'],
-                        markeredgecolor=(darkness, darkness, darkness, 1))
+                        markeredgewidth=marker_width,
+                        #markeredgecolor=(darkness, darkness, darkness, 1),
+                        markeredgecolor=group_colors[name],
+                        **add_kwargs)
             export_legend(ax, plot_settings['line_width'],
                     osp.join(plot_settings['save_loc'], section_name + '_legend.pdf'))
             plt.clf()
@@ -83,6 +102,7 @@ def plot_from_file(plot_cfg_path):
                     plot_section['plot_sections'],
                     get_setting(plot_section,'force_reload', False),
                     match_pat,
+                    plot_settings.get('other_plot_keys', []),
                     plot_settings['config_yaml'])
 
             if 'line_sections' in plot_section:
@@ -108,6 +128,8 @@ def plot_from_file(plot_cfg_path):
                         use_idx = np.argmin(df[line_val_key])
                     elif take_operation == 'max':
                         use_idx = np.argmax(df[line_val_key])
+                    elif take_operation == 'final':
+                        use_idx = -1
                     else:
                         raise ValueError('Unrecognized line reduce')
                     df = df.iloc[np.array([use_idx]).repeat(len(uniq_step))]
@@ -138,7 +160,7 @@ def plot_from_file(plot_cfg_path):
             use_legend_font_size = plot_section.get('legend_font_size',
                     plot_settings.get('legend_font_size', 'x-large'))
             uncert_plot(plot_df, ax, '_step', plot_key, 'run', 'method',
-                    float(plot_settings['smooth_factor']),
+                    get_setting(plot_section, 'smooth_factor'),
                     y_bounds=get_nums_from_str(plot_section['y_bounds']),
                     x_disp_bounds=get_nums_from_str(plot_section['x_disp_bounds']),
                     y_disp_bounds=get_nums_from_str(plot_section['y_disp_bounds']),
@@ -149,6 +171,8 @@ def plot_from_file(plot_cfg_path):
                     method_idxs=plot_settings['colors'],
                     tight=True,
                     legend_font_size=use_legend_font_size,
+                    num_marker_points=plot_settings.get('num_marker_points', {}),
+                    line_styles=plot_settings.get('linestyles', {}),
                     rename_map={
                         **plot_settings['global_renames'],
                         **local_renames,
