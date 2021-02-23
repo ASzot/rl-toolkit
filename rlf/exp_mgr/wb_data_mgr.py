@@ -67,13 +67,24 @@ def get_run_ids_from_report(wb_search, report_name, get_sections, api):
 
     # Find which section the run sets are in
     report_section_idx = None
-    for i in range(len(report.sections)):
-        if 'runSets' in report.sections[i]:
-            report_section_idx = i
-            break
+
+    run_sets = None
+    try:
+        for i in range(len(report.sections)):
+            if 'runSets' in report.sections[i]:
+                report_section_idx = i
+                break
+        run_sets = report.sections[report_section_idx]['runSets']
+    except Exception as e:
+        for i in range(len(report.spec['blocks'])):
+            spec = report.spec['blocks'][i]
+            if 'metadata' in spec and 'runSets' in spec['metadata']:
+                report_section_idx = i
+                break
+        run_sets = report.spec['blocks'][i]['metadata']['runSets']
 
     run_ids = []
-    for run_set in report.sections[report_section_idx]['runSets']:
+    for run_set in run_sets:
         report_section = run_set['name']
         if report_section not in get_sections:
             continue
