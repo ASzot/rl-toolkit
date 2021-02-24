@@ -27,6 +27,9 @@ def smooth_data(df, smooth_vals, value, gp_keys=['method', 'run']):
     for sub_df in [gp_df.get_group(k) for k in gp_df.indices]:
 
         df_method_name = sub_df['method'][0]
+        if isinstance(df_method_name, pd.Series):
+            df_method_name = df_method_name.tolist()[0]
+
         if df_method_name in smooth_vals:
             smooth = smooth_vals[sub_df['method'][0]]
         else:
