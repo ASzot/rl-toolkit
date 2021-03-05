@@ -37,6 +37,7 @@ def get_arg_parser():
     parser.add_argument('--pt-proc', type=int, default=-1)
     parser.add_argument('--mp-offset', type=int, default=0)
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--speed', action='store_true')
     parser.add_argument('--overcap', action='store_true')
     parser.add_argument('--cmd-format', type=str, default='reg', help="""
             Options are [reg, nodash]
@@ -244,7 +245,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
                 if 'habitat_baselines.run' in cmd:
                     run_file,run_name = generate_hab_run_file(log_file, ident, python_path, cmd,
                             prefix, args.st, ntasks[cmd_idx], g[cmd_idx],
-                            c[cmd_idx], args.overcap)
+                            c[cmd_idx], args.overcap, args)
                     print(f"Running file at {run_file}")
                     pane.send_keys(f"sbatch {run_file}")
                     time.sleep(2)
@@ -263,7 +264,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         print('everything should be running...')
 
 def generate_hab_run_file(log_file, ident,
-        python_path, cmd, prefix, st, ntasks, g, c, use_overcap):
+        python_path, cmd, prefix, st, ntasks, g, c, use_overcap, args):
     ignore_nodes_s = ",".join(config_mgr.get_prop("slurm_ignore_nodes", []))
     if len(ignore_nodes_s) != 0:
         ignore_nodes_s = '#SBATCH -x ' + ignore_nodes_s
@@ -273,12 +274,18 @@ def generate_hab_run_file(log_file, ident,
         add_options.append('#SBATCH --account=overcap')
     add_options = '\n'.join(add_options)
 
+    cpu_options = '#SBATCH --cpus-per-task %i' % int(c)
+    if args.speed:
+        cpu_options = '#SBATCH --overcommit\n'
+        cpu_options += '#SBATCH --cpu-freq=performance\n'
+        cpu_options += '#SBATCH -c $(((${SLURM_CPUS_PER_TASK} * ${SLURM_TASKS_PER_NODE})))'
+
     fcontents = """#!/bin/bash
 #SBATCH --job-name=%s
 #SBATCH --output=%s
 #SBATCH --gres gpu:%i
+%s
 #SBATCH --nodes 1
-#SBATCH --cpus-per-task %i
 #SBATCH --ntasks-per-node %i
 #SBATCH -p %s
 %s
@@ -292,7 +299,7 @@ set -x
 srun %s/%s"""
     job_name = prefix + '_' + ident
     log_file_loc = '/'.join(log_file.split('/')[:-1])
-    fcontents = fcontents % (job_name, log_file, int(g), int(c),
+    fcontents = fcontents % (job_name, log_file, int(g), cpu_options,
             int(ntasks), st, add_options, python_path, cmd)
     job_file = osp.join(log_file_loc, job_name + '.sh')
     with open(job_file, 'w') as f:
