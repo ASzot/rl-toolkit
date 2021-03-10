@@ -25,8 +25,7 @@ def smooth_data(df, smooth_vals, value, gp_keys=['method', 'run']):
     if not isinstance(smooth_vals, dict):
         smooth_vals = {'default': float(smooth_vals)}
     for sub_df in [gp_df.get_group(k) for k in gp_df.indices]:
-
-        df_method_name = sub_df['method'][0]
+        df_method_name = sub_df['method'].iloc[0]
         if isinstance(df_method_name, pd.Series):
             df_method_name = df_method_name.tolist()[0]
 

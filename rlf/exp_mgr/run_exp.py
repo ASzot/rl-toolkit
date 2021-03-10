@@ -39,6 +39,7 @@ def get_arg_parser():
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--speed', action='store_true')
     parser.add_argument('--overcap', action='store_true')
+    parser.add_argument('--slurm-no-batch', action='store_true')
     parser.add_argument('--cmd-format', type=str, default='reg', help="""
             Options are [reg, nodash]
             """)
@@ -242,7 +243,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
                     new_dirs.append(k +" "+osp.join(base_data_dir, v))
                 cmd += " " + (" ".join(new_dirs))
 
-                if 'habitat_baselines.run' in cmd:
+                if not args.slurm_no_batch:
                     run_file,run_name = generate_hab_run_file(log_file, ident, python_path, cmd,
                             prefix, args.st, ntasks[cmd_idx], g[cmd_idx],
                             c[cmd_idx], args.overcap, args)

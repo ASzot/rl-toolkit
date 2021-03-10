@@ -11,6 +11,8 @@ import os
 import pandas as pd
 import numpy as np
 import seaborn as sns
+import glob
+from collections import defaultdict
 
 def get_arg_parser():
     parser = argparse.ArgumentParser()
@@ -72,6 +74,75 @@ def plot_legend(plot_cfg_path):
                     osp.join(plot_settings['save_loc'], section_name + '_legend.pdf'))
             plt.clf()
 
+
+def get_tb_data(search_name, plot_key, plot_section, force_reload, match_pat,
+        other_plot_keys, config):
+    import tensorflow as tf
+
+    method_dfs = defaultdict(list)
+    method_steps = {}
+
+    for f in glob.glob(osp.join(search_name, '*/*', plot_key, '*.tfevents.*')):
+        run = f.split('/')[-3]
+        method_parts = run.split('_')
+        seed = method_parts[-2]
+        method_name = '_'.join(method_parts[:-2])
+
+        if method_name not in plot_section:
+            continue
+
+        values = []
+        run_names = []
+        method_names = []
+        steps = []
+        for summary in tf.train.summary_iterator(f):
+            if len(summary.summary.value) > 0:
+                val = summary.summary.value[0].simple_value
+                values.append(val)
+                steps.append(summary.step)
+                run_names.append(run)
+                method_names.append(method_name)
+
+        if method_name not in method_steps or len(method_steps[method_name]) < len(steps):
+            method_steps[method_name] = steps
+
+        steps = method_steps[method_name][:len(steps)]
+
+        method_dfs[run].append(pd.DataFrame.from_dict({
+            'method': method_names,
+            'run': run_names,
+            plot_key: values,
+            '_step': steps
+            }))
+
+    combined_df = None
+    for k, dfs in method_dfs.items():
+        max_len = None
+        max_df = None
+        for df in dfs:
+            if max_len is None or len(df) > max_len:
+                max_len = len(df)
+                max_df = df
+
+        if combined_df is None:
+            combined_df = max_df
+        else:
+            combined_df = pd.concat([combined_df, max_df])
+
+    return combined_df
+
+
+
+
+def get_data(search_name, plot_key, plot_section, force_reload, match_pat,
+        other_plot_keys, config, is_tb):
+    if is_tb:
+        return get_tb_data(search_name, plot_key, plot_section,
+                force_reload, match_pat, other_plot_keys, config)
+    else:
+        return get_report_data(search_name, plot_key, plot_section,
+                force_reload, match_pat, other_plot_keys, config)
+
 def plot_from_file(plot_cfg_path):
     with open(plot_cfg_path) as f:
         plot_settings = yaml.load(f)
@@ -97,13 +168,14 @@ def plot_from_file(plot_cfg_path):
             match_pat = plot_section.get('name_match_pat',
                     plot_settings.get('name_match_pat', None))
             print(f"Getting data for {plot_section['report_name']}")
-            plot_df = get_report_data(plot_section['report_name'],
+            plot_df = get_data(plot_section['report_name'],
                     plot_key,
                     plot_section['plot_sections'],
                     get_setting(plot_section,'force_reload', False),
                     match_pat,
                     plot_settings.get('other_plot_keys', []),
-                    plot_settings['config_yaml'])
+                    plot_settings['config_yaml'],
+                    plot_section.get('is_tb', True))
 
             if 'line_sections' in plot_section:
                 line_plot_key = get_setting(plot_section, 'line_plot_key')
@@ -113,12 +185,13 @@ def plot_from_file(plot_cfg_path):
                     fetch_keys = [line_plot_key, line_val_key]
                 else:
                     fetch_keys = line_plot_key
-                line_df = get_report_data(plot_section['report_name'],
+                line_df = get_data(plot_section['report_name'],
                         fetch_keys,
                         plot_section['line_sections'],
                         get_setting(plot_section,'force_reload', False),
-                        match_pat,
-                        plot_settings['config_yaml'])
+                        match_pat, [],
+                        plot_settings['config_yaml'],
+                        plot_section.get('is_tb', True))
                 line_df = line_df[line_df[line_plot_key].notna()]
                 uniq_step = plot_df['_step'].unique()
                 use_line_df = None
