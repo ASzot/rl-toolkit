@@ -293,6 +293,7 @@ def generate_hab_run_file(log_file, ident,
 #SBATCH --gres gpu:%i
 %s
 #SBATCH --nodes 1
+#SBATCH --signal=USR1@600
 #SBATCH --ntasks-per-node %i
 #SBATCH -p %s
 %s
