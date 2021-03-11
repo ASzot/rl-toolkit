@@ -20,7 +20,7 @@ def get_arg_parser():
                         help='list of commands to run')
     parser.add_argument('--seed', type=str, default=None)
     parser.add_argument('--st', type=str, default=None, help="Slum type [long, short]")
-    parser.add_argument('--c', type=str, default='6', help="""
+    parser.add_argument('--c', type=str, default='7', help="""
             Number of cpus for SLURM job
             """)
     parser.add_argument('--g', type=str, default='1', help="""
@@ -274,6 +274,12 @@ def generate_hab_run_file(log_file, ident,
     if use_overcap:
         add_options.append('#SBATCH --account=overcap')
     add_options = '\n'.join(add_options)
+
+    pre_python_txt = ''
+    python_parts = cmd.split(" python")
+    if len(python_parts) > 1:
+        pre_python_txt = python_parts[0]
+        cmd = "python" + python_parts[1]
 
     cpu_options = '#SBATCH --cpus-per-task %i' % int(c)
     if args.speed:
