@@ -295,6 +295,7 @@ def generate_hab_run_file(log_file, ident,
 #SBATCH --nodes 1
 #SBATCH --signal=USR1@600
 #SBATCH --ntasks-per-node %i
+#SBATCH --requeue
 #SBATCH -p %s
 %s
 
