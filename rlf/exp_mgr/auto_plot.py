@@ -80,7 +80,7 @@ def get_tb_data(search_name, plot_key, plot_section, force_reload, match_pat,
     import tensorflow as tf
 
     method_dfs = defaultdict(list)
-    method_steps = {}
+    run_to_name = {}
 
     for f in glob.glob(osp.join(search_name, '*/*', plot_key, '*.tfevents.*')):
         run = f.split('/')[-3]
@@ -103,10 +103,11 @@ def get_tb_data(search_name, plot_key, plot_section, force_reload, match_pat,
                 run_names.append(run)
                 method_names.append(method_name)
 
-        if method_name not in method_steps or len(method_steps[method_name]) < len(steps):
-            method_steps[method_name] = steps
+        #if method_name not in method_steps or len(method_steps[method_name]) < len(steps):
+        #    method_steps[method_name] = steps
 
-        steps = method_steps[method_name][:len(steps)]
+        #steps = method_steps[method_name][:len(steps)]
+        run_to_name[run] = method_name
 
         method_dfs[run].append(pd.DataFrame.from_dict({
             'method': method_names,
@@ -115,19 +116,32 @@ def get_tb_data(search_name, plot_key, plot_section, force_reload, match_pat,
             '_step': steps
             }))
 
-    combined_df = None
+    combined_method_dfs = {}
+    overall_step = []
+    method_steps = {}
     for k, dfs in method_dfs.items():
-        max_len = None
-        max_df = None
-        for df in dfs:
-            if max_len is None or len(df) > max_len:
-                max_len = len(df)
-                max_df = df
+        overall_df = pd.concat(dfs)
+        overall_df = overall_df.sort_values('_step')
+        overall_df = overall_df.drop_duplicates(subset=['_step'], keep='last')
+        method_name = run_to_name[k]
 
+        n_steps = len(overall_df['_step'])
+
+        if method_name not in method_steps or \
+                len(method_steps[method_name]) < n_steps:
+            method_steps[method_name] = overall_df['_step'].tolist()
+
+        combined_method_dfs[k] = overall_df
+
+    combined_df = None
+    for k, df in combined_method_dfs.items():
+        # Update with the max # of steps.
+        method_name = run_to_name[k]
+        df['_step'] = method_steps[method_name][:len(df)]
         if combined_df is None:
-            combined_df = max_df
+            combined_df = df
         else:
-            combined_df = pd.concat([combined_df, max_df])
+            combined_df = pd.concat([combined_df, df])
 
     return combined_df
 

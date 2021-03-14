@@ -62,7 +62,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         group_colors = {method: color for method, color in zip(methods, colors)}
 
     # Smooth each method and run independently
-    plot_df = smooth_data(plot_df, smooth_factor, y_name, [group_key, avg_key])
+    #plot_df = smooth_data(plot_df, smooth_factor, y_name, [group_key, avg_key])
 
     avg_y_df = plot_df.groupby([group_key, x_name]).mean()
     std_y_df = plot_df.groupby([group_key, x_name]).std()
@@ -70,17 +70,17 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
 
     lines = []
     for name, sub_df in avg_y_df.groupby(level=0):
+        #sub_df = smooth_data(sub_df, smooth_factor, y_name, [group_key, avg_key])
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
         y_std = sub_df['std'].fillna(0).to_numpy()
 
+        y_vals = np.array(smooth_arr(y_vals, smooth_factor))
+        y_std = np.array(smooth_arr(y_std, smooth_factor))
+
         add_kwargs = {}
         if name in line_styles:
             add_kwargs['linestyle'] = line_styles[name]
-        if name == 'sqil':
-            x_vals = x_vals[::1]
-            y_vals = y_vals[::1]
-            y_std = y_std[::1]
         l = ax.plot(x_vals, y_vals, **add_kwargs)
         sel_vals = [int(x) for x in np.linspace(0, len(x_vals)-1,
             num=num_marker_points.get(name, 8))]
