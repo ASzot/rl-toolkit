@@ -36,7 +36,9 @@ def get_arg_parser():
     parser.add_argument('--cfg', type=str, default='./config.yaml')
     parser.add_argument('--pt-proc', type=int, default=-1)
     parser.add_argument('--mp-offset', type=int, default=0)
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--debug', type=int, default=None, help="""
+            Index of the command to run.
+    """)
     parser.add_argument('--speed', action='store_true')
     parser.add_argument('--overcap', action='store_true')
     parser.add_argument('--slurm-no-batch', action='store_true')
@@ -161,9 +163,9 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
 
         cmds[0] = make_dist_cmd(cmds[0])
 
-    if args.debug:
+    if args.debug is not None:
         print('IN DEBUG MODE')
-        cmds = cmds[:1]
+        cmds = [cmds[args.debug]]
 
     if sess_id == -1:
         if len(cmds) == 1:
