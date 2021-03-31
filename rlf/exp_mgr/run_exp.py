@@ -167,6 +167,10 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         print('IN DEBUG MODE')
         cmds = [cmds[args.debug]]
 
+    env_vars = " ".join(config_mgr.get_prop('add_env_vars', []))
+    if len(env_vars) != 0:
+        env_vars += " "
+
     if sess_id == -1:
         if len(cmds) == 1:
             exec_cmd = cmds[0]
@@ -174,6 +178,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
                 exec_cmd = 'CUDA_VISIBLE_DEVICES=' + cd + ' ' + exec_cmd + ' ' + add_on
             else:
                 exec_cmd = exec_cmd + ' ' + add_on
+            exec_cmd = env_vars + exec_cmd
             print('executing ', exec_cmd)
             os.system(exec_cmd)
         else:
@@ -200,6 +205,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
             # Send the keys to run the command
             conda_env = config_mgr.get_prop('conda_env')
             if args.st is None:
+                cmd = env_vars + cmd
                 last_pane = new_window.attached_pane
                 last_pane.send_keys(cmd, enter=False)
                 pane = new_window.split_window(attach=False)
