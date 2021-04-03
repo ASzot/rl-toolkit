@@ -247,7 +247,10 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
                 pane.set_height(height=10)
 
                 new_dirs = []
+                cmd_args = cmd.split(' ')
                 for k, v in config_mgr.get_prop('change_cmds').items():
+                    if k in cmd_args:
+                        continue
                     new_dirs.append(k +" "+osp.join(base_data_dir, v))
                 cmd += " " + (" ".join(new_dirs))
 
