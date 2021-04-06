@@ -312,6 +312,7 @@ def generate_hab_run_file(log_file, ident,
 
 export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet
+export MULTI_PROC_OFFSET=%i
 
 export MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 
@@ -320,7 +321,7 @@ srun %s/%s"""
     job_name = prefix + '_' + ident
     log_file_loc = '/'.join(log_file.split('/')[:-1])
     fcontents = fcontents % (job_name, log_file, int(g), cpu_options,
-            int(ntasks), st, add_options, python_path, cmd)
+            int(ntasks), st, add_options, args.mp_offset, python_path, cmd)
     job_file = osp.join(log_file_loc, job_name + '.sh')
     with open(job_file, 'w') as f:
         f.write(fcontents)
