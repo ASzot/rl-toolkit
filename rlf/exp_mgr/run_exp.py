@@ -19,7 +19,31 @@ def get_arg_parser():
     parser.add_argument('--cmd', type=str, required=True,
                         help='list of commands to run')
     parser.add_argument('--seed', type=str, default=None)
-    parser.add_argument('--st', type=str, default=None, help="Slum type [long, short]")
+    parser.add_argument('--cd', default='-1', type=str, help="""
+            String of CUDA_VISIBLE_DEVICES. A value of "-1" will not set
+            CUDA_VISIBLE_DEVICES at all.
+            """)
+    parser.add_argument('--cfg', type=str, default='./config.yaml')
+    parser.add_argument('--debug', type=int, default=None, help="""
+            Index of the command to run.
+            """)
+    parser.add_argument('--cmd-format', type=str, default='reg', help="""
+            Options are [reg, nodash]
+            """)
+    # MULTIPROC OPTIONS
+    parser.add_argument('--mp-offset', type=int, default=0)
+    parser.add_argument('--pt-proc', type=int, default=-1)
+
+    # SLURM OPTIONS
+    parser.add_argument('--overcap', action='store_true')
+    parser.add_argument('--slurm-no-batch', action='store_true')
+    parser.add_argument('--speed', action='store_true', help="""
+            SLURM optimized for maximum CPU usage.
+            """)
+    parser.add_argument('--st', type=str, default=None, help="Slum parition type [long, short]")
+    parser.add_argument('--time', type=str, default=None, help="""
+            Slurm time limit. "10:00" is 10 minutes.
+            """)
     parser.add_argument('--c', type=str, default='7', help="""
             Number of cpus for SLURM job
             """)
@@ -29,22 +53,7 @@ def get_arg_parser():
     parser.add_argument('--ntasks', type=str, default='1', help="""
             Number of processes for SLURM job
             """)
-    parser.add_argument('--cd', default='-1', type=str, help="""
-            String of CUDA_VISIBLE_DEVICES. A value of "-1" will not set
-            CUDA_VISIBLE_DEVICES at all.
-            """)
-    parser.add_argument('--cfg', type=str, default='./config.yaml')
-    parser.add_argument('--pt-proc', type=int, default=-1)
-    parser.add_argument('--mp-offset', type=int, default=0)
-    parser.add_argument('--debug', type=int, default=None, help="""
-            Index of the command to run.
-    """)
-    parser.add_argument('--speed', action='store_true')
-    parser.add_argument('--overcap', action='store_true')
-    parser.add_argument('--slurm-no-batch', action='store_true')
-    parser.add_argument('--cmd-format', type=str, default='reg', help="""
-            Options are [reg, nodash]
-            """)
+
     return parser
 
 
@@ -284,6 +293,8 @@ def generate_hab_run_file(log_file, ident,
     add_options = [ignore_nodes_s]
     if use_overcap:
         add_options.append('#SBATCH --account=overcap')
+    if args.time is not None:
+        add_options.append(f"#SBATCH --time={args.time}")
     add_options = '\n'.join(add_options)
 
     pre_python_txt = ''

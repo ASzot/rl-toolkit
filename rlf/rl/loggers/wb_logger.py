@@ -69,7 +69,13 @@ class WbLogger(BaseLogger):
         self.wandb = self._create_wandb(args)
 
     def log_vals(self, key_vals, step_count):
-        wandb.log(key_vals, step=int(step_count))
+        if self.is_closed:
+            return
+        try:
+            wandb.log(key_vals, step=int(step_count))
+        except:
+            self.is_closed = True
+            print('Wb logger was closed when trying to log')
 
     def watch_model(self, model):
         wandb.watch(model)
@@ -86,6 +92,7 @@ class WbLogger(BaseLogger):
         self.run = wandb.init(project=self.wb_proj_name, name=self.prefix,
                 entity=self.wb_entity, group=group_id, reinit=True)
         wandb.config.update(args)
+        self.is_closed = False
         return wandb
 
     def log_video(self, video_file, step_count, fps):
@@ -94,6 +101,7 @@ class WbLogger(BaseLogger):
         wandb.log({'video': wandb.Video(video_file + '.mp4', fps=fps)}, step=step_count)
 
     def close(self):
+        self.is_closed = True
         self.run.finish()
 
 

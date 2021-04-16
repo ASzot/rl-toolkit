@@ -452,6 +452,12 @@ def elapsed_timer():
     end = default_timer()
     elapser = lambda: end-start
 
+try:
+    # For nvidia nsight profiling which is super helpful
+    from habitat_sim.utils import profiling_utils
+except:
+    profiling_utils = None
+
 class TimeProfiler(ContextDecorator):
     def __init__(self, timer_name, timee=None, timer_prop=None):
         """
@@ -466,32 +472,44 @@ class TimeProfiler(ContextDecorator):
             self.add_time_f = None
 
     def __enter__(self):
+        if profiling_utils is not None:
+            profiling_utils.range_push(self.timer_name)
         self.start_time = time.time()
         return self
 
     def __call__(self, f):
-        def wrapper(*args):
+        def wrapper(*args, **kwargs):
             other_self = args[0]
             if self.timer_prop is not None:
                 self.add_time_f = eval(f"other_self.{self.timer_prop}.timer.add_time")
             else:
                 self.add_time_f = other_self.timer.add_time
-            return f(*args)
+            return f(*args, **kwargs)
         return super().__call__(wrapper)
 
     def __exit__(self, *exc):
         elapsed = time.time() - self.start_time
         self.add_time_f(self.timer_name, elapsed)
+        if profiling_utils is not None:
+            profiling_utils.range_pop()
         return False
 
 
 class TimeProfilee:
     def __init__(self):
         self.clear()
+        self._should_time = True
+
+    def freeze(self):
+        self._should_time = False
+
+    def unfreeze(self):
+        self._should_time = True
 
     def add_time(self, timer_name, timer_val):
-        self.timers[timer_name] += timer_val
-        self.timer_call_count[timer_name] += 1
+        if self._should_time:
+            self.timers[timer_name] += timer_val
+            self.timer_call_count[timer_name] += 1
 
     def get_time(self, timer_name):
         return (self.timers[timer_name],
