@@ -12,6 +12,7 @@ import os
 import os.path as osp
 import pandas as pd
 import hashlib
+import json
 
 
 def get_arg_parser():
@@ -102,7 +103,8 @@ def get_run_ids_from_report(wb_search, report_name, get_sections, api):
     return run_ids
 
 def get_report_data(report_name, plot_field, plot_sections,
-        force_refresh=False, match_pat=None, other_plot_fields=[], cfg='./config.yaml'):
+        force_refresh=False, match_pat=None, other_plot_fields=[],
+        cfg='./config.yaml', other_fetch_fields=[]):
     """
     Converts the selected data sets in a W&B report into a Pandas DataFrame.
     Fetches only the plot_field you specify.
@@ -142,6 +144,19 @@ def get_report_data(report_name, plot_field, plot_sections,
         df = wbrun.history(samples=15000)
 
         if not isinstance(plot_field, str):
+            orig_not_found = False
+            for k in plot_field:
+                if k not in df.columns:
+                    orig_not_found = True
+                    break
+            if orig_not_found:
+                plot_field = other_plot_fields
+                for k in plot_field:
+                    if k not in df.columns:
+                        raise ValueError((f"Requested key {k} is not present in",
+                            f" data frame with {df.columns} for run {run_id}",
+                            f" section {report_section}"))
+
             df = df[['_step', *plot_field]]
         else:
             if plot_field not in df.columns:
@@ -156,6 +171,17 @@ def get_report_data(report_name, plot_field, plot_sections,
                             """ % (str(other_plot_fields), report_section, str(df.columns)))
                 df = df.rename(columns={match_other_plot: plot_field})
             df = df[['_step', plot_field]]
+
+        if len(other_plot_fields) != 0:
+            run_cfg = json.loads(wbrun.json_config)
+            for k in other_fetch_fields:
+                parts = k.split('.')
+                cur_d = run_cfg
+                for part in parts:
+                    cur_d = cur_d[part]
+                    if isinstance(cur_d, dict):
+                        cur_d = cur_d['value']
+                df[k] = cur_d
         df['method'] = report_section
         df['run'] = run_id
 
