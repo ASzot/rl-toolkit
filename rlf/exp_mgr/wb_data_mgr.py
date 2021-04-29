@@ -104,10 +104,12 @@ def get_run_ids_from_report(wb_search, report_name, get_sections, api):
 
 def get_report_data(report_name, plot_field, plot_sections,
         force_refresh=False, match_pat=None, other_plot_fields=[],
-        cfg='./config.yaml', other_fetch_fields=[]):
+        cfg='./config.yaml', other_fetch_fields=[], get_any_cols=False):
     """
     Converts the selected data sets in a W&B report into a Pandas DataFrame.
     Fetches only the plot_field you specify.
+    - get_any_cols: If true, will filter plot_field to be the subset of columns
+      which in the report.
     """
     config_mgr.init(cfg)
 
@@ -150,7 +152,10 @@ def get_report_data(report_name, plot_field, plot_sections,
                     orig_not_found = True
                     break
             if orig_not_found:
-                plot_field = other_plot_fields
+                if len(other_plot_fields) > 0:
+                    plot_field = other_plot_fields
+                if get_any_cols:
+                    plot_field = [x for x in plot_field if x in df.columns]
                 for k in plot_field:
                     if k not in df.columns:
                         raise ValueError((f"Requested key {k} is not present in",
@@ -172,7 +177,7 @@ def get_report_data(report_name, plot_field, plot_sections,
                 df = df.rename(columns={match_other_plot: plot_field})
             df = df[['_step', plot_field]]
 
-        if len(other_plot_fields) != 0:
+        if len(other_fetch_fields) > 0:
             run_cfg = json.loads(wbrun.json_config)
             for k in other_fetch_fields:
                 parts = k.split('.')
