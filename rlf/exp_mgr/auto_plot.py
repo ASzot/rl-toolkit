@@ -86,7 +86,7 @@ def get_tb_data(search_name, plot_key, plot_section, force_reload, match_pat,
         match_pat = '*/*'
 
     for f in glob.glob(osp.join(search_name, match_pat, plot_key, '*.tfevents.*')):
-        run = f.split('/')[4]
+        run = f.split('/')[-3]
         method_parts = run.split('_')
         seed = method_parts[-2]
         method_name = '_'.join(method_parts[:-2])
