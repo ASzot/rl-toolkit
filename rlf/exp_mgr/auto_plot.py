@@ -192,7 +192,7 @@ def plot_from_file(plot_cfg_path):
                     match_pat,
                     plot_settings.get('other_plot_keys', []),
                     plot_settings['config_yaml'],
-                    plot_section.get('is_tb', True))
+                    plot_section.get('is_tb', False))
 
             if 'line_sections' in plot_section:
                 line_plot_key = get_setting(plot_section, 'line_plot_key')
