@@ -53,7 +53,8 @@ def save_agent_obs(frames, imdim, vid_dir, name):
     print(f"Wrote observation sequence to {use_dir}")
 
 
-def save_mp4(frames, vid_dir, name, fps=60.0, no_frame_drop=False):
+def save_mp4(frames, vid_dir, name, fps=60.0, no_frame_drop=False,
+        should_print=True):
     frames = np.array(frames)
     if len(frames[0].shape) == 4:
         new_frames = frames[0]
@@ -76,6 +77,7 @@ def save_mp4(frames, vid_dir, name, fps=60.0, no_frame_drop=False):
         frame = frame[..., 0:3][..., ::-1]
         video.write(frame)
     video.release()
-    print(f"Rendered to {vid_file}")
+    if should_print:
+        print(f"Rendered to {vid_file}")
 
 

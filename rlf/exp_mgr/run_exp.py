@@ -37,6 +37,9 @@ def get_arg_parser():
     # SLURM OPTIONS
     parser.add_argument('--overcap', action='store_true')
     parser.add_argument('--slurm-no-batch', action='store_true')
+    parser.add_argument('--skip-env', action='store_true', help="""
+            If true, will not export any environment variables from config.yaml
+            """)
     parser.add_argument('--speed', action='store_true', help="""
             SLURM optimized for maximum CPU usage.
             """)
@@ -187,7 +190,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
                 exec_cmd = 'CUDA_VISIBLE_DEVICES=' + cd + ' ' + exec_cmd + ' ' + add_on
             else:
                 exec_cmd = exec_cmd + ' ' + add_on
-            exec_cmd = env_vars + exec_cmd
+            if not args.skip_env:
+                exec_cmd = env_vars + exec_cmd
             print('executing ', exec_cmd)
             os.system(exec_cmd)
         else:
@@ -214,7 +218,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
             # Send the keys to run the command
             conda_env = config_mgr.get_prop('conda_env')
             if args.st is None:
-                cmd = env_vars + cmd
+                if not args.skip_env:
+                    cmd = env_vars + cmd
                 last_pane = new_window.attached_pane
                 last_pane.send_keys(cmd, enter=False)
                 pane = new_window.split_window(attach=False)
