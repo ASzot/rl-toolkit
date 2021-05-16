@@ -195,6 +195,9 @@ def get_report_data(report_name, plot_field, plot_sections,
         else:
             all_df = pd.concat([all_df, df])
 
+    if all_df is None:
+        raise ValueError(f"Could not find any matching reports on wb for {report_name}")
+
     uniq_methods = all_df['method'].unique()
     for plot_section in plot_sections:
         assert plot_section in uniq_methods, f"{plot_section} not found"

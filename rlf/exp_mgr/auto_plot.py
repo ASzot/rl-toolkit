@@ -208,12 +208,11 @@ def plot_from_file(plot_cfg_path):
                         get_setting(plot_section,'force_reload', False),
                         match_pat, [],
                         plot_settings['config_yaml'],
-                        plot_section.get('is_tb', True))
+                        plot_section.get('is_tb', False))
                 line_df = line_df[line_df[line_plot_key].notna()]
                 uniq_step = plot_df['_step'].unique()
                 use_line_df = None
                 for group_name, df in line_df.groupby('run'):
-                    #df = df.iloc[np.array([0]).repeat(len(uniq_step))]
                     if take_operation == 'min':
                         use_idx = np.argmin(df[line_val_key])
                     elif take_operation == 'max':
@@ -221,7 +220,7 @@ def plot_from_file(plot_cfg_path):
                     elif take_operation == 'final':
                         use_idx = -1
                     else:
-                        raise ValueError('Unrecognized line reduce')
+                        raise ValueError(f"Unrecognized line reduce {take_operation}")
                     df = df.iloc[np.array([use_idx]).repeat(len(uniq_step))]
                     if line_plot_key != line_val_key:
                         del df[line_val_key]

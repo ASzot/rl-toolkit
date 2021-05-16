@@ -40,6 +40,7 @@ def get_arg_parser():
     parser.add_argument('--skip-env', action='store_true', help="""
             If true, will not export any environment variables from config.yaml
             """)
+    parser.add_argument('--skip-add', action='store_true')
     parser.add_argument('--speed', action='store_true', help="""
             SLURM optimized for maximum CPU usage.
             """)
@@ -123,7 +124,10 @@ def transform_prefix(s, common_id):
     parts = prefix.split(' ')
     prefix = parts[0]
     after_prefix = ' '.join(parts[1:])
-    return before_prefix + f"{use_split} {prefix}-{common_id} " + after_prefix
+    if prefix != 'debug':
+        return before_prefix + f"{use_split} {prefix}-{common_id} " + after_prefix
+    else:
+        return s
 
 def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         args):
@@ -262,11 +266,12 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
 
                 new_dirs = []
                 cmd_args = cmd.split(' ')
-                for k, v in config_mgr.get_prop('change_cmds').items():
-                    if k in cmd_args:
-                        continue
-                    new_dirs.append(k +" "+osp.join(base_data_dir, v))
-                cmd += " " + (" ".join(new_dirs))
+                if not args.skip_add:
+                    for k, v in config_mgr.get_prop('change_cmds').items():
+                        if k in cmd_args:
+                            continue
+                        new_dirs.append(k +" "+osp.join(base_data_dir, v))
+                    cmd += " " + (" ".join(new_dirs))
 
                 if not args.slurm_no_batch:
                     run_file,run_name = generate_hab_run_file(log_file, ident, python_path, cmd,
@@ -304,15 +309,24 @@ def generate_hab_run_file(log_file, ident,
 
     pre_python_txt = ''
     python_parts = cmd.split(" python")
+    has_python = False
     if len(python_parts) > 1:
         pre_python_txt = python_parts[0]
         cmd = "python" + python_parts[1]
+        has_python = True
 
     cpu_options = '#SBATCH --cpus-per-task %i' % int(c)
     if args.speed:
         cpu_options = '#SBATCH --overcommit\n'
         cpu_options += '#SBATCH --cpu-freq=performance\n'
         cpu_options += '#SBATCH -c $(((${SLURM_CPUS_PER_TASK} * ${SLURM_TASKS_PER_NODE})))'
+
+    if has_python:
+        run_cmd = python_path+"/"+cmd
+        requeue_s = '#SBATCH --requeue'
+    else:
+        run_cmd = cmd
+        requeue_s = ''
 
     fcontents = """#!/bin/bash
 #SBATCH --job-name=%s
@@ -322,7 +336,7 @@ def generate_hab_run_file(log_file, ident,
 #SBATCH --nodes 1
 #SBATCH --signal=USR1@600
 #SBATCH --ntasks-per-node %i
-#SBATCH --requeue
+%s
 #SBATCH -p %s
 %s
 
@@ -333,11 +347,14 @@ export MULTI_PROC_OFFSET=%i
 export MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 
 set -x
-srun %s/%s"""
-    job_name = prefix + '_' + ident
+srun %s"""
+    if prefix is not None:
+        job_name = prefix + '_' + ident
+    else:
+        job_name = ident
     log_file_loc = '/'.join(log_file.split('/')[:-1])
     fcontents = fcontents % (job_name, log_file, int(g), cpu_options,
-            int(ntasks), st, add_options, args.mp_offset, python_path, cmd)
+            int(ntasks), requeue_s, st, add_options, args.mp_offset, run_cmd)
     job_file = osp.join(log_file_loc, job_name + '.sh')
     with open(job_file, 'w') as f:
         f.write(fcontents)

@@ -1,5 +1,4 @@
 import os.path as osp
-from tensorboardX import SummaryWriter
 import os
 from six.moves import shlex_quote
 from rlf.rl import utils
@@ -30,6 +29,7 @@ class TbLogger(BaseLogger):
         self.writer = self._create_writer(args, self.tb_log_dir)
 
     def _create_writer(self, args, log_dir):
+        from tensorboardX import SummaryWriter
         rnd_id = ''.join(random.sample(string.ascii_uppercase + string.digits, k=4))
         log_dir = osp.join(self.tb_log_dir, args.env_name, args.prefix + '-' + rnd_id)
         writer = SummaryWriter(log_dir)
