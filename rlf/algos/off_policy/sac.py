@@ -11,7 +11,6 @@ from rlf.args import str2bool
 import torch.optim as optim
 import numpy as np
 import rlf.rl.utils as rutils
-from rlf.rl.loggers import sanity_checker
 
 
 class SAC(OffPolicy):
@@ -29,7 +28,6 @@ class SAC(OffPolicy):
                 self.policy._get_base_out_shape(),
                 self.policy.action_space)
         autils.hard_update(self.policy.critic, self.target_critic)
-        sanity_checker.check('critic_target', critic_target=self.target_critic)
 
     def _get_optimizers(self):
         opts = super()._get_optimizers()
@@ -116,14 +114,12 @@ class SAC(OffPolicy):
         if self.update_i <= self.args.n_rnd_steps:
             return {}
 
-        sanity_checker.check_rand_state()
         state, n_state, action, reward, add_info, n_add_info = self._sample_transitions(storage)
 
         all_log = {}
 
         critic_log = self.update_critic(state, n_state, action, reward, add_info, n_add_info)
         all_log.update(critic_log)
-        sanity_checker.check("x", critic=self.policy.critic)
 
         if self.update_i % self.args.actor_update_freq == 0:
             avg_d = {}
@@ -139,11 +135,9 @@ class SAC(OffPolicy):
                 avg_d[k] /= self.args.actor_update_epochs
 
             all_log.update(avg_d)
-            sanity_checker.check("x", actor=self.policy.actor)
 
         if self.update_i % self.args.critic_update_freq == 0:
             autils.soft_update(self.policy.critic, self.target_critic, self.args.tau)
-            sanity_checker.check("x", critic_target=self.target_critic)
 
         return all_log
 
