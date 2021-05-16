@@ -68,7 +68,7 @@ def get_def_critic(obs_shape, input_shape, action_space):
 
 def get_def_ac_critic(obs_shape, input_shape, action_space, hidden_size=(64, 64)):
     assert len(input_shape) == 1
-    ac_dim = rutils.get_ac_dim(slf.action_space)
+    ac_dim = rutils.get_ac_dim(action_space)
     return TwoLayerMlpWithAction(input_shape[0], hidden_size, ac_dim)
 
 
@@ -91,6 +91,6 @@ def get_def_dist(input_shape, action_space):
                 Categorical(input_size, action_space.spaces[keys[0]].n),
                 DiagGaussian(input_size, action_space.spaces[keys[1]].shape[0]))
     else:
-        raise NotImplemented('Unrecognized environment action space')
+        raise NotImplementedError('Unrecognized environment action space')
 
 
