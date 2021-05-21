@@ -43,6 +43,22 @@ def smooth_data(df, smooth_vals, value, gp_keys=['method', 'run']):
     return data
 
 
+def make_steps_match(plot_df, group_key, x_name):
+    all_dfs = []
+    for method_name, method_df in plot_df.groupby([group_key]):
+        grouped_runs = method_df.groupby(['run'])
+        max_len = -1
+        max_step_idxs = None
+        for run_name, run_df in grouped_runs:
+            if len(run_df) > max_len:
+                max_len = len(run_df)
+                max_step_idxs = run_df[x_name]
+        for run_name, run_df in grouped_runs:
+            run_df[x_name] = max_step_idxs[:len(run_df)]
+            all_dfs.append(run_df)
+    return pd.concat(all_dfs)
+
+
 def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
                 y_bounds=None, y_disp_bounds=None, x_disp_bounds=None,
                 group_colors=None, xtick_fn=None, ytick_fn=None, legend=False,
@@ -50,8 +66,8 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
                legend_font_size='x-large', method_idxs={}, num_marker_points={},
                line_styles={}, tight=False):
     """
-    - num_marker_points: int, The number of markers drawn on the line, NOT the
-      number of points that are plotted!
+    - num_marker_points dict: Key maps method name to the number of markers drawn on the line, NOT the
+      number of points that are plotted! By default this is 8.
     """
     plot_df = plot_df.copy()
     if tight:
@@ -61,8 +77,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         colors = sns.color_palette()
         group_colors = {method: color for method, color in zip(methods, colors)}
 
-    # Smooth each method and run independently
-    #plot_df = smooth_data(plot_df, smooth_factor, y_name, [group_key, avg_key])
+    plot_df = make_steps_match(plot_df, group_key, x_name)
 
     avg_y_df = plot_df.groupby([group_key, x_name]).mean()
     std_y_df = plot_df.groupby([group_key, x_name]).std()

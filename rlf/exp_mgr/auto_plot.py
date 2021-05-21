@@ -152,13 +152,36 @@ def get_tb_data(search_name, plot_key, plot_section, force_reload, match_pat,
 
 
 def get_data(search_name, plot_key, plot_section, force_reload, match_pat,
-        other_plot_keys, config, is_tb):
+        other_plot_keys, config, is_tb, other_fetch_fields):
     if is_tb:
         return get_tb_data(search_name, plot_key, plot_section,
                 force_reload, match_pat, other_plot_keys, config)
     else:
         return get_report_data(search_name, plot_key, plot_section,
-                force_reload, match_pat, other_plot_keys, config)
+                force_reload, match_pat, other_plot_keys, config,
+                other_fetch_fields)
+
+def combine_common(plot_df, group_key, x_name):
+    all_dfs = []
+    for method_name, method_df in plot_df.groupby([group_key]):
+        grouped_runs = method_df.groupby(['prefix'])
+        combine = defaultdict(dict)
+        for run_name, run_df in grouped_runs:
+            name = run_name.split('-')[-1]
+            last_step = run_df[x_name].max()
+            combine[name][last_step] = run_df
+        for name, step_df in combine.items():
+            key_order = sorted(step_df.keys())
+            last_k = None
+            for k in key_order:
+                if last_k is None:
+                    all_dfs.append(step_df[k])
+                else:
+                    all_dfs.append(step_df[k][step_df[k][x_name] > last_k])
+                last_k = k
+    return pd.concat(all_dfs)
+
+
 
 def plot_from_file(plot_cfg_path):
     with open(plot_cfg_path) as f:
@@ -185,14 +208,20 @@ def plot_from_file(plot_cfg_path):
             match_pat = plot_section.get('name_match_pat',
                     plot_settings.get('name_match_pat', None))
             print(f"Getting data for {plot_section['report_name']}")
+            should_combine = get_setting(plot_section, 'should_combine')
+            other_plot_keys = plot_settings.get('other_plot_keys', [])
+            other_fetch_fields = []
+            if should_combine:
+                other_fetch_fields.append('prefix')
+
             plot_df = get_data(plot_section['report_name'],
                     plot_key,
                     plot_section['plot_sections'],
                     get_setting(plot_section,'force_reload', False),
                     match_pat,
-                    plot_settings.get('other_plot_keys', []),
+                    other_plot_keys,
                     plot_settings['config_yaml'],
-                    plot_section.get('is_tb', False))
+                    plot_section.get('is_tb', False), other_fetch_fields)
 
             if 'line_sections' in plot_section:
                 line_plot_key = get_setting(plot_section, 'line_plot_key')
@@ -218,7 +247,6 @@ def plot_from_file(plot_cfg_path):
                         line_match_pat, [],
                         plot_settings['config_yaml'],
                         line_is_tb)
-                line_df = line_df[line_df[line_plot_key].notna()]
                 uniq_step = plot_df['_step'].unique()
                 use_line_df = None
                 for group_name, df in line_df.groupby('run'):
@@ -257,6 +285,10 @@ def plot_from_file(plot_cfg_path):
                 plot_df[plot_key] *= plot_settings['scale_factor']
             use_legend_font_size = plot_section.get('legend_font_size',
                     plot_settings.get('legend_font_size', 'x-large'))
+
+            if should_combine:
+                plot_df = combine_common(plot_df, 'method', '_step')
+
             uncert_plot(plot_df, ax, '_step', plot_key, 'run', 'method',
                     get_setting(plot_section, 'smooth_factor'),
                     y_bounds=get_nums_from_str(plot_section['y_bounds']),

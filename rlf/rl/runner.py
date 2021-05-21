@@ -6,7 +6,6 @@ from rlf.policies.base_policy import get_step_info
 from rlf.rl.envs import get_vec_normalize
 from rlf.algos.base_net_algo import BaseNetAlgo
 import numpy as np
-from rlf.rl.loggers import sanity_checker
 from rlf.rl.envs import make_vec_envs
 
 
@@ -32,7 +31,6 @@ class Runner:
 
             step_info = get_step_info(update_iter, step, self.episode_count, self.args)
             with torch.no_grad():
-                sanity_checker.check_rand_state()
                 ac_info = self.policy.get_action(
                         utils.get_def_obs(obs, self.args.policy_ob_key),
                         utils.get_other_obs(obs),
@@ -43,8 +41,6 @@ class Runner:
 
             next_obs, reward, done, infos = self.envs.step(ac_info.take_action)
 
-            sanity_checker.check("env_step", obs=obs, action=ac_info.take_action,
-                    next_obs=next_obs)
             reward += ac_info.add_reward
 
             step_log_vals = utils.agg_ep_log_stats(infos, ac_info.extra)

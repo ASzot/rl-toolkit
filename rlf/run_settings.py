@@ -91,13 +91,13 @@ class RunSettings(MasterClass):
         """
         Return: rlf.base_policy.BasePolicy
         """
-        raise NotImplemented('Must return policy to be used.')
+        raise NotImplementedError('Must return policy to be used.')
 
     def get_algo(self):
         """
         Return: rlf.base_algo.BaseAlgo
         """
-        raise NotImplemented('Must return algorithm to be used')
+        raise NotImplementedError('Must return algorithm to be used')
 
     def _get_env_interface(self, args, task_id=None):
         env_interface = get_env_interface(args.env_name)(args)
