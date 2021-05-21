@@ -202,13 +202,22 @@ def plot_from_file(plot_cfg_path):
                     fetch_keys = [line_plot_key, line_val_key]
                 else:
                     fetch_keys = line_plot_key
-                line_df = get_data(plot_section['report_name'],
+                line_is_tb = plot_section.get('is_tb', False)
+                if 'line_is_tb' in plot_section:
+                    line_is_tb = plot_section['line_is_tb']
+                line_report_name = plot_section['report_name']
+                if 'line_report_name' in plot_section:
+                    line_report_name = plot_section['line_report_name']
+                line_match_pat = match_pat
+                if 'line_match_pat' in plot_section:
+                    line_match_pat = plot_section['line_match_pat']
+                line_df = get_data(line_report_name,
                         fetch_keys,
                         plot_section['line_sections'],
                         get_setting(plot_section,'force_reload', False),
-                        match_pat, [],
+                        line_match_pat, [],
                         plot_settings['config_yaml'],
-                        plot_section.get('is_tb', False))
+                        line_is_tb)
                 line_df = line_df[line_df[line_plot_key].notna()]
                 uniq_step = plot_df['_step'].unique()
                 use_line_df = None

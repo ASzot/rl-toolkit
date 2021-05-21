@@ -69,7 +69,9 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
     avg_y_df['std'] = std_y_df[y_name]
 
     lines = []
+    names = []
     for name, sub_df in avg_y_df.groupby(level=0):
+        names.append(name)
         #sub_df = smooth_data(sub_df, smooth_factor, y_name, [group_key, avg_key])
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
@@ -114,8 +116,9 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         plt.yticks(ax.get_yticks(), [ytick_fn(t) for t in ax.get_yticks()])
 
     if legend:
-        labs = [l[0].get_label() for l in lines]
-        plt.legend(lines, labs, fontsize=legend_font_size)
+        labs = [(i, l[0].get_label()) for i, l in enumerate(lines)]
+        labs = sorted(labs, key=lambda x: method_idxs[names[x[0]]])
+        plt.legend([lines[i] for i, _ in labs], [x[1] for x in labs], fontsize=legend_font_size)
 
     ax.grid(b=True, which='major', color='lightgray', linestyle='--')
 
