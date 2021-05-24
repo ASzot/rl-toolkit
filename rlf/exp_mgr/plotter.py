@@ -77,7 +77,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         colors = sns.color_palette()
         group_colors = {method: color for method, color in zip(methods, colors)}
 
-    plot_df = make_steps_match(plot_df, group_key, x_name)
+    #plot_df = make_steps_match(plot_df, group_key, x_name)
 
     avg_y_df = plot_df.groupby([group_key, x_name]).mean()
     std_y_df = plot_df.groupby([group_key, x_name]).std()
