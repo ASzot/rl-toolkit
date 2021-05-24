@@ -308,7 +308,7 @@ def generate_hab_run_file(log_file, ident,
     add_options = '\n'.join(add_options)
 
     pre_python_txt = ''
-    python_parts = cmd.split(" python")
+    python_parts = cmd.split("python")
     has_python = False
     if len(python_parts) > 1:
         pre_python_txt = python_parts[0]

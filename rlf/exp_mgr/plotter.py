@@ -64,7 +64,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
                 group_colors=None, xtick_fn=None, ytick_fn=None, legend=False,
                rename_map={}, title=None, axes_font_size=14, title_font_size=18,
                legend_font_size='x-large', method_idxs={}, num_marker_points={},
-               line_styles={}, tight=False):
+               line_styles={}, tight=False, nlegend_cols=1, fetch_std=False):
     """
     - num_marker_points dict: Key maps method name to the number of markers drawn on the line, NOT the
       number of points that are plotted! By default this is 8.
@@ -81,7 +81,21 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
 
     avg_y_df = plot_df.groupby([group_key, x_name]).mean()
     std_y_df = plot_df.groupby([group_key, x_name]).std()
-    avg_y_df['std'] = std_y_df[y_name]
+    if fetch_std:
+        y_std = y_name+'_std'
+        new_df = []
+        for k, sub_df in plot_df.groupby([group_key]):
+            where_matches = avg_y_df.index.get_level_values(0) == k
+
+            use_df = avg_y_df[where_matches]
+            if np.isnan(sub_df.iloc[0][y_std]):
+                use_df['std'] = std_y_df[where_matches][y_name]
+            else:
+                use_df['std'] = avg_y_df[where_matches][y_std]
+            new_df.append(use_df)
+        avg_y_df = pd.concat(new_df)
+    else:
+        avg_y_df['std'] = std_y_df[y_name]
 
     lines = []
     names = []
@@ -133,7 +147,8 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
     if legend:
         labs = [(i, l[0].get_label()) for i, l in enumerate(lines)]
         labs = sorted(labs, key=lambda x: method_idxs[names[x[0]]])
-        plt.legend([lines[i] for i, _ in labs], [x[1] for x in labs], fontsize=legend_font_size)
+        plt.legend([lines[i] for i, _ in labs], [x[1] for x in labs],
+                fontsize=legend_font_size, ncol=nlegend_cols)
 
     ax.grid(b=True, which='major', color='lightgray', linestyle='--')
 

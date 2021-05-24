@@ -200,7 +200,7 @@ def get_report_data(report_name, plot_field, plot_sections,
 
     uniq_methods = all_df['method'].unique()
     for plot_section in plot_sections:
-        assert plot_section in uniq_methods, f"{plot_section} not found"
+        assert plot_section in uniq_methods, f"'{plot_section}' from {uniq_methods} not found"
 
     cacher.save(all_df)
 

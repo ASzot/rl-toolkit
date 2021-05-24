@@ -191,12 +191,14 @@ def plot_from_file(plot_cfg_path):
         group_colors = {name: colors[idx] for name, idx in
                 plot_settings['colors'].items()}
 
-        def get_setting(local, k, local_override=True):
+        def get_setting(local, k, local_override=True, defval=None):
             if local_override:
                 if k in local:
                     return local[k]
-                else:
+                elif k in plot_settings:
                     return plot_settings[k]
+                else:
+                    return defval
             else:
                 if k in plot_settings:
                     return plot_settings[k]
@@ -208,11 +210,16 @@ def plot_from_file(plot_cfg_path):
             match_pat = plot_section.get('name_match_pat',
                     plot_settings.get('name_match_pat', None))
             print(f"Getting data for {plot_section['report_name']}")
-            should_combine = get_setting(plot_section, 'should_combine')
+            should_combine = get_setting(plot_section, 'should_combine',
+                    defval=False)
             other_plot_keys = plot_settings.get('other_plot_keys', [])
             other_fetch_fields = []
+            fetch_std = get_setting(plot_section, 'fetch_std', defval=False)
             if should_combine:
                 other_fetch_fields.append('prefix')
+
+            if fetch_std:
+                other_plot_keys.append(plot_key + '_std')
 
             plot_df = get_data(plot_section['report_name'],
                     plot_key,
@@ -230,7 +237,12 @@ def plot_from_file(plot_cfg_path):
                 if line_plot_key != line_val_key:
                     fetch_keys = [line_plot_key, line_val_key]
                 else:
-                    fetch_keys = line_plot_key
+                    fetch_keys = [line_plot_key]
+                if fetch_std:
+                    fetch_keys.append(line_plot_key+'_std')
+                if len(fetch_keys) == 1:
+                    fetch_keys = fetch_keys[0]
+
                 line_is_tb = plot_section.get('is_tb', False)
                 if 'line_is_tb' in plot_section:
                     line_is_tb = plot_section['line_is_tb']
@@ -246,7 +258,7 @@ def plot_from_file(plot_cfg_path):
                         get_setting(plot_section,'force_reload', False),
                         line_match_pat, [],
                         plot_settings['config_yaml'],
-                        line_is_tb)
+                        line_is_tb, other_fetch_fields)
                 uniq_step = plot_df['_step'].unique()
                 use_line_df = None
                 for group_name, df in line_df.groupby('run'):
@@ -268,7 +280,10 @@ def plot_from_file(plot_cfg_path):
                         use_line_df = df
                     else:
                         use_line_df = pd.concat([use_line_df, df])
-                use_line_df = use_line_df.rename(columns={line_plot_key: plot_key})
+                rename_dict = {line_plot_key: plot_key}
+                if fetch_std:
+                    rename_dict[line_plot_key+'_std'] = plot_key+'_std'
+                use_line_df = use_line_df.rename(columns=rename_dict)
                 plot_df = pd.concat([plot_df, use_line_df])
 
             use_fig_dims = plot_section.get('fig_dims', plot_settings.get('fig_dims', (5,4)))
@@ -283,6 +298,8 @@ def plot_from_file(plot_cfg_path):
             title = plot_section['plot_title']
             if 'scale_factor' in plot_settings:
                 plot_df[plot_key] *= plot_settings['scale_factor']
+                if fetch_std:
+                    plot_df[plot_key+'_std'] *= plot_settings['scale_factor']
             use_legend_font_size = plot_section.get('legend_font_size',
                     plot_settings.get('legend_font_size', 'x-large'))
 
@@ -303,6 +320,8 @@ def plot_from_file(plot_cfg_path):
                     legend_font_size=use_legend_font_size,
                     num_marker_points=plot_settings.get('num_marker_points', {}),
                     line_styles=plot_settings.get('linestyles', {}),
+                    nlegend_cols=plot_section.get("nlegend_cols", 1),
+                    fetch_std=fetch_std,
                     rename_map={
                         **plot_settings['global_renames'],
                         **local_renames,
