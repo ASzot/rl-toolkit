@@ -77,8 +77,6 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         colors = sns.color_palette()
         group_colors = {method: color for method, color in zip(methods, colors)}
 
-    #plot_df = make_steps_match(plot_df, group_key, x_name)
-
     avg_y_df = plot_df.groupby([group_key, x_name]).mean()
     std_y_df = plot_df.groupby([group_key, x_name]).std()
     if fetch_std:
@@ -105,9 +103,14 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
         y_std = sub_df['std'].fillna(0).to_numpy()
+        if isinstance(smooth_factor, dict):
+            use_smooth_factor = (smooth_factor[name]
+                    if name in smooth_factor else smooth_factor['default'])
+        else:
+            use_smooth_factor = smooth_factor
 
-        y_vals = np.array(smooth_arr(y_vals, smooth_factor))
-        y_std = np.array(smooth_arr(y_std, smooth_factor))
+        y_vals = np.array(smooth_arr(y_vals, use_smooth_factor))
+        y_std = np.array(smooth_arr(y_std, use_smooth_factor))
 
         add_kwargs = {}
         if name in line_styles:
