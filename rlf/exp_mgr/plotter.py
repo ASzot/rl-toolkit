@@ -79,6 +79,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
 
     avg_y_df = plot_df.groupby([group_key, x_name]).mean()
     std_y_df = plot_df.groupby([group_key, x_name]).std()
+    method_runs = plot_df.groupby('method')['run'].unique()
     if fetch_std:
         y_std = y_name+'_std'
         new_df = []
@@ -98,6 +99,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
     lines = []
     names = []
     for name, sub_df in avg_y_df.groupby(level=0):
+        print(f"{name}: n_seeds: {len(method_runs[name])} (from WB run IDs {list(method_runs[name])})")
         names.append(name)
         #sub_df = smooth_data(sub_df, smooth_factor, y_name, [group_key, avg_key])
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
