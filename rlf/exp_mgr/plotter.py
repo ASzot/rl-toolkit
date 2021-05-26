@@ -108,9 +108,9 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
                     if name in smooth_factor else smooth_factor['default'])
         else:
             use_smooth_factor = smooth_factor
-
-        y_vals = np.array(smooth_arr(y_vals, use_smooth_factor))
-        y_std = np.array(smooth_arr(y_std, use_smooth_factor))
+        if use_smooth_factor != 0.0:
+            y_vals = np.array(smooth_arr(y_vals, use_smooth_factor))
+            y_std = np.array(smooth_arr(y_std, use_smooth_factor))
 
         add_kwargs = {}
         if name in line_styles:
