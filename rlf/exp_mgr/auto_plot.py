@@ -233,6 +233,9 @@ def plot_from_file(plot_cfg_path):
                     other_plot_keys,
                     plot_settings['config_yaml'],
                     plot_section.get('is_tb', False), other_fetch_fields)
+            # W&B will sometimes return NaN rows at the start and end of
+            # training.
+            plot_df = plot_df.dropna()
 
             if 'line_sections' in plot_section:
                 line_plot_key = get_setting(plot_section, 'line_plot_key')
@@ -263,6 +266,7 @@ def plot_from_file(plot_cfg_path):
                         line_match_pat, [],
                         plot_settings['config_yaml'],
                         line_is_tb, other_fetch_fields)
+                line_df = line_df.dropna()
                 uniq_step = plot_df['_step'].unique()
                 use_line_df = None
                 for group_name, df in line_df.groupby('run'):

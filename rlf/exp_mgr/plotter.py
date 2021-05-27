@@ -77,10 +77,9 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         colors = sns.color_palette()
         group_colors = {method: color for method, color in zip(methods, colors)}
 
-    #plot_df = make_steps_match(plot_df, group_key, x_name)
-
     avg_y_df = plot_df.groupby([group_key, x_name]).mean()
     std_y_df = plot_df.groupby([group_key, x_name]).std()
+    method_runs = plot_df.groupby('method')['run'].unique()
     if fetch_std:
         y_std = y_name+'_std'
         new_df = []
@@ -100,15 +99,20 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
     lines = []
     names = []
     for name, sub_df in avg_y_df.groupby(level=0):
+        print(f"{name}: n_seeds: {len(method_runs[name])} (from WB run IDs {list(method_runs[name])})")
         names.append(name)
         #sub_df = smooth_data(sub_df, smooth_factor, y_name, [group_key, avg_key])
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
         y_std = sub_df['std'].fillna(0).to_numpy()
-        print(name, 'final', y_vals[-1])
-
-        y_vals = np.array(smooth_arr(y_vals, smooth_factor))
-        y_std = np.array(smooth_arr(y_std, smooth_factor))
+        if isinstance(smooth_factor, dict):
+            use_smooth_factor = (smooth_factor[name]
+                    if name in smooth_factor else smooth_factor['default'])
+        else:
+            use_smooth_factor = smooth_factor
+        if use_smooth_factor != 0.0:
+            y_vals = np.array(smooth_arr(y_vals, use_smooth_factor))
+            y_std = np.array(smooth_arr(y_std, use_smooth_factor))
 
         add_kwargs = {}
         if name in line_styles:
