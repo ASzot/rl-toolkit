@@ -105,6 +105,7 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
         y_std = sub_df['std'].fillna(0).to_numpy()
+        print(name, 'final', y_vals[-1])
 
         y_vals = np.array(smooth_arr(y_vals, smooth_factor))
         y_std = np.array(smooth_arr(y_std, smooth_factor))

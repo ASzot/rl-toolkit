@@ -13,6 +13,8 @@ import numpy as np
 import seaborn as sns
 import glob
 from collections import defaultdict
+import matplotlib
+matplotlib.use('Agg')
 
 def get_arg_parser():
     parser = argparse.ArgumentParser()
@@ -63,12 +65,14 @@ def plot_legend(plot_cfg_path):
                 else:
                     marker_width = plot_settings['marker_width']
 
+                marker_alpha = plot_settings.get('alphas', {}).get(name, 1.0)
+                use_color =(*group_colors[name], marker_alpha)
                 ax.plot([0], [1], marker=marker, label=disp_name,
-                        color=group_colors[name],
+                        color=use_color,
                         markersize=plot_settings['marker_size'],
                         markeredgewidth=marker_width,
                         #markeredgecolor=(darkness, darkness, darkness, 1),
-                        markeredgecolor=group_colors[name],
+                        markeredgecolor=use_color,
                         **add_kwargs)
             export_legend(ax, plot_settings['line_width'],
                     osp.join(plot_settings['save_loc'], section_name + '_legend.pdf'))
