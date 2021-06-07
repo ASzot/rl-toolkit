@@ -80,6 +80,9 @@ class WbLogger(BaseLogger):
     def watch_model(self, model):
         wandb.watch(model)
 
+    def log_image(self, k, img_file, step_count):
+        wandb.log({k: wandb.Image(img_file)}, step=step_count)
+
     def _create_wandb(self, args):
         args.prefix = self.prefix
         if self.prefix.count('-') >= 4:

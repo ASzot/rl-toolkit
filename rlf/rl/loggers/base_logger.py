@@ -210,5 +210,14 @@ class BaseLogger(object):
         self.log_vals(log_dat, total_num_steps)
         return log_dat
 
+    def log_image(self, k, img_file, step_count):
+        pass
+
     def close(self):
         pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
