@@ -134,8 +134,18 @@ class BaseLogger(object):
         else:
             self.prefix = args.prefix
 
-    def set_prefix(self, args):
+    def set_prefix(self, args, setup_log_dirs=[]):
         args.prefix = self.prefix
+        if setup_log_dirs:
+            self.setup_log_dirs(args, setup_log_dirs)
+
+
+    def setup_log_dirs(self, args, log_keys):
+        for log_key in log_keys:
+            new_dir = osp.join(getattr(args, log_key), args.prefix)
+            setattr(args, log_key, new_dir)
+            if not osp.exists(new_dir):
+                os.makedirs(new_dir)
 
     def start_interval_log(self):
         """
