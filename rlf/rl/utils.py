@@ -24,6 +24,13 @@ try:
 except:
     pass
 
+
+def print_weights(m):
+    for name, param in m.named_parameters():
+        print(name)
+        print(param)
+
+
 def get_env_attr(env, attr_name, max_calls=10):
     try:
         return getattr(env, attr_name)
@@ -39,14 +46,14 @@ def get_env_attr(env, attr_name, max_calls=10):
 
 
 
-def plot_line(plot_vals, save_name, args, to_wb, update_iter=None, x_vals=None,
+def plot_line(plot_vals, save_name, save_dir, to_wb, update_iter=None, x_vals=None,
         x_name=None, y_name=None, title=None):
     """
     Plot a simple rough line.
     """
     if x_vals is None:
         x_vals = np.arange(len(plot_vals))
-    save_path = osp.join(args.save_dir, args.env_name, args.prefix, save_name)
+    save_path = osp.join(save_dir, save_name+'.png')
     if title is None:
         plt.title(save_name)
     else:
@@ -65,9 +72,9 @@ def plot_line(plot_vals, save_name, args, to_wb, update_iter=None, x_vals=None,
     if update_iter is not None:
         kwargs['step'] = update_iter
 
-    if to_wb and not args.ray:
+    if to_wb:
         wandb.log({save_name:
-            [wandb.Image(Image.open(save_path))]}, **kwargs)
+            [wandb.Image(save_path)]}, **kwargs)
 
 def plt_save(*path_parts):
     save_name = osp.join(*path_parts)
