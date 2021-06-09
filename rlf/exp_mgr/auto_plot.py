@@ -92,8 +92,8 @@ def get_tb_data(search_name, plot_key, plot_section, force_reload, match_pat,
     for f in glob.glob(osp.join(search_name, match_pat, plot_key, '*.tfevents.*')):
         run = f.split('/')[-3]
         method_parts = run.split('_')
-        seed = method_parts[-2]
-        method_name = '_'.join(method_parts[:-2])
+        seed = method_parts[-1]
+        method_name = '_'.join(method_parts[:-1])
 
         if method_name not in plot_section:
             continue
@@ -152,7 +152,36 @@ def get_tb_data(search_name, plot_key, plot_section, force_reload, match_pat,
 
     return combined_df
 
+def make_steps_similar(method_dfs, run_to_name):
+    combined_method_dfs = {}
+    overall_step = []
+    method_steps = {}
+    for k, dfs in method_dfs:
+        #overall_df = pd.concat(dfs)
+        overall_df = dfs
+        overall_df = overall_df.sort_values('_step')
+        overall_df = overall_df.drop_duplicates(subset=['_step'], keep='last')
+        method_name = run_to_name[k]
 
+        n_steps = len(overall_df['_step'])
+
+        if method_name not in method_steps or \
+                len(method_steps[method_name]) < n_steps:
+            method_steps[method_name] = overall_df['_step'].tolist()
+
+        combined_method_dfs[k] = overall_df
+
+    combined_df = None
+    for k, df in combined_method_dfs.items():
+        # Update with the max # of steps.
+        method_name = run_to_name[k]
+        df['_step'] = method_steps[method_name][:len(df)]
+        if combined_df is None:
+            combined_df = df
+        else:
+            combined_df = pd.concat([combined_df, df])
+
+    return combined_df
 
 
 def get_data(search_name, plot_key, plot_section, force_reload, match_pat,
@@ -313,6 +342,9 @@ def plot_from_file(plot_cfg_path):
 
             if should_combine:
                 plot_df = combine_common(plot_df, 'method', '_step')
+            run_grouped = plot_df.groupby('run')
+            name_map = {x['run']: x['method'] for i, x in plot_df.iterrows()}
+            #plot_df = make_steps_similar(run_grouped,name_map)
 
             uncert_plot(plot_df, ax, '_step', plot_key, 'run', 'method',
                     get_setting(plot_section, 'smooth_factor'),
