@@ -23,6 +23,8 @@ Codebase I use to to implement RL algorithms.
 
 See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks)
 
+## Documentation
+- Loggers: `rl-toolkit/rlf/rl/loggers/README.md`
 
 ## Code Features
 - Custom policies. 
@@ -44,8 +46,7 @@ Requires Python 3.7. With conda:
 - Clone the repo
 - `conda create -n rlf python=3.7`
 - `source activate rlf`
-- `pip install -r requirements.txt`. In the future I will merge this with the
-  bottom step.
+- `pip install -r requirements.txt`. 
 - `pip install -e .`
 
 If you want to install MuJoCo as well: `mujoco-py==2.0.2.5` 

@@ -115,6 +115,20 @@ def deep_dict_select(d, idx):
         ret_dict[k] = d[k][idx]
     return ret_dict
 
+def transpose_arr_dict(arr):
+    keys = arr[0].keys()
+    orig_format = arr[0][list(keys)[0]]
+    ret_d = {k: [] for k in keys}
+    for arr_ele in arr:
+        for k in keys:
+            ret_d[k].append(arr_ele[k])
+
+    if isinstance(orig_format, torch.Tensor):
+        for k in keys:
+            ret_d[k] = torch.stack(ret_d[k])
+
+    return ret_d
+
 def flatten_obs_dict(ob_shape, keep_keys):
     total_dim = 0
     low_val = None
