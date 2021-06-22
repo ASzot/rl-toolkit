@@ -1,7 +1,10 @@
 import sys
 sys.path.insert(0, './')
 
-import wandb
+try:
+    import wandb
+except:
+    pass
 from rlf.exp_mgr import config_mgr
 from rlf.rl.utils import CacheHelper
 import yaml
@@ -25,6 +28,23 @@ def get_report_data_from_spec(spec_str, force_refresh=False, cfg='./config.yaml'
     spec = yaml.safe_load(spec_str)
     return get_report_data(spec['report_name'], spec['plot_column'], spec['fields'],
             force_refresh, cfg)
+
+def get_run_params(wb_run_id):
+    wb_proj_name = config_mgr.get_prop('proj_name')
+    wb_entity = config_mgr.get_prop('wb_entity')
+    api = wandb.Api()
+    run = api.run(f"{wb_entity}/{wb_proj_name}/{wb_run_id}")
+    for f in run.files():
+        if f.name == 'wandb-metadata.json':
+            with f.download(replace=True) as f:
+                lines = f.readlines()
+                data_d = json.loads('\n'.join(lines))
+                data_d['full_name'] = run.name
+                return data_d
+
+    return None
+
+
 
 def get_run_data(run_names, plot_field, method_name,
         cfg='./config.yaml'):

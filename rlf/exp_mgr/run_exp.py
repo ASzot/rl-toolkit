@@ -8,6 +8,7 @@ import random
 import string
 import uuid
 import time
+from rlf.exp_mgr.wb_data_mgr import get_run_params
 
 
 def get_arg_parser():
@@ -66,13 +67,51 @@ def add_on_args(spec_args):
     return ((' '.join(spec_args)))
 
 
-def get_cmds(cmd_path, spec_args):
+def get_cmds(cmd_path, spec_args, args):
     try:
         open_cmd = osp.join(cmd_path + '.cmd')
         print('opening', open_cmd)
         with open(open_cmd) as f:
             cmds = f.readlines()
     except:
+        base_cmd = cmd_path.split('/')[-1]
+        if len(base_cmd) == 8:
+            # This could be a W&B ID.
+            run = get_run_params(base_cmd)
+            if run is not None:
+                # The added part should already be in the command
+                args.skip_add = True
+                use_args = ' '.join(run['args'])
+                full_cmd = f"python {run['codePath']} {use_args} "
+
+                for k, v in config_mgr.get_prop('eval_replace').items():
+                    full_cmd = transform_k(full_cmd, k+' ', v)
+
+                eval_add = config_mgr.get_prop("eval_add")
+                if '%s' in eval_add:
+                    ckpt_dir = osp.join(config_mgr.get_prop("base_data_dir"),
+                            "checkpoints", run['full_name'])
+                    #ckpts = [x for x in os.listdir(ckpt_dir) if '.pth' in x]
+                    #max_idx = 0
+                    #max_val = 0
+                    #for i, ckpt in enumerate(ckpts):
+                    #    parts = ckpt.split('.')
+                    #    if len(parts) < 2 or not parts[-2].isdigit():
+                    #        continue
+                    #    cur_val = int(parts[-2])
+                    #    if cur_val > max_val:
+                    #        max_idx = i
+                    #        max_val = cur_val
+                    #ckpt_path = osp.join(ckpt_dir, ckpts[max_idx])
+                    #if not osp.exists(ckpt_path):
+                    #    raise ValueError('Could not find ckpt path')
+
+                    #eval_add = eval_add % ckpt_path
+                    eval_add = eval_add % ckpt_dir
+                full_cmd += eval_add
+                cmds = [full_cmd]
+                return cmds
+
         raise ValueError(f"Command at {cmd_path} does not exist")
 
     # pay attention to comments
@@ -87,7 +126,8 @@ def get_cmds(cmd_path, spec_args):
             ref_cmd_loc = cmd_parts[0]
             full_ref_cmd_loc = osp.join(config_mgr.get_prop('cmds_loc'),
                     ref_cmd_loc)
-            ref_cmds = get_cmds(full_ref_cmd_loc.rstrip(), [*cmd_parts[1:], *spec_args])
+            ref_cmds = get_cmds(full_ref_cmd_loc.rstrip(), [*cmd_parts[1:],
+                *spec_args], args)
             all_ref_cmds.extend(ref_cmds)
     cmds = list(filter(lambda x: not x.startswith('R:'), cmds))
 
@@ -110,6 +150,17 @@ def get_tmux_window(sess_name, sess_id):
 
     return sess.new_window(attach=False, window_name="auto_proc")
 
+def transform_k(s, use_split, replace_s):
+    prefix_parts = s.split(use_split)
+
+    before_prefix = use_split.join(prefix_parts[:-1])
+    prefix = prefix_parts[-1]
+    parts = prefix.split(' ')
+    prefix = parts[0]
+    after_prefix = ' '.join(parts[1:])
+
+    return before_prefix + f"{use_split} {replace_s} " + after_prefix
+
 def transform_prefix(s, common_id):
     if '--prefix' in s:
         use_split = '--prefix '
@@ -131,7 +182,7 @@ def transform_prefix(s, common_id):
 
 def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed,
         args):
-    cmds = get_cmds(cmd_path, add_args_str)
+    cmds = get_cmds(cmd_path, add_args_str, args)
 
     n_seeds = 1
     if args.cmd_format == 'reg':
