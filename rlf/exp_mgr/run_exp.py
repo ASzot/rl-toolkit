@@ -9,6 +9,7 @@ import string
 import uuid
 import time
 from rlf.exp_mgr.wb_data_mgr import get_run_params
+import subprocess
 
 
 def get_arg_parser():
@@ -423,6 +424,28 @@ def full_execute_command_file():
     execute_command_file(cmd_path, rest, args.cd, args.sess_name, args.sess_id,
             args.seed, args)
 
+def kill_current_window():
+    """
+    Kills the current tmux window. Helpful for managing tmux windows. If not
+    current attached to a tmux window, does nothing.
+    """
+    # From https://superuser.com/a/1188041
+    run_cmd = """tty=$(tty)
+for s in $(tmux list-sessions -F '#{session_name}' 2>/dev/null); do
+    tmux list-panes -F '#{pane_tty} #{session_name}' -t "$s"
+done | grep "$tty" | awk '{print $2}'"""
+    curr_sess_id = subprocess.check_output(run_cmd, shell=True).decode('utf-8').strip()
+    print("Got session id", curr_sess_id)
+    if curr_sess_id == '':
+        return
+    curr_sess_id = int(curr_sess_id)
+
+    server = libtmux.Server()
+    session = server.get_by_id('$%i' % curr_sess_id)
+
+    session.attached_window.kill_window()
+
 if __name__ == '__main__':
     full_execute_command_file()
+
 
