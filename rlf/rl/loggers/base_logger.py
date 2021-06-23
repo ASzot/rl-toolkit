@@ -37,9 +37,13 @@ class BaseLogger(object):
         self.is_printing = True
         self.prev_steps = 0
         self.start = None
+        self.args = args
 
     def disable_print(self):
         self.is_printing = False
+
+    def get_config(self):
+        return self.args
 
     def save_run_info(self, args):
         log_dir = osp.join(args.log_dir, args.env_name, self.prefix)

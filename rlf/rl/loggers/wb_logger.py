@@ -93,10 +93,12 @@ class WbLogger(BaseLogger):
             group_id = None
 
         self.run = wandb.init(project=self.wb_proj_name, name=self.prefix,
-                entity=self.wb_entity, group=group_id, reinit=True)
-        wandb.config.update(args)
+                entity=self.wb_entity, group=group_id, reinit=True, config=args)
         self.is_closed = False
         return wandb
+
+    def get_config(self):
+        return wandb.config
 
     def log_video(self, video_file, step_count, fps):
         if not self.should_log_vids:
