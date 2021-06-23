@@ -98,6 +98,15 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
 
     lines = []
     names = []
+
+    # Update the legend info with any previously plotted lines
+    if ax.get_legend() is not None:
+        all_lines = ax.get_lines()
+
+        for i, (l, n) in enumerate(zip(ax.get_legend().get_lines(), ax.get_legend().get_texts())):
+            names.append(n.get_text())
+            lines.append((all_lines[i*2+1],all_lines[i*2]))
+
     for name, sub_df in avg_y_df.groupby(level=0):
         print(f"{name}: n_seeds: {len(method_runs[name])} (from WB run IDs {list(method_runs[name])})")
         names.append(name)

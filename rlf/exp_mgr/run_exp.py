@@ -20,6 +20,7 @@ def get_arg_parser():
     parser.add_argument('--cmd', type=str, required=True,
                         help='list of commands to run')
     parser.add_argument('--seed', type=str, default=None)
+    parser.add_argument('--comment', type=str, default=None)
     parser.add_argument('--cd', default='-1', type=str, help="""
             String of CUDA_VISIBLE_DEVICES. A value of "-1" will not set
             CUDA_VISIBLE_DEVICES at all.
@@ -356,6 +357,8 @@ def generate_hab_run_file(log_file, ident,
         add_options.append('#SBATCH --account=overcap')
     if args.time is not None:
         add_options.append(f"#SBATCH --time={args.time}")
+    if args.comment is not None:
+        add_options.append(f"#SBATCH --comment=\"{args.comment}\"")
     add_options = '\n'.join(add_options)
 
     pre_python_txt = ''

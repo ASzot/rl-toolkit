@@ -89,11 +89,16 @@ def get_tb_data(search_name, plot_key, plot_section, force_reload, match_pat,
     if match_pat is None:
         match_pat = '*/*'
 
-    for f in glob.glob(osp.join(search_name, match_pat, plot_key, '*.tfevents.*')):
+    search_path = osp.join(search_name, match_pat, plot_key, '*.tfevents.*')
+    matches = glob.glob(search_path)
+    if len(matches) == 0:
+        raise ValueError(f"Could not get any matching files for {search_path}")
+
+    for f in matches:
         run = f.split('/')[-3]
         method_parts = run.split('_')
-        seed = method_parts[-1]
-        method_name = '_'.join(method_parts[:-1])
+        seed = method_parts[-2]
+        method_name = '_'.join(method_parts[:-2])
 
         if method_name not in plot_section:
             continue
@@ -122,6 +127,9 @@ def get_tb_data(search_name, plot_key, plot_section, force_reload, match_pat,
             plot_key: values,
             '_step': steps
             }))
+
+    if len(method_dfs) == 0:
+        raise ValueError(f"Could not find any matching runs in {search_path}")
 
     combined_method_dfs = {}
     overall_step = []
@@ -238,6 +246,7 @@ def plot_from_file(plot_cfg_path):
                 else:
                     return local[k]
 
+        fig = None
         for plot_section in plot_settings['plot_sections']:
             plot_key = plot_section.get('plot_key', plot_settings['plot_key'])
             match_pat = plot_section.get('name_match_pat',
@@ -257,7 +266,7 @@ def plot_from_file(plot_cfg_path):
             plot_df = get_data(plot_section['report_name'],
                     plot_key,
                     plot_section['plot_sections'],
-                    get_setting(plot_section,'force_reload', False),
+                    get_setting(plot_section,'force_reload', defval=False),
                     match_pat,
                     other_plot_keys,
                     plot_settings['config_yaml'],
@@ -291,7 +300,7 @@ def plot_from_file(plot_cfg_path):
                 line_df = get_data(line_report_name,
                         fetch_keys,
                         plot_section['line_sections'],
-                        get_setting(plot_section,'force_reload', False),
+                        get_setting(plot_section,'force_reload', defval=False),
                         line_match_pat, [],
                         plot_settings['config_yaml'],
                         line_is_tb, other_fetch_fields)
@@ -324,7 +333,8 @@ def plot_from_file(plot_cfg_path):
                 plot_df = pd.concat([plot_df, use_line_df])
 
             use_fig_dims = plot_section.get('fig_dims', plot_settings.get('fig_dims', (5,4)))
-            fig, ax = plt.subplots(figsize=use_fig_dims)
+            if fig is None:
+                fig, ax = plt.subplots(figsize=use_fig_dims)
             def get_nums_from_str(s):
                 return [float(x) for x in s.split(',')]
 
@@ -344,12 +354,14 @@ def plot_from_file(plot_cfg_path):
                 plot_df = combine_common(plot_df, 'method', '_step')
             run_grouped = plot_df.groupby('run')
             name_map = {x['run']: x['method'] for i, x in plot_df.iterrows()}
-            #plot_df = make_steps_similar(run_grouped,name_map)
+            if get_setting(plot_section, 'make_steps_similar', defval=False):
+                plot_df = make_steps_similar(run_grouped,name_map)
 
             uncert_plot(plot_df, ax, '_step', plot_key, 'run', 'method',
                     get_setting(plot_section, 'smooth_factor'),
                     y_bounds=get_nums_from_str(plot_section['y_bounds']),
-                    x_disp_bounds=get_nums_from_str(plot_section['x_disp_bounds']),
+                    x_disp_bounds=get_nums_from_str(
+                        get_setting(plot_section,'x_disp_bounds')),
                     y_disp_bounds=get_nums_from_str(plot_section['y_disp_bounds']),
                     xtick_fn=human_format_int,
                     legend=plot_section['legend'],
@@ -366,12 +378,14 @@ def plot_from_file(plot_cfg_path):
                         **plot_settings['global_renames'],
                         **local_renames,
                         })
-            save_loc = plot_settings['save_loc']
-            if not osp.exists(save_loc):
-                os.makedirs(save_loc)
-            save_path = osp.join(save_loc, plot_section['save_name'] + '.pdf')
-            high_res_save(save_path)
-            plt.clf()
+            if plot_section.get("should_save", True):
+                save_loc = plot_settings['save_loc']
+                if not osp.exists(save_loc):
+                    os.makedirs(save_loc)
+                save_path = osp.join(save_loc, plot_section['save_name'] + '.pdf')
+                high_res_save(save_path)
+                plt.clf()
+                fig = None
 
 if __name__ == '__main__':
     parser = get_arg_parser()
