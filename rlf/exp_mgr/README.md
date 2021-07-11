@@ -31,54 +31,92 @@ naming convention from point
 Typically this is run as `python rl-toolkit/rlf/exp_mgr/auto_plot.py --plot-cfg
 my_plot_cfgs/plot.yaml`. 
 
-Here is an illustrative plot settings YAML file. 
-
+Documentation of the plot settings YAML file. Most properties in the
+`plot_sections` element can also be set in the base element as a default. 
 ```
 ---
-# You can specify multiple elements in the plot  sections list to create multiple plots at once. 
 plot_sections:
-    - plot_title: "Fridge"
-      save_name: "pick_fridge"
-      report_name: "0106-pick-fridge"
-      y_bounds: "0.0,100.0"
-      x_disp_bounds: "0,60e6"
-      y_disp_bounds: "0,110"
-      legend: True
+    - save_name: [string, filename to save to (not including extension or directory)]
+      should_save: [bool, If False, then the plot is not saved, and is apart of the next rendered plot, this is how you can compose data from multiple data sources.]
+
+      # Data source settings
+      report_name: [string, either the TB search directory or the W&B report description ID]
+      line_report_name: [string, W&B ID or TB directory of where to get data for rendering lines, if nothing, then same as report name]
+
+      # Render settings
+      plot_title: [string, overhead title of plot]
+      y_bounds: [string, like "0.0,100.0" clips values to this range]
+      x_disp_bounds: [string, like "0,1e8" plot display bounds]
+      y_disp_bounds: [string, like "60,102" plot display bounds ]
+      legend: [bool, If true, will render the legend within the plot]
+      nlegend_cols: [int, # of columns in the legend, useful for large legends]
+
+      make_steps_similar: [bool, if True, will forcefully align the steps in the runs for a particular method]
+      plot_key: "eval_metrics/ep_success"
+
+      line_match_pat: null
       line_sections:
-          - "mpg"
+          - 'mpg'
+          - 'mpp2'
       plot_sections:
-          - "img"
-          - "state"
+          - "D-s eval"
+          - "D eval"
+          - "RGB-s eval"
+          - "RGB eval"
+          - "RGBD-s eval"
+          - "RGBD eval"
       force_reload: False
-global_renames: 
+global_renames: [dict str -> str]
     "eval_metrics/ep_success": "Success (%)"
     _step: "Step"
-    'img': 'Image Method'
-    'state': 'State Only Method'
-    "mpg": 'Motion Planning Method'
-plot_key: "eval_metrics/ep_success"
+    "eval_metrics_ep_success": "Success (%)"
+
+    "D-s eval": "D+ps"
+    "D eval": "D"
+    "RGB-s eval": "RGB+ps"
+    "RGB eval": "RGB"
+    "RGBD-s eval": "RGBD+ps"
+    "RGBD eval": "RGBD"
+
+    "RGBD_s": 'RGBD+ps'
+    "input_ablation_RGBD_g": 'RGBD'
+    "input_ablation_RGB_s": 'RGB+ps'
+    "input_ablation_D_s": 'D+ps'
+    "input_ablation_s": 'ps'
+    "input_ablation_RGB_g": "RGB"
+    "input_ablation_D_g": "D"
+    "mpp": "SPA"
+    "mpg": "SPA-Priv"
+    "mpp2": "SPA"
 line_plot_key: "eval_metrics/ep_success"
-smooth_factor: 0.95
-# Multiplies the Y axis values by this amount. Helpful if you want to turn
-# something into a percen.
-scale_factor: 100
-# These configure how a run should be converted into a line (single value). 
-line_op: 'max'
 line_val_key: "eval_metrics/ep_success"
-line_plot_key: "eval_metrics/ep_success"
+smooth_factor: 0.8
+scale_factor: 100
+line_op: 'max'
 config_yaml: "./config.yaml"
-save_loc: "./data/plot/figs/"
-# Make the figure wider, this is optional. 
+save_loc: "./data/plot"
 fig_dims: [6,4]
-# Make legend font size smaller. 
 legend_font_size: 'medium'
-# This will ignore names from W&B which don't contain one of these substrings.
-name_match_pat: ['_eval', 'mpg', 'blind']
 colors:
-    "img": 0 
-    "state": 1
-    "mpg": 2
+  "RGBD_s": 0
+  "input_ablation_RGB_s": 1
+  "input_ablation_D_s": 2
+  "input_ablation_s": 3
+  "input_ablation_RGBD_g": 4
+  "input_ablation_RGB_g": 5
+  "input_ablation_D_g": 6
+  "mpg": 7
+  "mpp": 8
+  "mpp2": 8
+
+  "D-s eval": 0
+  "D eval": 1
+  "RGB-s eval": 2
+  "RGB eval": 3
+  "RGBD-s eval": 4
+  "RGBD eval": 5
 ```
+
 
 ## Plotting Utilities
 This can help make good looking plots. 
