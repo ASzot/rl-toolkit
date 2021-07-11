@@ -2,12 +2,13 @@ import cv2
 import numpy as np
 import os.path as osp
 import os
+from typing import List
 
-def append_text_to_image(image, lines):
+def append_text_to_image(image: np.ndarray, lines: List[str], from_bottom: bool=False) -> np.ndarray:
     """
-    Parameters:
-        image: (np.array): The frame to add the text to.
-        lines (list):
+    Args:
+        image: The NxMx3 frame to add the text to.
+        lines: The list of strings (new line separated) to add to the image.
     Returns:
         image: (np.array): The modified image with the text appended.
     """
@@ -17,10 +18,16 @@ def append_text_to_image(image, lines):
     font = cv2.FONT_HERSHEY_SIMPLEX
     blank_image = np.zeros(image.shape, dtype=np.uint8)
 
-    y = 0
+    if from_bottom:
+        y = image.shape[0]
+    else:
+        y = 0
     for line in lines:
         textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
-        y += textsize[1] + 10
+        if from_bottom:
+            y -= (textsize[1] + 10)
+        else:
+            y += textsize[1] + 10
         x = 10
         cv2.putText(
             blank_image,

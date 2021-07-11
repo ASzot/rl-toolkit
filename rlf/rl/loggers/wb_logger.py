@@ -68,7 +68,7 @@ class WbLogger(BaseLogger):
             return
         self.wandb = self._create_wandb(args)
 
-    def log_vals(self, key_vals, step_count):
+    def _internal_log_vals(self, key_vals, step_count):
         if self.is_closed:
             return
         try:

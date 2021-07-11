@@ -74,7 +74,8 @@ def add_args(parser):
         help='how many training CPU processes to use (default: 32)')
 
     parser.add_argument('--env-name',
-        help='environment to train on (default: PongNoFrameskip-v4)')
+        help='environment to train on (default: PongNoFrameskip-v4)',
+        required=True)
 
     parser.add_argument(
         '--gamma',

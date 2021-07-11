@@ -3,7 +3,8 @@ imageio
 imageio-ffmpeg
 libtmux==0.8.2
 matplotlib
-numpy
+numpy>=1.16.1
+torch==1.8.1
 opencv-python
 Pillow
 python-dateutil
@@ -13,7 +14,8 @@ subprocess32==3.5.4
 tensorboardX
 termcolor==1.1.0
 tqdm
-wandb==0.8.19
+wandb==0.10.33
 gym==0.17.1
 seaborn
 scikit-image
+pytest==6.2.4

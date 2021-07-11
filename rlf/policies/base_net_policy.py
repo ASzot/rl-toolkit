@@ -37,7 +37,7 @@ class BaseNetPolicy(nn.Module, BasePolicy):
 
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
-        if 'recurrent' in inspect.getargspec(self.get_base_net_fn).args:
+        if 'recurrent' in inspect.getfullargspec(self.get_base_net_fn).args:
             self.get_base_net_fn = partial(self.get_base_net_fn,
                     recurrent=self.args.recurrent_policy)
         if self.use_goal:

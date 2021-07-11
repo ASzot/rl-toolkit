@@ -539,3 +539,62 @@ class TimeProfilee:
     def clear(self):
         self.timers = defaultdict(lambda: 0)
         self.timer_call_count = defaultdict(lambda: 0)
+
+class StackHelper:
+    """
+    A helper for stacking observations.
+    """
+
+    def __init__(self, ob_shape, n_stack, device, n_procs=None):
+        self.input_dim = ob_shape[0]
+        self.n_procs = n_procs
+        self.real_shape = (n_stack*self.input_dim, *ob_shape[1:])
+        if self.n_procs is not None:
+            self.stacked_obs = torch.zeros((n_procs, *self.real_shape))
+            if device is not None:
+                self.stacked_obs = self.stacked_obs.to(device)
+        else:
+            self.stacked_obs = np.zeros(self.real_shape)
+
+    def update_obs(self, obs, dones=None, infos=None):
+        """
+        - obs: torch.tensor
+        """
+        if self.n_procs is not None:
+            self.stacked_obs[:, :-self.input_dim] = self.stacked_obs[:, self.input_dim:].clone()
+            for (i, new) in enumerate(dones):
+                if new:
+                    self.stacked_obs[i] = 0
+            self.stacked_obs[:, -self.input_dim:] = obs
+
+            # Update info so the final observation frame stack has the final
+            # observation as the final frame in the stack.
+            for i in range(len(infos)):
+                if 'final_obs' in infos[i]:
+                    new_final = torch.zeros(*self.stacked_obs.shape[1:])
+                    new_final[:-1] = self.stacked_obs[i][1:]
+                    new_final[-1] = torch.tensor(infos[i]['final_obs']).to(self.stacked_obs.device)
+                    infos[i]['final_obs'] = new_final
+            return self.stacked_obs.clone(), infos
+        else:
+            self.stacked_obs[:-self.input_dim] = self.stacked_obs[self.input_dim:].copy()
+            self.stacked_obs[-self.input_dim:] = obs
+
+            return self.stacked_obs.copy(), infos
+
+    def reset(self, obs):
+        if self.n_procs is not None:
+            if torch.backends.cudnn.deterministic:
+                self.stacked_obs = torch.zeros(self.stacked_obs.shape)
+            else:
+                self.stacked_obs.zero_()
+            self.stacked_obs[:, -self.input_dim:] = obs
+            return self.stacked_obs.clone()
+        else:
+            self.stacked_obs = np.zeros(self.stacked_obs.shape)
+            self.stacked_obs[-self.input_dim:] = obs
+            return self.stacked_obs.copy()
+
+    def get_shape(self):
+        return self.real_shape
+

@@ -17,13 +17,7 @@ import os.path as osp
 from gym.spaces import Box
 import os
 import sys
-from rlf.rl.loggers import sanity_checker
-
-# Import the env interfaces
-import rlf.envs.minigrid_interface
-import rlf.envs.bit_flip
-import rlf.envs.blackjack
-
+import rlf
 
 def init_seeds(args):
     # Set all seeds
@@ -44,19 +38,25 @@ except:
     MasterClass = BlankTrainable
 
 class RunSettings(MasterClass):
-    def __init__(self, args_str=None, config=None, logger_creator=None):
+    """
+    Sets up the training, environments, and all other information needed for
+    running an algorithm.
+    """
+    def __init__(self, args_str: str = None, config=None, logger_creator=None):
         """
-        - config: The config for tune.Trainable if used.
-        - logger_creator: Also used for tune.Trainble if used.
+        Args:
+        :param args_str: Parse the arguments from this string.
+        :param config: The config for tune.Trainable if used.
+        :param logger_creator: Also used for tune.Trainble if used.
         """
-        self.args_str = args_str
+        self._preset_args = None if args_str is None else args_str.split(' ')
         self.working_dir = os.getcwd()
 
         base_parser = self._get_base_parser()
-        if self.args_str is None:
+        if self._preset_args is None:
             self.base_args, _ = base_parser.parse_known_args()
         else:
-            self.base_args, _ = base_parser.parse_known_args(self.args_str)
+            self.base_args, _ = base_parser.parse_known_args(self._preset_args)
         super().__init__(config, logger_creator)
 
     def _get_base_parser(self):
@@ -64,15 +64,18 @@ class RunSettings(MasterClass):
         self.get_add_args(base_parser)
         return base_parser
 
-    def get_config_file(self):
+    def get_config_file(self) -> str:
         """
-        - Returns (string)
-        Returns the location to a config file that holds whatever information
-        about the project.
+        :return: The location to a config file that holds whatever information
+            about the project.
         """
         return osp.join(self.working_dir, 'config.yaml')
 
-    def create_traj_saver(self, save_path):
+    def create_traj_saver(self, save_path: str) -> rlf.il.TrajSaver:
+        """
+        How trajectories should be saved if desired.
+        :save_path: file name to write the trajectories to
+        """
         return TrajSaver(save_path)
 
     def get_add_args(self, parser):
@@ -87,15 +90,15 @@ class RunSettings(MasterClass):
     def get_add_ray_kwargs(self):
         return {}
 
-    def get_policy(self):
+    def get_policy(self) -> rlf.policies.BasePolicy:
         """
-        Return: rlf.base_policy.BasePolicy
+        :return: The policy for training
         """
         raise NotImplementedError('Must return policy to be used.')
 
-    def get_algo(self):
+    def get_algo(self) -> rlf.algos.BaseAlgo:
         """
-        Return: rlf.base_algo.BaseAlgo
+        :return: The algorithm to update the policy with.
         """
         raise NotImplementedError('Must return algorithm to be used')
 
@@ -112,10 +115,10 @@ class RunSettings(MasterClass):
         algo.get_add_args(parser)
         policy.get_add_args(parser)
 
-        if self.args_str is None:
+        if self._preset_args is None:
             args, rest = parser.parse_known_args()
         else:
-            args, rest = parser.parse_known_args(self.args_str)
+            args, rest = parser.parse_known_args(self._preset_args)
 
         env_parser = argparse.ArgumentParser()
         get_env_interface(args.env_name)(args).get_add_args(env_parser)
@@ -169,13 +172,14 @@ class RunSettings(MasterClass):
         log.init(args)
         log.set_prefix(args)
 
-        sanity_checker.set_sanity_checker(args)
-
         args.device = torch.device("cuda:0" if args.cuda else "cpu")
         init_seeds(args)
         return args, log
 
-    def create_runner(self, add_args={}, ray_create=False):
+    def create_runner(self, add_args={}, ray_create=False) -> rlf.Runner:
+        """
+        Gets the runner used for training.
+        """
         policy = self.get_policy()
         algo = self.get_algo()
 
@@ -226,9 +230,15 @@ class RunSettings(MasterClass):
         return runner
 
     def import_add(self):
+        """
+        Needed for ray training.
+        """
         pass
 
     def setup(self, config):
+        """
+        Only called during ray training.
+        """
         self.import_add()
         self.ray_runner = self.create_runner(config, ray_create=True)
         if self.ray_runner is None:
@@ -240,12 +250,15 @@ class RunSettings(MasterClass):
             self.ray_runner.log.disable_print()
 
     def step(self):
+        """
+        Only called during ray training
+        """
         updater_log_vals = self.ray_runner.training_iter(self.training_iteration)
         if (self.training_iteration+1) % self.ray_args.log_interval == 0:
             log_dict = self.ray_runner.log_vals(updater_log_vals, self.training_iteration)
         if (self.training_iteration+1) % self.ray_args.save_interval == 0:
-            self.ray_runner.save()
+            self.ray_runner.save(self.training_iteration)
         if (self.training_iteration+1) % self.ray_args.eval_interval == 0:
-            self.ray_runner.eval()
+            self.ray_runner.eval(self.training_iteration)
 
         return log_dict

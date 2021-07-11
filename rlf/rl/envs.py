@@ -13,7 +13,6 @@ from rlf.baselines.vec_env.shmem_vec_env import ShmemVecEnv
 from rlf.baselines.vec_env.vec_normalize import \
     VecNormalize as VecNormalize_
 import rlf.rl.utils as rutils
-import rlf.algos.utils as autils
 from functools import partial
 
 
@@ -386,7 +385,7 @@ class VecPyTorchFrameStack(VecEnvWrapper):
 
         ob_space = rutils.get_obs_space(venv.observation_space)
 
-        self.stacked_obs = autils.StackHelper(ob_space.shape, nstack, device, venv.num_envs)
+        self.stacked_obs = rutils.StackHelper(ob_space.shape, nstack, device, venv.num_envs)
         new_obs_space = rutils.update_obs_space(
                 venv.observation_space,
                 rutils.reshape_obs_space(ob_space, self.stacked_obs.get_shape()))

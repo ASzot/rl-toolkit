@@ -10,6 +10,9 @@ from rlf.rl.envs import make_vec_envs
 
 
 class Runner:
+    """
+    Trains a policy
+    """
     def __init__(self, envs, storage, policy, log, env_interface, checkpointer,
             args, updater):
         self.envs = envs

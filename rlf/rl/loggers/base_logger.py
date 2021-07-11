@@ -9,8 +9,10 @@ import random
 import datetime
 import string
 from rlf.exp_mgr import config_mgr
+import torch
 
 from collections import deque, defaultdict
+from typing import Callable, Any
 
 
 class BaseLogger(object):
@@ -38,6 +40,7 @@ class BaseLogger(object):
         self.prev_steps = 0
         self.start = None
         self.args = args
+        self._collected_vals = defaultdict(list)
 
     def disable_print(self):
         self.is_printing = False
@@ -152,17 +155,39 @@ class BaseLogger(object):
                 os.makedirs(new_dir)
 
     def start_interval_log(self):
-        """
-        Old functionality, really we want to measure the average over the last
+        """Old functionality, really we want to measure the average over the last
         time since logged, not over the single training step.
         """
         if self.start is None:
             self.start = time.time()
 
+    def collect(self, val_name: str, val: Any) -> None:
+        """Useful when collecting a bunch of logging variables over a loop but
+        only want to report the final average.
+        """
+        self._collected_vals[val_name].append(val)
+
+    def get_collect(self, val_name: str, list_idx: int) -> Any:
+        """Gets a variable being collected.
+        """
+        return self._collected_vals[val_name][list_idx]
+
     def log_vals(self, key_vals, step_count):
+        """Log key value pairs to whatever interface. Also logs the collected
+        values if there are any.
         """
-        Log key value pairs to whatever interface.
-        """
+        def avg_data(x):
+            if isinstance(x[0], torch.Tensor):
+                return torch.stack(x).detach().mean().item()
+            else:
+                return np.mean(x)
+        collected_data = {
+                k: avg_data(v) for k, v in self._collected_vals.items()
+                }
+        self._internal_log_vals({**key_vals, **collected_data}, step_count)
+        self._collected_vals = defaultdict(list)
+
+    def _internal_log_vals(self, key_vals, step_count):
         pass
 
     def log_video(self, video_file, step_count, fps):
