@@ -4,6 +4,7 @@ import numpy as np
 import rlf.rl.utils as rutils
 from rlf.rl.envs import get_vec_normalize
 import attr
+from typing import Dict, Any
 
 @attr.s(auto_attribs=True, slots=True)
 class AlgorithmSettings:
@@ -71,10 +72,7 @@ class BaseAlgo(object):
             return None
         self.get_env_ob_filt = get_vec_normalize_fn
 
-    def pre_main(self, log, env_interface):
-        pass
-
-    def first_train(self, log, eval_policy):
+    def first_train(self, log, eval_policy, env_interface):
         """
         Called before any RL training loop starts.
         - log: logger object to log any statistics.
@@ -84,7 +82,7 @@ class BaseAlgo(object):
         """
         pass
 
-    def get_num_updates(self):
+    def get_num_updates(self) -> int:
         """
         Allows overridding the number of updates performed in the RL
         loop.Setting this is useful if an algorithm should
@@ -94,7 +92,7 @@ class BaseAlgo(object):
             return 0
         return int(self.args.num_env_steps) // self.args.num_steps // self.args.num_processes
 
-    def get_completed_update_steps(self, num_updates):
+    def get_completed_update_steps(self, num_updates: int) -> int:
         """
         num_updates: the number of times this updater has been called.
         Returns: (int) the number of environment frames processed.
@@ -126,19 +124,19 @@ class BaseAlgo(object):
         cp_policy.init(*self._policy_args)
         return cp_policy
 
-    def load_resume(self, checkpointer):
+    def load_resume(self, checkpointer) -> None:
         pass
 
-    def load(self, checkpointer):
+    def load(self, checkpointer) -> None:
         pass
 
-    def save(self, checkpointer):
+    def save(self, checkpointer) -> None:
         pass
 
-    def pre_update(self, cur_update):
+    def pre_update(self, cur_update: int) -> None:
         pass
 
-    def update(self, storage):
+    def update(self, storage) -> Dict[str, Any]:
         self.update_i += 1
         return {}
 

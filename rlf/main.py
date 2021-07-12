@@ -2,11 +2,13 @@ import numpy as np
 import rlf.rl.utils as rutils
 import os
 import attr
+from typing import Dict
 
 
 @attr.s(auto_attribs=True, slots=True)
 class RunResult:
     prefix: str
+    eval_result: Dict = {}
 
 def run_policy(run_settings, runner=None):
     if runner is None:
@@ -44,7 +46,8 @@ def run_policy(run_settings, runner=None):
             runner.load_from_checkpoint()
 
         if args.eval_only:
-            return runner.full_eval(run_settings.create_traj_saver)
+            eval_result = runner.full_eval(run_settings.create_traj_saver)
+            return RunResult(prefix=args.prefix, eval_result=eval_result)
 
         start_update = 0
         if args.resume:

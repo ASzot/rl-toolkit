@@ -61,9 +61,8 @@ class Runner:
     def setup(self):
         self.episode_count = 0
         self.alg_env_settings = self.updater.get_env_settings(self.args)
-        #TODO: pre_main and first_train should be merged into one function
-        self.updater.pre_main(self.log, self.env_interface)
-        self.updater.first_train(self.log, self._eval_policy)
+        self.updater.first_train(self.log, self._eval_policy,
+                self.env_interface)
         if self.args.clip_actions:
             self.ac_tensor = utils.ac_space_to_tensor(self.policy.action_space)
 

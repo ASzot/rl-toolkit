@@ -28,8 +28,12 @@ class BehavioralCloning(BaseILAlgo):
     def init(self, policy, args):
         super().init(policy, args)
         self.num_epochs = 0
-        self.norm_mean = self.expert_stats['state'][0]
-        self.norm_var = torch.pow(self.expert_stats['state'][1], 2)
+        if self.args.bc_state_norm:
+            self.norm_mean = self.expert_stats['state'][0]
+            self.norm_var = torch.pow(self.expert_stats['state'][1], 2)
+        else:
+            self.norm_mean = None
+            self.norm_var = None
         self.num_bc_updates = 0
 
     def get_env_settings(self, args):
@@ -73,7 +77,7 @@ class BehavioralCloning(BaseILAlgo):
                 prev_num = self.num_epochs
 
         rutils.plot_line(action_loss, f"action_loss_{update_iter}.png",
-                         self.args, not self.args.no_wb,
+                         self.args.vid_dir, not self.args.no_wb,
                          self.get_completed_update_steps(self.update_i))
         self.num_epochs = 0
 

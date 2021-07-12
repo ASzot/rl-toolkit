@@ -17,7 +17,9 @@ class BaseNetAlgo(BaseAlgo):
     def init(self, policy, args):
         super().init(policy, args)
         self.arg_vars = vars(args)
-        self.optimizers = self._get_optimizers()
+        self._optimizers = self._get_optimizers()
+        self.obs_space = policy.obs_space
+        self.action_space = policy.action_space
 
         if self._arg('linear_lr_decay'):
             if self._arg('lr_env_steps') is None:
@@ -25,9 +27,12 @@ class BaseNetAlgo(BaseAlgo):
             else:
                 self.lr_updates = int(self._arg('lr_env_steps')) // args.num_steps // args.num_processes
 
+    def get_optimizer(self, opt_key: str):
+        return self._optimizers[opt_key][0]
+
     def update(self, storage):
         log_vals = super().update(storage)
-        for k, (opt, _, initial_lr) in self.optimizers.items():
+        for k, (opt, _, initial_lr) in self._optimizers.items():
             lr = None
             for param_group in opt.param_groups:
                 lr = param_group['lr']
@@ -44,18 +49,18 @@ class BaseNetAlgo(BaseAlgo):
     def load_resume(self, checkpointer):
         super().load_resume(checkpointer)
         # Load the optimizers where they left off.
-        for k, (opt, _, _) in self.optimizers.items():
+        for k, (opt, _, _) in self._optimizers.items():
             opt.load_state_dict(checkpointer.get_key(k))
 
     def save(self, checkpointer):
         super().save(checkpointer)
-        for k, (opt, _, _) in self.optimizers.items():
+        for k, (opt, _, _) in self._optimizers.items():
             checkpointer.save_key(k, opt.state_dict())
 
     def pre_update(self, cur_update):
         super().pre_update(cur_update)
         if self._arg('linear_lr_decay'):
-            for k, (opt, _, initial_lr) in self.optimizers.items():
+            for k, (opt, _, initial_lr) in self._optimizers.items():
                 autils.linear_lr_schedule(cur_update, self.lr_updates,
                         initial_lr, opt)
 
@@ -72,7 +77,7 @@ class BaseNetAlgo(BaseAlgo):
         Helper function to compute gradients, clip gradients and then take
         optimization step.
         """
-        opt, get_params_fn, _ = self.optimizers[optimizer_key]
+        opt, get_params_fn, _ = self._optimizers[optimizer_key]
         opt.zero_grad()
         loss.backward()
         self._clip_grad(get_params_fn())
@@ -82,6 +87,7 @@ class BaseNetAlgo(BaseAlgo):
         self.arg_prefix = arg_prefix + '-'
 
     def get_add_args(self, parser):
+        super().get_add_args(parser)
         parser.add_argument(f"--{self.arg_prefix}max-grad-norm", default=0.5, type=float,
                             help='-1 results in no grad norm')
         parser.add_argument(
@@ -97,12 +103,17 @@ class BaseNetAlgo(BaseAlgo):
         parser.add_argument(f"--{self.arg_prefix}lr", type=float, default=1e-3,
                             help='learning rate (default: 1e-3)')
 
+    @staticmethod
+    def _create_opt(module_to_opt, lr, eps=1e-8):
+        get_params_fn = lambda: module_to_opt.parameters()
+        return (
+                optim.Adam(get_params_fn(),
+                           lr=lr, eps=eps),
+                get_params_fn, lr
+            )
+
     def _get_optimizers(self):
         return {
-            'actor_opt': (
-                optim.Adam(self.policy.parameters(),
-                           lr=self._arg('lr'), eps=self._arg('eps')),
-                lambda: self.policy.parameters(),
-                self._arg('lr')
-            )
+                'actor_opt': BaseNetAlgo._create_opt(self.policy,
+                    self._arg('lr'), self._arg('eps'))
         }

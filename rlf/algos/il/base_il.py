@@ -5,6 +5,7 @@ import torch
 import numpy as np
 import rlf.rl.utils as rutils
 import os.path as osp
+import functools
 
 class ExperienceGenerator(object):
     def init(self, policy, args, exp_gen_num_trans):
@@ -40,12 +41,12 @@ class BaseILAlgo(BaseNetAlgo):
         print('Loaded %s transitions for imitation' % trans_count_str)
         print('(%i trajectories)' % num_trajs)
 
+    @property
+    @functools.lru_cache()
+    def expert_stats(self):
+        return self.orig_dataset.get_expert_stats(self.args.device)
+
     def _create_train_loader(self, args):
-        if args.clip_dataset_actions:
-            self.expert_dataset.clip_actions(*rutils.ac_space_to_tensor(policy.action_space))
-
-        self.expert_stats = self.orig_dataset.get_expert_stats(args.device)
-
         # Always keep track of the non-shuffled, non-split version of the
         # dataset.
         self.expert_dataset = self.orig_dataset
@@ -140,7 +141,6 @@ class BaseILAlgo(BaseNetAlgo):
         parser.add_argument('--traj-frac', type=float, default=1.0,
                 help="The fraction of trajectories to use")
         parser.add_argument('--traj-viz', action='store_true', default=False)
-        parser.add_argument('--clip-dataset-actions', action='store_true', default=False)
         parser.add_argument('--exp-gen-num-trans', type=int, default=None)
 
         # Unless you have some weird dataset situation, you probably want to

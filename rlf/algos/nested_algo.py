@@ -76,9 +76,9 @@ class NestedAlgo(BaseAlgo):
         for module in self.modules:
             module.on_traj_finished(traj)
 
-    def first_train(self, log, eval_policy):
+    def first_train(self, log, eval_policy, env_interface):
         for module in self.modules:
-            module.first_train(log, eval_policy)
+            module.first_train(log, eval_policy, env_interface)
 
     def update(self, storage):
         log_vals = {}

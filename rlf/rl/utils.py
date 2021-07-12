@@ -18,6 +18,7 @@ import cv2
 import hashlib
 from contextlib import ContextDecorator
 from abc import ABC
+from typing import List, Dict, Any
 
 try:
     import wandb
@@ -25,10 +26,6 @@ except:
     pass
 
 
-def print_weights(m):
-    for name, param in m.named_parameters():
-        print(name)
-        print(param)
 
 
 def get_env_attr(env, attr_name, max_calls=10):
@@ -53,7 +50,7 @@ def plot_line(plot_vals, save_name, save_dir, to_wb, update_iter=None, x_vals=No
     """
     if x_vals is None:
         x_vals = np.arange(len(plot_vals))
-    save_path = osp.join(save_dir, save_name+'.png')
+    save_path = osp.join(save_dir, str(save_name)+'.png')
     if title is None:
         plt.title(save_name)
     else:
@@ -95,6 +92,9 @@ def save_model(model, save_name, args):
     print(f"Saved model to {save_path}")
 
 
+#########################################
+# FORMATTING / PRINTING
+#########################################
 def human_format_int(num, round_pos=2):
     magnitude = 0
     while abs(num) >= 1000:
@@ -108,6 +108,11 @@ def human_format_int(num, round_pos=2):
 
     return num_str + ['', 'K', 'M', 'G', 'T', 'P'][magnitude]
 
+def print_weights(m):
+    for name, param in m.named_parameters():
+        print(name)
+        print(param)
+
 def pstart_sep():
     print('')
     print('-' * 30)
@@ -115,14 +120,19 @@ def pstart_sep():
 def pend_sep():
     print('-' * 10)
     print('')
+#########################################
 
+
+#########################################
+# OBS DICTIONARY ACTIONS
+#########################################
 def deep_dict_select(d, idx):
     ret_dict = {}
     for k in d:
         ret_dict[k] = d[k][idx]
     return ret_dict
 
-def transpose_arr_dict(arr):
+def transpose_arr_dict(arr: List[Dict]) -> Dict[Any, Any]:
     keys = arr[0].keys()
     orig_format = arr[0][list(keys)[0]]
     ret_d = {k: [] for k in keys}
@@ -135,6 +145,18 @@ def transpose_arr_dict(arr):
             ret_d[k] = torch.stack(ret_d[k])
 
     return ret_d
+
+def transpose_dict_arr(d: Dict[Any, Any]) -> List[Dict]:
+    keys = list(d.keys())
+    lens = [len(d[k]) for k in d]
+    if len(set(lens)) != 1:
+        raise ValueError('All lists must have equal sizes')
+
+    # Assumes that all the lists are equal length.
+    ret = []
+    for i in range(lens[0]):
+        ret.append({k: d[k][i] for k in keys})
+    return ret
 
 def flatten_obs_dict(ob_shape, keep_keys):
     total_dim = 0
@@ -154,6 +176,7 @@ def flatten_obs_dict(ob_shape, keep_keys):
             low=np.float32(low_val),
             high=np.float32(high_val),
             dtype=np.float32)
+#########################################
 
 def is_dict_obs(ob_space):
     return isinstance(ob_space, gym.spaces.Dict)
