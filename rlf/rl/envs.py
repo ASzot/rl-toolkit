@@ -106,7 +106,7 @@ def make_vec_envs(env_name,
             for i in range(num_processes)
             ]
 
-    if len(envs) > 1:
+    if len(envs) > 1 or args.force_multi_proc:
         custom_envs = env_interface.get_setup_multiproc_fn(make_env, env_name,
                 seed, allow_early_resets, env_interface, set_eval,
                 alg_env_settings, args)

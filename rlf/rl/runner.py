@@ -7,6 +7,8 @@ from rlf.rl.envs import get_vec_normalize
 from rlf.algos.base_net_algo import BaseNetAlgo
 import numpy as np
 from rlf.rl.envs import make_vec_envs
+from rlf.baselines.vec_env import VecEnvWrapper
+from typing import Any, Optional
 
 
 class Runner:
@@ -66,7 +68,7 @@ class Runner:
         if self.args.clip_actions:
             self.ac_tensor = utils.ac_space_to_tensor(self.policy.action_space)
 
-    def _eval_policy(self, policy, total_num_steps, args):
+    def _eval_policy(self, policy, total_num_steps, args) -> Optional[VecEnvWrapper]:
         return train_eval(self.envs, self.alg_env_settings, policy, args,
                           self.log, total_num_steps, self.env_interface,
                           self.train_eval_envs)

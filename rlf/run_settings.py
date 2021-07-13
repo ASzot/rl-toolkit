@@ -226,8 +226,11 @@ class RunSettings(MasterClass):
         storage.init_storage(envs.reset())
         storage.set_traj_done_callback(algo.on_traj_finished)
 
-        runner = Runner(envs, storage, policy, log, env_interface, checkpointer, args, algo)
+        runner = self._get_runner_cls()(envs, storage, policy, log, env_interface, checkpointer, args, algo)
         return runner
+
+    def _get_runner_cls(self):
+        return Runner
 
     def import_add(self):
         """
