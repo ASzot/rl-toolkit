@@ -24,7 +24,7 @@ class BaseILAlgo(BaseNetAlgo):
         self.data_iter = None
         self._holdout_idxs = None
         # By default do not transform the dataset at all.
-        self._transform_dem_dataset_fn = lambda x: x
+        self._transform_dem_dataset_fn = None
 
     def set_transform_dem_dataset_fn(self, transform_dem_dataset_fn):
         self._transform_dem_dataset_fn = transform_dem_dataset_fn

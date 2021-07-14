@@ -3,10 +3,10 @@ from rlf.algos.base_algo import BaseAlgo
 class NestedAlgo(BaseAlgo):
     def __init__(self, modules, designated_rl_idx, designated_settings_idx=0):
         """
-        - modules: ([rlf.algos.base_algo.BaseAlgo])
-        - designated_rl_idx: (int) which module to use to return
+        :param modules: ([rlf.algos.base_algo.BaseAlgo])
+        :param designated_rl_idx: (int) which module to use to return
           storage object and other things for the RL training loop.
-        - designated_settings_idx: (int) which module to use to return
+        :param designated_settings_idx: (int) which module to use to return
           algorithm settings which are used in environment creation amoung
           other things.
         """
@@ -43,7 +43,7 @@ class NestedAlgo(BaseAlgo):
 
 
     def _copy_policy(self):
-        raise NotImplemented('Need to implement copy policy for NestedAlgo')
+        raise NotImplementedError('Need to implement copy policy for NestedAlgo')
 
     def load_resume(self, checkpointer):
         for module in self.modules:

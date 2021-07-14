@@ -10,11 +10,12 @@ class TransitionDataset(ImitationLearningDataset):
     format.
     """
     def __init__(self, load_path, transform_dem_dataset_fn):
+        super().__init__(transform_dem_dataset_fn)
         if load_path.endswith(".npz"):
             self.trajs = self._load_npz(load_path)
         else:
             self.trajs = self._load_pt(load_path)
-        self.trajs = transform_dem_dataset_fn(self.trajs)
+        self.trajs = self._transform_dem_dataset_fn(self.trajs, self.trajs)
 
         # Convert all to floats
         self.trajs['obs'] = self.trajs['obs'].float()

@@ -53,7 +53,9 @@ def get_step_info(n_full_iter, within_loop_iter, episode_count, args):
 def get_empty_step_info():
     return StepInfo(None, None, True)
 
-class BasePolicy(ABC):
+# This cannot be ABC super classed because the "Higher" meta-learning library
+# cannot work with ABC superclass.
+class BasePolicy:
     """
     Foundation for all RL policies to derive from. Defines basic behavior which
     could be needed. Agents do not need to necessarily implement all method.
@@ -87,7 +89,7 @@ class BasePolicy(ABC):
         pass
 
     @abstractmethod
-    def get_action(self, state, add_state, hxs, masks, step_info):
+    def get_action(self, state, add_state, hxs, masks, step_info: StepInfo) -> ActionData:
         """
         - step_info: Dictionary consisting of keys
           {
@@ -96,7 +98,6 @@ class BasePolicy(ABC):
           }
         - add_state: If the state is a dictionary, this contains all the other
           non 'observation' keys.
-        Return: ActionData
         """
         pass
 

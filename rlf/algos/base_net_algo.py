@@ -87,6 +87,15 @@ class BaseNetAlgo(BaseAlgo):
         self.arg_prefix = arg_prefix + '-'
 
     def get_add_args(self, parser):
+        """
+        Adds default arguments that might be useful for all algorithms that
+        update neural networks. Added arguments:
+        * --max-grad-norm
+        * --linear-lr-decay
+        * --eps
+        * --lr
+        All can be prefixed with `self.arg_prefix`.
+        """
         super().get_add_args(parser)
         parser.add_argument(f"--{self.arg_prefix}max-grad-norm", default=0.5, type=float,
                             help='-1 results in no grad norm')

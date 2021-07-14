@@ -16,8 +16,8 @@ from typing import Callable, Any
 
 
 class BaseLogger(object):
-    def __init__(self):
-        pass
+    def __init__(self, print_all=False):
+        self._print_all = print_all
 
     def init(self, args, mod_prefix=lambda x: x):
         """
@@ -237,7 +237,7 @@ class BaseLogger(object):
 
             # Print log values from the updater if requested.
             for k, v in log_dat.items():
-                if should_print(k):
+                if should_print(k) or self._print_all:
                     print(f"    - {k}: {v}")
 
             # Print a new line to separate loggin lines and keep things clean.

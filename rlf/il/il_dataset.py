@@ -1,5 +1,6 @@
 import torch.utils.data
 from abc import ABC, abstractmethod
+from typing import Callable, Dict
 
 class ImitationLearningDataset(torch.utils.data.Dataset, ABC):
     """
@@ -10,8 +11,19 @@ class ImitationLearningDataset(torch.utils.data.Dataset, ABC):
         'next_obs': torch.tensor
         'actions': torch.tensor
         }
-        All lists should be exactly the same length.
+        All tensors should be exactly the same length.
     """
+
+    def __init__(self, load_path,
+            transform_dem_dataset_fn: Callable[[Dict, Dict], Dict]=None):
+        """
+        :param transform_dem_dataset_fn: Takes as input the output trajectory
+        and the original data trajectory and outputs the modified trajectory.
+        """
+        if transform_dem_dataset_fn is None:
+            transform_dem_dataset_fn = lambda x, y: x
+        self._transform_dem_dataset_fn = transform_dem_dataset_fn
+
     def viz(self, args):
         pass
 

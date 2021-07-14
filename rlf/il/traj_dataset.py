@@ -8,7 +8,8 @@ class TrajDataset(ImitationLearningDataset):
     See `rlf/il/il_dataset.py` for notes about the demonstration dataset
     format.
     """
-    def __init__(self, load_path):
+    def __init__(self, load_path, transform_dem_dataset_fn=None):
+        super().__init__(load_path, transform_dem_dataset_fn)
         trajs = torch.load(load_path)
 
         rutils.pstart_sep()
@@ -100,7 +101,7 @@ class TrajDataset(ImitationLearningDataset):
         actions = trajs['actions'].float()
         episode_ids = trajs['episode_ids']
 
-        trajs = []
+        ret_trajs = []
 
         num_samples = done.shape[0]
         print('Collecting trajectories')
@@ -114,7 +115,7 @@ class TrajDataset(ImitationLearningDataset):
                 combined_obs = [*obs_seq, final_obs]
                 #combined_obs = torch.cat([obs_seq, final_obs.view(1, *obs_dim)])
 
-                trajs.append((combined_obs, actions[start_j:j+1]))
+                ret_trajs.append((combined_obs, actions[start_j:j+1]))
                 # Move to where this episode ends
                 while j < num_samples and not done[j]:
                     j += 1
@@ -125,14 +126,15 @@ class TrajDataset(ImitationLearningDataset):
 
             j += 1
 
-        for i in range(len(trajs)):
-            states, actions = trajs[i]
+        for i in range(len(ret_trajs)):
+            states, actions = ret_trajs[i]
             if is_tensor_dict:
                 states = rutils.transpose_arr_dict(states)
             else:
                 states = torch.cat([states])
-            trajs[i] = (states, actions)
-        return trajs
+            ret_trajs[i] = (states, actions)
+        ret_trajs = self._transform_dem_dataset_fn(ret_trajs, trajs)
+        return ret_trajs
 
     def __len__(self):
         return len(self.data)
