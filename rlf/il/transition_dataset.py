@@ -10,18 +10,19 @@ class TransitionDataset(ImitationLearningDataset):
     format.
     """
     def __init__(self, load_path, transform_dem_dataset_fn):
-        super().__init__(transform_dem_dataset_fn)
+        super().__init__(load_path, transform_dem_dataset_fn)
         if load_path.endswith(".npz"):
-            self.trajs = self._load_npz(load_path)
+            trajs = self._load_npz(load_path)
         else:
-            self.trajs = self._load_pt(load_path)
-        self.trajs = self._transform_dem_dataset_fn(self.trajs, self.trajs)
+            trajs = self._load_pt(load_path)
+        trajs = self._transform_dem_dataset_fn(trajs, trajs)
 
         # Convert all to floats
-        self.trajs['obs'] = self.trajs['obs'].float()
-        self.trajs['done'] = self.trajs['done'].float()
-        self.trajs['actions'] = self.trajs['actions'].float()
-        self.trajs['next_obs'] = self.trajs['next_obs'].float()
+        self.trajs = {}
+        self.trajs['obs'] = trajs['obs'].float()
+        self.trajs['done'] = trajs['done'].float()
+        self.trajs['actions'] = trajs['actions'].float()
+        self.trajs['next_obs'] = trajs['next_obs'].float()
 
         self.state_mean = torch.mean(self.trajs['obs'], dim=0)
         self.state_std = torch.std(self.trajs['obs'], dim=0)

@@ -1,7 +1,9 @@
 from rlf.algos.base_algo import BaseAlgo
+from typing import Optional
 
 class NestedAlgo(BaseAlgo):
-    def __init__(self, modules, designated_rl_idx, designated_settings_idx=0):
+    def __init__(self, modules, designated_rl_idx, designated_settings_idx=0,
+            num_steps_idx: Optional[int]=None):
         """
         :param modules: ([rlf.algos.base_algo.BaseAlgo])
         :param designated_rl_idx: (int) which module to use to return
@@ -13,6 +15,10 @@ class NestedAlgo(BaseAlgo):
         self.modules = modules
         self.designated_rl_idx = designated_rl_idx
         self.designated_settings_idx = designated_settings_idx
+        if num_steps_idx is None:
+            self.num_steps_idx = self.designated_rl_idx
+        else:
+            self.num_steps_idx = num_steps_idx
 
 
     def init(self, policy, args):
@@ -24,11 +30,7 @@ class NestedAlgo(BaseAlgo):
             module.set_env_ref(envs)
 
     def get_num_updates(self):
-        n_updates = self.modules[0].get_num_updates()
-        for m in self.modules[1:]:
-            if m.get_num_updates() != n_updates:
-                raise ValueError('All submodules must return the same number of updates')
-        return n_updates
+        return self.modules[self.num_steps_idx].get_num_updates()
 
     def get_completed_update_steps(self, num_updates):
         n_updates = self.modules[0].get_completed_update_steps(num_updates)
