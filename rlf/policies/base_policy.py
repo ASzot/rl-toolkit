@@ -64,6 +64,11 @@ class BasePolicy:
     def __init__(self):
         pass
 
+    def requires_inference_grads(self) -> bool:
+        """If true, there is no `torch.no_grad()` during policy inference
+        """
+        return False
+
     def init(self, obs_space, action_space, args):
         self.action_space = action_space
         self.obs_space = obs_space
@@ -91,13 +96,9 @@ class BasePolicy:
     @abstractmethod
     def get_action(self, state, add_state, hxs, masks, step_info: StepInfo) -> ActionData:
         """
-        - step_info: Dictionary consisting of keys
-          {
-              'cur_num_steps',
-              'cur_num_episodes'
-          }
-        - add_state: If the state is a dictionary, this contains all the other
+        :param add_state: If the state is a dictionary, this contains all the other
           non 'observation' keys.
+        :param step_info:
         """
         pass
 

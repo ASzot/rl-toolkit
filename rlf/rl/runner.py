@@ -9,6 +9,7 @@ import numpy as np
 from rlf.rl.envs import make_vec_envs
 from rlf.baselines.vec_env import VecEnvWrapper
 from typing import Any, Optional
+import contextlib
 
 
 class Runner:
@@ -27,6 +28,11 @@ class Runner:
         self.updater = updater
         self.train_eval_envs = None
 
+        if self.policy.requires_inference_grads():
+            self.train_ctx = contextlib.nullcontext
+        else:
+            self.train_ctx = torch.no_grad
+
     def training_iter(self, update_iter):
         self.log.start_interval_log()
         self.updater.pre_update(update_iter)
@@ -35,7 +41,8 @@ class Runner:
             obs = self.storage.get_obs(step)
 
             step_info = get_step_info(update_iter, step, self.episode_count, self.args)
-            with torch.no_grad():
+
+            with self.train_ctx():
                 ac_info = self.policy.get_action(
                         utils.get_def_obs(obs, self.args.policy_ob_key),
                         utils.get_other_obs(obs),
