@@ -30,7 +30,7 @@ class SAC(OffPolicy):
             self.policy.obs_space,
             self.policy._get_base_out_shape(),
             self.policy.action_space,
-            self.args.hidden_dim,
+            self.args.dist_q_hidden_dim,
         )
         self.target_critic = self.target_critic.to(self.args.device)
         autils.hard_update(self.policy.critic, self.target_critic)

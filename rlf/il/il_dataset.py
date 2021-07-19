@@ -1,6 +1,21 @@
-import torch.utils.data
 from abc import ABC, abstractmethod
 from typing import Callable, Dict
+
+import torch
+import torch.utils.data
+
+
+def convert_to_tensors(trajs):
+    if not isinstance(trajs["obs"], torch.Tensor):
+        trajs["obs"] = torch.tensor(trajs["obs"])
+    if not isinstance(trajs["done"], torch.Tensor):
+        trajs["done"] = torch.tensor(trajs["done"])
+    if not isinstance(trajs["actions"], torch.Tensor):
+        trajs["actions"] = torch.tensor(trajs["actions"])
+    if not isinstance(trajs["next_obs"], torch.Tensor):
+        trajs["next_obs"] = torch.tensor(trajs["next_obs"])
+    return trajs
+
 
 class ImitationLearningDataset(torch.utils.data.Dataset, ABC):
     """
@@ -14,8 +29,9 @@ class ImitationLearningDataset(torch.utils.data.Dataset, ABC):
         All tensors should be exactly the same length.
     """
 
-    def __init__(self, load_path,
-            transform_dem_dataset_fn: Callable[[Dict, Dict], Dict]=None):
+    def __init__(
+        self, load_path, transform_dem_dataset_fn: Callable[[Dict, Dict], Dict] = None
+    ):
         """
         :param transform_dem_dataset_fn: Takes as input the output trajectory
         and the original data trajectory and outputs the modified trajectory.

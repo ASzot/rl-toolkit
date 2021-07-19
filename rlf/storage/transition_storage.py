@@ -15,6 +15,8 @@ class TransitionStorage(BaseStorage):
     """Buffer to store environment transitions."""
 
     def __init__(self, obs_shape, action_shape, capacity, device):
+        super().__init__()
+
         self.capacity = capacity
         self.device = device
 
@@ -25,8 +27,8 @@ class TransitionStorage(BaseStorage):
         self.next_obses = np.empty((capacity, *obs_shape), dtype=obs_dtype)
         self.actions = np.empty((capacity, *action_shape), dtype=np.float32)
         self.rewards = np.empty((capacity, 1), dtype=np.float32)
-        self.not_dones = np.empty((capacity, 1), dtype=np.float32)
-        self.not_dones_no_max = np.empty((capacity, 1), dtype=np.float32)
+        self.masks = np.empty((capacity, 1), dtype=np.float32)
+        self.masks_no_max = np.empty((capacity, 1), dtype=np.float32)
 
         self.idx = 0
         self.last_save = 0
@@ -85,8 +87,8 @@ class TransitionStorage(BaseStorage):
             np.copyto(self.actions[buffer_slice], action[batch_slice])
             np.copyto(self.rewards[buffer_slice], reward[batch_slice])
             np.copyto(self.next_obses[buffer_slice], next_obs[batch_slice])
-            np.copyto(self.not_dones[buffer_slice], done[batch_slice])
-            np.copyto(self.not_dones_no_max[buffer_slice], bad_masks[batch_slice])
+            np.copyto(self.masks[buffer_slice], done[batch_slice])
+            np.copyto(self.masks_no_max[buffer_slice], bad_masks[batch_slice])
 
         _batch_start = 0
         buffer_end = self.idx + len(obs)
@@ -110,9 +112,7 @@ class TransitionStorage(BaseStorage):
         actions = torch.as_tensor(self.actions[idxs], device=self.device)
         rewards = torch.as_tensor(self.rewards[idxs], device=self.device)
         next_obses = torch.as_tensor(self.next_obses[idxs], device=self.device).float()
-        not_dones = torch.as_tensor(self.not_dones[idxs], device=self.device)
-        not_dones_no_max = torch.as_tensor(
-            self.not_dones_no_max[idxs], device=self.device
-        )
+        masks = torch.as_tensor(self.masks[idxs], device=self.device)
+        masks_no_max = torch.as_tensor(self.masks_no_max[idxs], device=self.device)
 
-        return obses, actions, rewards, next_obses, not_dones, not_dones_no_max
+        return obses, actions, rewards, next_obses, masks, masks_no_max
