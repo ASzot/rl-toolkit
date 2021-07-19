@@ -27,7 +27,7 @@ def get_vec_normalize(venv):
 def make_env(rank, env_id, seed, allow_early_resets, env_interface,
         set_eval, alg_env_settings, args, immediate_call=False):
     """
-    - immediate_call: Whether to return the created environment or to return
+    :param immediate_call: Whether to return the created environment or to return
       the lambda that creates the environment.
     """
     def _thunk():

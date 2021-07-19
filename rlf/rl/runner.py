@@ -1,23 +1,24 @@
-import torch
-
-from rlf.rl import utils
-from rlf.rl.evaluation import train_eval, full_eval
-from rlf.policies.base_policy import get_step_info
-from rlf.rl.envs import get_vec_normalize
-from rlf.algos.base_net_algo import BaseNetAlgo
-import numpy as np
-from rlf.rl.envs import make_vec_envs
-from rlf.baselines.vec_env import VecEnvWrapper
-from typing import Any, Optional
 import contextlib
+from typing import Any, Optional
+
+import numpy as np
+import torch
+from rlf.algos.base_net_algo import BaseNetAlgo
+from rlf.baselines.vec_env import VecEnvWrapper
+from rlf.policies.base_policy import get_step_info
+from rlf.rl import utils
+from rlf.rl.envs import get_vec_normalize, make_vec_envs
+from rlf.rl.evaluation import full_eval, train_eval
 
 
 class Runner:
     """
     Trains a policy
     """
-    def __init__(self, envs, storage, policy, log, env_interface, checkpointer,
-            args, updater):
+
+    def __init__(
+        self, envs, storage, policy, log, env_interface, checkpointer, args, updater
+    ):
         self.envs = envs
         self.storage = storage
         self.policy = policy
@@ -44,10 +45,12 @@ class Runner:
 
             with self.train_ctx():
                 ac_info = self.policy.get_action(
-                        utils.get_def_obs(obs, self.args.policy_ob_key),
-                        utils.get_other_obs(obs),
-                        self.storage.get_hidden_state(step),
-                        self.storage.get_masks(step), step_info)
+                    utils.get_def_obs(obs, self.args.policy_ob_key),
+                    utils.get_other_obs(obs),
+                    self.storage.get_hidden_state(step),
+                    self.storage.get_masks(step),
+                    step_info,
+                )
                 if self.args.clip_actions:
                     ac_info.clip_action(*self.ac_tensor)
 
@@ -63,6 +66,7 @@ class Runner:
             self.storage.insert(obs, next_obs, reward, done, infos, ac_info)
 
         updater_log_vals = self.updater.update(self.storage)
+
         self.storage.after_update()
 
         return updater_log_vals
@@ -70,27 +74,40 @@ class Runner:
     def setup(self):
         self.episode_count = 0
         self.alg_env_settings = self.updater.get_env_settings(self.args)
-        self.updater.first_train(self.log, self._eval_policy,
-                self.env_interface)
+        self.updater.first_train(self.log, self._eval_policy, self.env_interface)
         if self.args.clip_actions:
             self.ac_tensor = utils.ac_space_to_tensor(self.policy.action_space)
 
     def _eval_policy(self, policy, total_num_steps, args) -> Optional[VecEnvWrapper]:
-        return train_eval(self.envs, self.alg_env_settings, policy, args,
-                          self.log, total_num_steps, self.env_interface,
-                          self.train_eval_envs)
+        return train_eval(
+            self.envs,
+            self.alg_env_settings,
+            policy,
+            args,
+            self.log,
+            total_num_steps,
+            self.env_interface,
+            self.train_eval_envs,
+        )
 
     def log_vals(self, updater_log_vals, update_iter):
-        total_num_steps = self.updater.get_completed_update_steps(update_iter+1)
-        return self.log.interval_log(update_iter, total_num_steps,
-                self.episode_count, updater_log_vals, self.args)
+        total_num_steps = self.updater.get_completed_update_steps(update_iter + 1)
+        return self.log.interval_log(
+            update_iter,
+            total_num_steps,
+            self.episode_count,
+            updater_log_vals,
+            self.args,
+        )
 
     def save(self, update_iter):
-        if ((self.episode_count > 0) or (self.args.num_steps == 0)) and self.checkpointer.should_save():
+        if (
+            (self.episode_count > 0) or (self.args.num_steps == 0)
+        ) and self.checkpointer.should_save():
             vec_norm = get_vec_normalize(self.envs)
             if vec_norm is not None:
-                self.checkpointer.save_key('ob_rms', vec_norm.ob_rms_dict)
-            self.checkpointer.save_key('step', update_iter)
+                self.checkpointer.save_key("ob_rms", vec_norm.ob_rms_dict)
+            self.checkpointer.save_key("step", update_iter)
 
             self.policy.save_to_checkpoint(self.checkpointer)
             self.updater.save(self.checkpointer)
@@ -101,8 +118,10 @@ class Runner:
 
     def eval(self, update_iter):
         if (self.episode_count > 0) or (self.args.num_steps <= 1):
-            total_num_steps = self.updater.get_completed_update_steps(update_iter+1)
-            self.train_eval_envs = self._eval_policy(self.policy, total_num_steps, self.args)
+            total_num_steps = self.updater.get_completed_update_steps(update_iter + 1)
+            self.train_eval_envs = self._eval_policy(
+                self.policy, total_num_steps, self.args
+            )
 
     def close(self):
         self.log.close()
@@ -113,7 +132,7 @@ class Runner:
     def resume(self):
         self.updater.load_resume(self.checkpointer)
         self.policy.load_resume(self.checkpointer)
-        return self.checkpointer.get_key('step')
+        return self.checkpointer.get_key("step")
 
     def should_load_from_checkpoint(self):
         return self.checkpointer.should_load()
@@ -121,30 +140,43 @@ class Runner:
     def full_eval(self, create_traj_saver_fn):
         alg_env_settings = self.updater.get_env_settings(self.args)
 
-        tmp_env = make_vec_envs(self.args.env_name, self.args.seed, 1,
-                             self.args.gamma, self.args.device,
-                             False, self.env_interface, self.args,
-                             alg_env_settings, set_eval=False)
+        tmp_env = make_vec_envs(
+            self.args.env_name,
+            self.args.seed,
+            1,
+            self.args.gamma,
+            self.args.device,
+            False,
+            self.env_interface,
+            self.args,
+            alg_env_settings,
+            set_eval=False,
+        )
         vec_norm = None
-        if self.checkpointer.has_load_key('ob_rms'):
-            ob_rms_dict = self.checkpointer.get_key('ob_rms')
+        if self.checkpointer.has_load_key("ob_rms"):
+            ob_rms_dict = self.checkpointer.get_key("ob_rms")
             vec_norm = get_vec_normalize(tmp_env)
             if vec_norm is not None:
                 vec_norm.ob_rms_dict = ob_rms_dict
 
-        return full_eval(self.envs, self.policy, self.log,
-                self.checkpointer, self.env_interface, self.args,
-                alg_env_settings, create_traj_saver_fn,
-                vec_norm)
+        return full_eval(
+            self.envs,
+            self.policy,
+            self.log,
+            self.checkpointer,
+            self.env_interface,
+            self.args,
+            alg_env_settings,
+            create_traj_saver_fn,
+            vec_norm,
+        )
 
     def load_from_checkpoint(self):
-        self.policy.load_state_dict(self.checkpointer.get_key('policy'))
+        self.policy.load_state_dict(self.checkpointer.get_key("policy"))
 
-        if self.checkpointer.has_load_key('ob_rms'):
-            ob_rms_dict = self.checkpointer.get_key('ob_rms')
+        if self.checkpointer.has_load_key("ob_rms"):
+            ob_rms_dict = self.checkpointer.get_key("ob_rms")
             vec_norm = get_vec_normalize(self.envs)
             if vec_norm is not None:
                 vec_norm.ob_rms_dict = ob_rms_dict
         self.updater.load(self.checkpointer)
-
-

@@ -1,10 +1,11 @@
-from rlf.storage.rollout_storage import RolloutStorage
-from typing import Callable
+from typing import Any, Callable, Dict
+
+import attr
 import numpy as np
 import rlf.rl.utils as rutils
 from rlf.rl.envs import get_vec_normalize
-import attr
-from typing import Dict, Any
+from rlf.storage import BaseStorage, RolloutStorage
+
 
 @attr.s(auto_attribs=True, slots=True)
 class AlgorithmSettings:
@@ -18,6 +19,7 @@ class AlgorithmSettings:
       updated_frame) Render algorithm information on the render output. Must
       specify `--render-metric` for this to be called.
     """
+
     ret_raw_obs: bool
     state_fn: Callable[[np.ndarray], np.ndarray]
     action_fn: Callable[[np.ndarray], np.ndarray]
@@ -26,7 +28,7 @@ class AlgorithmSettings:
 
 
 def mod_render_frames_identity(cur_frame, obs):
-        return cur_frame
+    return cur_frame
 
 
 class BaseAlgo(object):
@@ -60,6 +62,7 @@ class BaseAlgo(object):
 
     def set_env_ref(self, envs):
         env_norm = get_vec_normalize(envs)
+
         def get_vec_normalize_fn():
             if env_norm is not None:
                 obfilt = get_vec_normalize(envs)._obfilt
@@ -68,8 +71,10 @@ class BaseAlgo(object):
                     state = obfilt(state, update)
                     state = rutils.get_def_obs(state)
                     return state
+
                 return mod_env_ob_filt
             return None
+
         self.get_env_ob_filt = get_vec_normalize_fn
 
     def first_train(self, log, eval_policy, env_interface):
@@ -90,7 +95,11 @@ class BaseAlgo(object):
         """
         if self.args.num_steps == 0:
             return 0
-        return int(self.args.num_env_steps) // self.args.num_steps // self.args.num_processes
+        return (
+            int(self.args.num_env_steps)
+            // self.args.num_steps
+            // self.args.num_processes
+        )
 
     def get_completed_update_steps(self, num_updates: int) -> int:
         """
@@ -103,8 +112,7 @@ class BaseAlgo(object):
         """
         Some updaters require specific things from the environment.
         """
-        return AlgorithmSettings(False, None, None, [],
-                mod_render_frames_identity)
+        return AlgorithmSettings(False, None, None, [], mod_render_frames_identity)
 
     def set_get_policy(self, get_policy_fn, policy_args):
         """
@@ -153,10 +161,14 @@ class BaseAlgo(object):
     def get_add_args(self, parser):
         pass
 
-    def get_storage_buffer(self, policy, envs, args):
-        return RolloutStorage(args.num_steps, args.num_processes,
-                              envs.observation_space, envs.action_space, args)
+    def get_storage_buffer(self, policy, envs, args) -> BaseStorage:
+        return RolloutStorage(
+            args.num_steps,
+            args.num_processes,
+            envs.observation_space,
+            envs.action_space,
+            args,
+        )
 
     def get_requested_obs_keys(self):
-        return ['observation']
-
+        return ["observation"]
