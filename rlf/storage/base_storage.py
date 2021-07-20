@@ -1,5 +1,7 @@
-import torch
+from abc import abstractmethod
+
 import rlf.rl.utils as rutils
+import torch
 
 
 class BaseStorage(object):
@@ -23,6 +25,10 @@ class BaseStorage(object):
     def init_storage(self, obs):
         self.traj_storage = [[] for _ in range(rutils.get_def_obs(obs).shape[0])]
 
+    @abstractmethod
+    def get_generator(self, **kwargs):
+        pass
+
     def get_obs(self, step):
         pass
 
@@ -37,8 +43,12 @@ class BaseStorage(object):
 
         for i in range(len(info)):
             traj_trans = self.get_traj_info(
-                    rutils.obs_select(obs, i),
-                    ac_info.take_action[i], done[i], info[i], reward[i])
+                rutils.obs_select(obs, i),
+                ac_info.take_action[i],
+                done[i],
+                info[i],
+                reward[i],
+            )
             self.traj_storage[i].append(traj_trans)
 
             if done[i]:
@@ -56,12 +66,11 @@ class BaseStorage(object):
 
     def compute_masks(self, done, infos):
         # If done then clean the history of observations.
-        masks = torch.FloatTensor(
-            [[0.0] if done_ else [1.0] for done_ in done])
+        masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
 
         bad_masks = torch.FloatTensor(
-            [[0.0] if 'bad_transition' in info.keys() else [1.0]
-             for info in infos])
+            [[0.0] if "bad_transition" in info.keys() else [1.0] for info in infos]
+        )
 
         return masks, bad_masks
 
@@ -90,4 +99,4 @@ class BaseStorage(object):
         return self._add_info_keys
 
     def get_add_info(self, key):
-        raise NotImplemented('No add info is implemented for this storage type')
+        raise NotImplemented("No add info is implemented for this storage type")

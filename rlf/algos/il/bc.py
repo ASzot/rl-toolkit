@@ -1,14 +1,15 @@
-from rlf.algos.il.base_il import BaseILAlgo
-import torch.nn.functional as F
-import torch
-from rlf.storage.base_storage import BaseStorage
+import copy
+
 import gym
 import numpy as np
-import rlf.rl.utils as rutils
 import rlf.algos.utils as autils
-from tqdm import tqdm
-import copy
+import rlf.rl.utils as rutils
+import torch
+import torch.nn.functional as F
+from rlf.algos.il.base_il import BaseILAlgo
 from rlf.args import str2bool
+from rlf.storage.base_storage import BaseStorage
+from tqdm import tqdm
 
 
 class BehavioralCloning(BaseILAlgo):
@@ -28,9 +29,10 @@ class BehavioralCloning(BaseILAlgo):
     def init(self, policy, args):
         super().init(policy, args)
         self.num_epochs = 0
+        self.action_dim = rutils.get_ac_dim(self.policy.action_space)
         if self.args.bc_state_norm:
-            self.norm_mean = self.expert_stats['state'][0]
-            self.norm_var = torch.pow(self.expert_stats['state'][1], 2)
+            self.norm_mean = self.expert_stats["state"][0]
+            self.norm_var = torch.pow(self.expert_stats["state"][1], 2)
         else:
             self.norm_mean = None
             self.norm_var = None
@@ -39,14 +41,19 @@ class BehavioralCloning(BaseILAlgo):
     def get_env_settings(self, args):
         settings = super().get_env_settings(args)
         if args.bc_state_norm:
-            print('Setting environment state normalization')
+            print("Setting environment state normalization")
             settings.state_fn = self._norm_state
         return settings
 
     def _norm_state(self, x):
-        obs_x = torch.clamp((rutils.get_def_obs(x) - self.norm_mean) / torch.pow(self.norm_var + 1e-8, 0.5), -10.0, 10.0)
+        obs_x = torch.clamp(
+            (rutils.get_def_obs(x) - self.norm_mean)
+            / torch.pow(self.norm_var + 1e-8, 0.5),
+            -10.0,
+            10.0,
+        )
         if isinstance(x, dict):
-            x['observation'] = obs_x
+            x["observation"] = obs_x
         return x
 
     def get_num_updates(self):
@@ -71,14 +78,18 @@ class BehavioralCloning(BaseILAlgo):
             while self.num_epochs < self.args.bc_num_epochs:
                 super().pre_update(self.num_bc_updates)
                 log_vals = self._bc_step(False)
-                action_loss.append(log_vals['_pr_action_loss'])
+                action_loss.append(log_vals["_pr_action_loss"])
 
                 pbar.update(self.num_epochs - prev_num)
                 prev_num = self.num_epochs
 
-        rutils.plot_line(action_loss, f"action_loss_{update_iter}.png",
-                         self.args.vid_dir, not self.args.no_wb,
-                         self.get_completed_update_steps(self.update_i))
+        rutils.plot_line(
+            action_loss,
+            f"action_loss_{update_iter}.png",
+            self.args.vid_dir,
+            not self.args.no_wb,
+            self.get_completed_update_steps(self.update_i),
+        )
         self.num_epochs = 0
 
     def pre_update(self, cur_update):
@@ -101,24 +112,29 @@ class BehavioralCloning(BaseILAlgo):
         pred_actions, _, _ = self.policy(states, None, None)
         if rutils.is_discrete(self.policy.action_space):
             pred_label = rutils.get_ac_compact(self.policy.action_space, pred_actions)
-            acc = (pred_label == true_actions.long()).sum().float() / pred_label.shape[0]
-            log_dict['_pr_acc'] = acc.item()
-        loss = autils.compute_ac_loss(pred_actions, true_actions,
-                self.policy.action_space)
+            acc = (pred_label == true_actions.long()).sum().float() / pred_label.shape[
+                0
+            ]
+            log_dict["_pr_acc"] = acc.item()
+        loss = autils.compute_ac_loss(
+            pred_actions,
+            true_actions.view(-1, self.action_dim),
+            self.policy.action_space,
+        )
 
         self._standard_step(loss)
         self.num_bc_updates += 1
 
         val_loss = self._compute_val_loss()
         if val_loss is not None:
-            log_dict['_pr_val_loss'] = val_loss.item()
+            log_dict["_pr_val_loss"] = val_loss.item()
 
-        log_dict['_pr_action_loss'] = loss.item()
+        log_dict["_pr_action_loss"] = loss.item()
 
         return log_dict
 
     def _get_data(self, batch):
-        states = batch['state'].to(self.args.device)
+        states = batch["state"].to(self.args.device)
         if self.args.bc_state_norm:
             states = self._norm_state(states)
 
@@ -127,7 +143,7 @@ class BehavioralCloning(BaseILAlgo):
             states += add_noise.to(self.args.device)
             states = states.detach()
 
-        true_actions = batch['actions'].to(self.args.device)
+        true_actions = batch["actions"].to(self.args.device)
         true_actions = self._adjust_action(true_actions)
         return states, true_actions
 
@@ -141,11 +157,14 @@ class BehavioralCloning(BaseILAlgo):
             for batch in self.val_train_loader:
                 states, true_actions = self._get_data(batch)
                 pred_actions, _, _ = self.policy(states, None, None)
-                loss = autils.compute_ac_loss(pred_actions, true_actions, self.policy.action_space)
+                loss = autils.compute_ac_loss(
+                    pred_actions,
+                    true_actions.view(-1, self.action_dim),
+                    self.policy.action_space,
+                )
                 losses.append(loss.item())
 
             return np.mean(losses)
-
 
     def update(self, storage):
         top_log_vals = super().update(storage)
@@ -160,26 +179,26 @@ class BehavioralCloning(BaseILAlgo):
         if not self.set_arg_defs:
             # This is set when BC is used at the same time as another optimizer
             # that also has a learning rate.
-            self.set_arg_prefix('bc')
+            self.set_arg_prefix("bc")
 
         super().get_add_args(parser)
         #########################################
         # Overrides
         if self.set_arg_defs:
-            parser.add_argument('--num-processes', type=int, default=1)
-            parser.add_argument('--num-steps', type=int, default=0)
+            parser.add_argument("--num-processes", type=int, default=1)
+            parser.add_argument("--num-steps", type=int, default=0)
             ADJUSTED_INTERVAL = 200
-            parser.add_argument('--log-interval', type=int,
-                                default=ADJUSTED_INTERVAL)
-            parser.add_argument('--save-interval', type=int,
-                                default=100*ADJUSTED_INTERVAL)
-            parser.add_argument('--eval-interval', type=int,
-                                default=100*ADJUSTED_INTERVAL)
-        parser.add_argument('--no-wb', default=False, action='store_true')
+            parser.add_argument("--log-interval", type=int, default=ADJUSTED_INTERVAL)
+            parser.add_argument(
+                "--save-interval", type=int, default=100 * ADJUSTED_INTERVAL
+            )
+            parser.add_argument(
+                "--eval-interval", type=int, default=100 * ADJUSTED_INTERVAL
+            )
+        parser.add_argument("--no-wb", default=False, action="store_true")
 
         #########################################
         # New args
-        parser.add_argument('--bc-num-epochs', type=int, default=1)
-        parser.add_argument('--bc-state-norm', type=str2bool, default=False)
-        parser.add_argument('--bc-noise', type=float, default=None)
-
+        parser.add_argument("--bc-num-epochs", type=int, default=1)
+        parser.add_argument("--bc-state-norm", type=str2bool, default=False)
+        parser.add_argument("--bc-noise", type=float, default=None)

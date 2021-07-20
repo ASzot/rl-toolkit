@@ -1,25 +1,23 @@
-import torch
-from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
-from rlf.storage.base_storage import BaseStorage
-import numpy as np
-import rlf.rl.utils as rutils
 from collections import defaultdict
 
-
+import numpy as np
+import rlf.rl.utils as rutils
+import torch
+from rlf.storage.base_storage import BaseStorage
+from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 
 def get_shape_for_ac(action_space):
-    if action_space.__class__.__name__ == 'Discrete':
+    if action_space.__class__.__name__ == "Discrete":
         action_shape = 1
-    elif action_space.__class__.__name__ == 'Dict':
+    elif action_space.__class__.__name__ == "Dict":
         # Another example of being hardcoded to logic game.
         # 1 for the discrete action space index selection
-        action_shape = 1 + action_space.spaces['pos'].shape[0]
+        action_shape = 1 + action_space.spaces["pos"].shape[0]
     else:
         action_shape = action_space.shape[0]
 
     return action_shape
-
 
 
 def _flatten_helper(T, N, _tensor):
@@ -31,8 +29,16 @@ def to_double(inp):
 
 
 class RolloutStorage(BaseStorage):
-    def __init__(self, num_steps, num_processes, obs_space, action_space,
-            args, value_dim=1, hidden_states={}):
+    def __init__(
+        self,
+        num_steps,
+        num_processes,
+        obs_space,
+        action_space,
+        args,
+        value_dim=1,
+        hidden_states={},
+    ):
         """
         - hidden_states: dict(key_name: str -> hidden_state_dim: int)
         """
@@ -54,10 +60,8 @@ class RolloutStorage(BaseStorage):
 
         self.rewards = torch.zeros(num_steps, num_processes, 1)
         self.value_preds = torch.zeros(num_steps + 1, num_processes, self.value_dim)
-        self.returns = torch.zeros(num_steps + 1, num_processes,
-                                   self.value_dim)
-        self.action_log_probs = torch.zeros(num_steps, num_processes,
-                                            self.value_dim)
+        self.returns = torch.zeros(num_steps + 1, num_processes, self.value_dim)
+        self.action_log_probs = torch.zeros(num_steps, num_processes, self.value_dim)
 
         self.hidden_states = {}
         for k, dim in hidden_states.items():
@@ -67,7 +71,7 @@ class RolloutStorage(BaseStorage):
 
         self.actions = torch.zeros(num_steps, num_processes, action_shape)
 
-        if action_space.__class__.__name__ == 'Discrete':
+        if action_space.__class__.__name__ == "Discrete":
             self.actions = self.actions.long()
 
         self.masks = torch.zeros(num_steps + 1, num_processes, 1)
@@ -120,7 +124,6 @@ class RolloutStorage(BaseStorage):
 
         for k, d in self.hidden_states.items():
             self.hidden_states[k] = d.to(device)
-
 
     def insert(self, obs, next_obs, rewards, done, info, ac_info):
         super().insert(obs, next_obs, rewards, done, info, ac_info)
@@ -178,11 +181,15 @@ class RolloutStorage(BaseStorage):
                 self.value_preds[-1] = next_value
                 gae = 0
                 for step in reversed(range(self.rewards.size(0))):
-                    delta = exp_rewards[step] + gamma * self.value_preds[
-                        step + 1] * self.masks[step +
-                                               1] - self.value_preds[step]
-                    gae = delta + gamma * self.args.gae_lambda * self.masks[step +
-                                                                  1] * gae
+                    delta = (
+                        exp_rewards[step]
+                        + gamma * self.value_preds[step + 1] * self.masks[step + 1]
+                        - self.value_preds[step]
+                    )
+                    gae = (
+                        delta
+                        + gamma * self.args.gae_lambda * self.masks[step + 1] * gae
+                    )
                     gae = gae * self.bad_masks[step + 1]
                     self.returns[step] = gae + self.value_preds[step]
             else:
@@ -190,57 +197,63 @@ class RolloutStorage(BaseStorage):
                 for step in reversed(range(self.rewards.size(0))):
                     # ((R_{t+1} * \gamma * M_{t+1}) + (R_t * B_{t+1}) +
                     # (1 - B_{t+1}) * V_t
-                    self.returns[step] = (self.returns[step + 1] * \
-                            gamma * self.masks[step + 1] + exp_rewards[step]) * \
-                            self.bad_masks[step + 1] + (1 - self.bad_masks[step + 1]) * \
-                            self.value_preds[step]
+                    self.returns[step] = (
+                        self.returns[step + 1] * gamma * self.masks[step + 1]
+                        + exp_rewards[step]
+                    ) * self.bad_masks[step + 1] + (
+                        1 - self.bad_masks[step + 1]
+                    ) * self.value_preds[
+                        step
+                    ]
         else:
             if self.args.use_gae:
                 self.value_preds[-1] = next_value
                 gae = 0
                 for step in reversed(range(self.rewards.size(0))):
-                    delta = exp_rewards[step] \
-                        + gamma * self.value_preds[step + 1] * self.masks[step + 1] \
+                    delta = (
+                        exp_rewards[step]
+                        + gamma * self.value_preds[step + 1] * self.masks[step + 1]
                         - self.value_preds[step]
+                    )
 
-                    gae = delta + gamma * \
-                        self.args.gae_lambda * self.masks[step + 1] * gae
+                    gae = (
+                        delta
+                        + gamma * self.args.gae_lambda * self.masks[step + 1] * gae
+                    )
                     self.returns[step] = gae + self.value_preds[step]
             else:
                 self.returns[-1] = next_value
                 for step in reversed(range(self.rewards.size(0))):
-                    self.returns[step] = self.returns[step + 1] * \
-                        gamma * self.masks[step + 1] + exp_rewards[step]
-
+                    self.returns[step] = (
+                        self.returns[step + 1] * gamma * self.masks[step + 1]
+                        + exp_rewards[step]
+                    )
 
     def compute_advantages(self):
         advantages = self.returns[:-1] - self.value_preds[:-1]
         # Normalize the advantages
-        advantages = (advantages - advantages.mean()) / (
-            advantages.std() + 1e-5)
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
         return advantages
-        #return advantages.reshape(-1, self.value_dim)
+        # return advantages.reshape(-1, self.value_dim)
 
-
-    def get_generator(self, advantages=None, num_mini_batch=None,
-            mini_batch_size=None):
+    def get_generator(
+        self, advantages=None, num_mini_batch=None, mini_batch_size=None, **kwargs
+    ):
         if self.args.recurrent_policy:
-            data_generator = self.recurrent_generator(
-                advantages, num_mini_batch)
+            data_generator = self.recurrent_generator(advantages, num_mini_batch)
         else:
             data_generator = self.feed_forward_generator(
-                advantages, num_mini_batch, mini_batch_size)
+                advantages, num_mini_batch, mini_batch_size
+            )
         return data_generator
 
     def get_rollout_data(self, advantages=None):
         gen = self.get_generator(advantages, num_mini_batch=1)
         return next(gen)
 
-
-    def feed_forward_generator(self,
-                               advantages,
-                               num_mini_batch=None,
-                               mini_batch_size=None):
+    def feed_forward_generator(
+        self, advantages, num_mini_batch=None, mini_batch_size=None
+    ):
         num_steps, num_processes = self.rewards.size()[0:2]
         batch_size = num_processes * num_steps
 
@@ -249,14 +262,15 @@ class RolloutStorage(BaseStorage):
                 "PPO requires the number of processes ({}) "
                 "* number of steps ({}) = {} "
                 "to be greater than or equal to the number of PPO mini batches ({})."
-                "".format(num_processes, num_steps, num_processes * num_steps,
-                          num_mini_batch))
+                "".format(
+                    num_processes, num_steps, num_processes * num_steps, num_mini_batch
+                )
+            )
             mini_batch_size = batch_size // num_mini_batch
 
         sampler = BatchSampler(
-            SubsetRandomSampler(range(batch_size)),
-            mini_batch_size,
-            drop_last=True)
+            SubsetRandomSampler(range(batch_size)), mini_batch_size, drop_last=True
+        )
 
         for indices in sampler:
             obs_batch = None
@@ -271,38 +285,38 @@ class RolloutStorage(BaseStorage):
 
             assert obs_batch is not None, f"Found not find {self.args.policy_ob_key}"
 
-            actions_batch = self.actions.view(-1,
-                                              self.actions.size(-1))[indices]
+            actions_batch = self.actions.view(-1, self.actions.size(-1))[indices]
             rewards_batch = self.rewards.view(-1, 1)[indices]
 
             hidden_states_batch = {}
             for k in self.hidden_states:
-                hidden_states_batch[k] = self.hidden_states[k][:-1].view(-1,
-                        self.hidden_states[k].size(-1))[indices]
+                hidden_states_batch[k] = self.hidden_states[k][:-1].view(
+                    -1, self.hidden_states[k].size(-1)
+                )[indices]
 
-            value_preds_batch = self.value_preds[:-
-                                                 1].view(-1, self.value_dim)[indices]
+            value_preds_batch = self.value_preds[:-1].view(-1, self.value_dim)[indices]
             return_batch = self.returns[:-1].view(-1, self.value_dim)[indices]
             masks_batch = self.masks[:-1].view(-1, 1)[indices]
-            old_action_log_probs_batch = self.action_log_probs.view(-1,
-                                                                    self.value_dim)[indices]
+            old_action_log_probs_batch = self.action_log_probs.view(-1, self.value_dim)[
+                indices
+            ]
             if advantages is None:
                 adv_targ = None
             else:
                 adv_targ = advantages.view(-1, self.value_dim)[indices]
 
             yield {
-                    'state': obs_batch,
-                    'other_state': other_obs_batch,
-                    'reward': rewards_batch,
-                    'hxs': hidden_states_batch,
-                    'action': actions_batch,
-                    'value': value_preds_batch,
-                    'return': return_batch,
-                    'mask': masks_batch,
-                    'prev_log_prob': old_action_log_probs_batch,
-                    'adv': adv_targ,
-                    }
+                "state": obs_batch,
+                "other_state": other_obs_batch,
+                "reward": rewards_batch,
+                "hxs": hidden_states_batch,
+                "action": actions_batch,
+                "value": value_preds_batch,
+                "return": return_batch,
+                "mask": masks_batch,
+                "prev_log_prob": old_action_log_probs_batch,
+                "adv": adv_targ,
+            }
 
     def get_np_tensors(self):
         """
@@ -319,8 +333,7 @@ class RolloutStorage(BaseStorage):
 
     def get_scalars(self):
         s, n_s, a, r, m = self.get_np_tensors()
-        return int(s[0]), int(n_s[0]), a[0,0], r[0,0], m[0,0]
-
+        return int(s[0]), int(n_s[0]), a[0, 0], r[0, 0], m[0, 0]
 
     def recurrent_generator(self, advantages, num_mini_batch):
         # Only called if args.recurrent_policy is True
@@ -328,7 +341,8 @@ class RolloutStorage(BaseStorage):
         assert num_processes >= num_mini_batch, (
             "PPO requires the number of processes ({}) "
             "to be greater than or equal to the number of "
-            "PPO mini batches ({}).".format(num_processes, num_mini_batch))
+            "PPO mini batches ({}).".format(num_processes, num_mini_batch)
+        )
 
         num_envs_per_batch = num_processes // num_mini_batch
         perm = torch.randperm(num_processes)
@@ -356,16 +370,14 @@ class RolloutStorage(BaseStorage):
                         other_obs_batch[k].append(self.obs[k][:-1, ind])
 
                 for k in self.hidden_states:
-                    hidden_states_batch[k].append(
-                            self.hidden_states[k][0:1, ind])
+                    hidden_states_batch[k].append(self.hidden_states[k][0:1, ind])
 
                 actions_batch.append(self.actions[:, ind])
                 value_preds_batch.append(self.value_preds[:-1, ind])
                 return_batch.append(self.returns[:-1, ind])
                 reward_batch.append(self.rewards[:, ind])
                 masks_batch.append(self.masks[:-1, ind])
-                old_action_log_probs_batch.append(
-                    self.action_log_probs[:, ind])
+                old_action_log_probs_batch.append(self.action_log_probs[:, ind])
                 adv_targ.append(advantages[:, ind])
 
             T, N = self.num_steps, num_envs_per_batch
@@ -375,13 +387,14 @@ class RolloutStorage(BaseStorage):
             return_batch = torch.stack(return_batch, 1)
             reward_batch = torch.stack(reward_batch, 1)
             masks_batch = torch.stack(masks_batch, 1)
-            old_action_log_probs_batch = torch.stack(
-                old_action_log_probs_batch, 1)
+            old_action_log_probs_batch = torch.stack(old_action_log_probs_batch, 1)
             adv_targ = torch.stack(adv_targ, 1)
 
             # States is just a (N, -1) tensor
             for k in hidden_states_batch:
-                hidden_states_batch[k] = torch.stack(hidden_states_batch[k], 1).view(N, -1)
+                hidden_states_batch[k] = torch.stack(hidden_states_batch[k], 1).view(
+                    N, -1
+                )
             # Flatten the (T, N, ...) tensors to (T * N, ...)
             for k in obs_batch:
                 obs_batch[k] = torch.stack(obs_batch[k], 1)
@@ -394,8 +407,9 @@ class RolloutStorage(BaseStorage):
             reward_batch = _flatten_helper(T, N, reward_batch)
             return_batch = _flatten_helper(T, N, return_batch)
             masks_batch = _flatten_helper(T, N, masks_batch)
-            old_action_log_probs_batch = _flatten_helper(T, N,
-                                                         old_action_log_probs_batch)
+            old_action_log_probs_batch = _flatten_helper(
+                T, N, old_action_log_probs_batch
+            )
             adv_targ = _flatten_helper(T, N, adv_targ)
 
             # No need to return obs dict if there's only one thing in
@@ -404,26 +418,21 @@ class RolloutStorage(BaseStorage):
                 obs_batch = next(iter(obs_batch.values()))
 
             yield {
-                    'other_state': other_obs_batch,
-                    'reward': reward_batch,
-                    'hxs': hidden_states_batch,
-
-                    'state': obs_batch,
-                    'action': actions_batch,
-                    'value': value_preds_batch,
-                    'return': return_batch,
-                    'mask': masks_batch,
-                    'prev_log_prob': old_action_log_probs_batch,
-                    'adv': adv_targ,
-                    }
+                "other_state": other_obs_batch,
+                "reward": reward_batch,
+                "hxs": hidden_states_batch,
+                "state": obs_batch,
+                "action": actions_batch,
+                "value": value_preds_batch,
+                "return": return_batch,
+                "mask": masks_batch,
+                "prev_log_prob": old_action_log_probs_batch,
+                "adv": adv_targ,
+            }
 
     def get_actions(self):
         actions = self.actions.view(-1, self.actions.size(-1))
         return actions
-
-    def get_masks(self):
-        masks = self.masks[:-1].view(-1, 1)
-        return masks
 
     def get_obs(self, step):
         obs = {}
@@ -431,8 +440,7 @@ class RolloutStorage(BaseStorage):
             if k is None:
                 return self.obs[step]
             obs[k] = self.obs[k][step]
-        assert len(obs) != 0, \
-                "No matching keys in state observation dictionary"
+        assert len(obs) != 0, "No matching keys in state observation dictionary"
 
         return obs
 
@@ -441,4 +449,3 @@ class RolloutStorage(BaseStorage):
 
     def get_masks(self, step):
         return self.masks[step]
-

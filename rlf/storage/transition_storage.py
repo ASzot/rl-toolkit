@@ -34,6 +34,42 @@ class TransitionStorage(BaseStorage):
         self.last_save = 0
         self.full = False
 
+        self._modify_reward_fn = None
+
+    def get_generator(self, from_recent, num_samples, mini_batch_size, **kwargs):
+        """To do the same thing as the on policy rollout storage, this does not
+        return the next state.
+        """
+        if num_samples > len(self):
+            return None
+        if from_recent:
+            all_indices = []
+            max_side = self.idx
+            all_indices = list(range(max(self.idx - num_samples, 0), self.idx))
+
+            overflow_amount = num_samples - self.idx
+            if self.full and overflow_amount > 0:
+                all_indices.extend(
+                    [list(range(self.capacity - overflow_amount, self.capacity))]
+                )
+        else:
+            all_indices = list(range(0, self.capacity if self.full else self.idx))
+        num_batches = num_samples // mini_batch_size
+        for _ in range(num_batches):
+            idxs = np.random.choice(all_indices, mini_batch_size)
+
+            obses = torch.as_tensor(self.obses[idxs], device=self.device).float()
+            actions = torch.as_tensor(self.actions[idxs], device=self.device)
+            rewards = torch.as_tensor(self.rewards[idxs], device=self.device)
+            masks = torch.as_tensor(self.masks[idxs], device=self.device)
+
+            yield {
+                "state": obses,
+                "reward": rewards,
+                "action": actions,
+                "mask": masks,
+            }
+
     def __len__(self):
         return self.capacity if self.full else self.idx
 
@@ -103,6 +139,9 @@ class TransitionStorage(BaseStorage):
         self.idx = (self.idx + _how_many) % self.capacity
         self.full = self.full or self.idx == 0
 
+    def set_modify_reward_fn(self, modify_reward_fn):
+        self._modify_reward_fn = modify_reward_fn
+
     def sample(self, batch_size):
         idxs = np.random.randint(
             0, self.capacity if self.full else self.idx, size=batch_size
@@ -114,5 +153,8 @@ class TransitionStorage(BaseStorage):
         next_obses = torch.as_tensor(self.next_obses[idxs], device=self.device).float()
         masks = torch.as_tensor(self.masks[idxs], device=self.device)
         masks_no_max = torch.as_tensor(self.masks_no_max[idxs], device=self.device)
+
+        if self._modify_reward_fn is not None:
+            rewards = self._modify_reward_fn(obses, actions, next_obses)
 
         return obses, actions, rewards, next_obses, masks, masks_no_max

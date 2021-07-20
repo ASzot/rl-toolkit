@@ -109,7 +109,7 @@ class BehavioralCloningFromObs(BehavioralCloning):
         self.inv_func = InvFunc(
             get_state_enc,
             rutils.get_obs_shape(self.policy.obs_space),
-            rutils.get_ac_dim(self.policy.action_space),
+            self.action_dim,
         )
         self.inv_func = self.inv_func.to(self.args.device)
         self.inv_opt = optim.Adam(self.inv_func.parameters(), lr=self.args.bco_inv_lr)
@@ -158,7 +158,6 @@ class BehavioralCloningFromObs(BehavioralCloning):
                 states.extend(state)
             rutils.pend_sep()
             self.use_envs.reset()
-            # self.use_envs.close()
 
         if self.args.bco_expl_load is not None and loaded_traj is None:
             # Save the data.
@@ -189,7 +188,9 @@ class BehavioralCloningFromObs(BehavioralCloning):
                 )
                 pred_action = self.inv_func(use_state_0, use_state_1)
                 loss = autils.compute_ac_loss(
-                    pred_action, true_action, self.policy.action_space
+                    pred_action,
+                    true_action.view(-1, self.action_dim),
+                    self.policy.action_space,
                 )
                 infer_ac_losses.append(loss.item())
 

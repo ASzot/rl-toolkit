@@ -1,5 +1,6 @@
 from collections import defaultdict
 from functools import partial
+from typing import Dict
 
 import rlf.il.utils as iutils
 import rlf.rl.utils as rutils
@@ -11,6 +12,7 @@ from rlf.algos.nested_algo import NestedAlgo
 from rlf.algos.on_policy.ppo import PPO
 from rlf.il.transition_dataset import TransitionDataset
 from rlf.rl.model import ConcatLayer
+from rlf.storage import RolloutStorage, TransitionStorage
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 
@@ -67,6 +69,10 @@ class DoubleStateDiscrim(nn.Module):
 
 
 class GaifoDiscrim(GailDiscrim):
+    def __init__(self, get_discrim=None):
+        super().__init__(get_discrim)
+        self._agent_obs_pairs: Dict[str, torch.Tensor] = {}
+
     def _create_discrim(self):
         new_shape = list(rutils.get_obs_shape(self.policy.obs_space))
         new_shape[0] *= 2
@@ -77,7 +83,7 @@ class GaifoDiscrim(GailDiscrim):
         return PairTransitionDataset(traj_load_path, self._transform_dem_dataset_fn)
 
     def _trans_batches(self, expert_batch, agent_batch):
-        agent_batch = iutils.select_idx_from_dict(agent_batch, self.agent_obs_pairs)
+        agent_batch = iutils.select_idx_from_dict(agent_batch, self._agent_obs_pairs)
         return expert_batch, agent_batch
 
     def _compute_discrim_loss(self, agent_batch, expert_batch, obsfilt):
@@ -100,13 +106,19 @@ class GaifoDiscrim(GailDiscrim):
         return self.discrim_net(state, next_state)
 
     def _get_sampler(self, storage):
-        obs = storage.get_def_obs_seq()
-        ob_shape = rutils.get_obs_shape(self.policy.obs_space)
-        self.agent_obs_pairs = {
-            "state": obs[:-1].view(-1, *ob_shape),
-            "next_state": obs[1:].view(-1, *ob_shape),
-            "mask": storage.masks[:-1].view(-1, 1),
-        }
+        if isinstance(storage, RolloutStorage):
+            obs = storage.get_def_obs_seq()
+            ob_shape = rutils.get_obs_shape(self.policy.obs_space)
+            self._agent_obs_pairs = {
+                "state": obs[:-1].view(-1, *ob_shape),
+                "next_state": obs[1:].view(-1, *ob_shape),
+                "mask": storage.masks[:-1].view(-1, 1),
+            }
+        elif isinstance(storage, TransitionStorage):
+            raise NotImplementedError("GAIfO+SAC not yet implemented")
+        else:
+            raise ValueError(f"Unrecognized storage {storage}")
+
         failure_sampler = BatchSampler(
             SubsetRandomSampler(range(self.args.num_steps)),
             self.args.traj_batch_size,
@@ -121,13 +133,8 @@ class GaifoDiscrim(GailDiscrim):
         )
         return settings
 
-    def _compute_discrim_reward(self, storage, step, add_info):
-        state = rutils.get_def_obs(storage.get_obs(step))
-
-        next_state = rutils.get_def_obs(storage.get_obs(step + 1))
-        masks = storage.masks[step + 1]
-        finished_episodes = [i for i in range(len(masks)) if masks[i] == 0.0]
-        add_inputs = {k: v[(step + 1) - 1] for k, v in add_info.items()}
+    def _compute_discrim_reward(self, state, next_state, action, mask, add_inputs):
+        finished_episodes = [i for i in range(len(mask)) if mask[i] == 0.0]
         obsfilt = self.get_env_ob_filt()
         for i in finished_episodes:
             next_state[i] = add_inputs["final_obs"][i]

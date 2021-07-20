@@ -95,19 +95,20 @@ def wass_grad_pen(
     )
     mixup_data_state = alpha_state * expert_state + (1 - alpha_state) * policy_state
     mixup_data_state.requires_grad = True
+    inputs = [mixup_data_state]
 
-    alpha_action = alpha.expand_as(expert_action).to(expert_action.device)
-    mixup_data_action = (
-        alpha_action * expert_action + (1 - alpha_action) * policy_action
-    )
-    mixup_data_action.requires_grad = True
+    if use_actions:
+        alpha_action = alpha.expand_as(expert_action).to(expert_action.device)
+        mixup_data_action = (
+            alpha_action * expert_action + (1 - alpha_action) * policy_action
+        )
+        mixup_data_action.requires_grad = True
+        inputs.append(mixup_data_action)
+    else:
+        mixup_data_action = []
 
     disc = disc_fn(mixup_data_state, mixup_data_action)
     ones = torch.ones(disc.size()).to(disc.device)
-
-    inputs = [mixup_data_state]
-    if use_actions:
-        inputs.append(mixup_data_action)
 
     grad = autograd.grad(
         outputs=disc,
