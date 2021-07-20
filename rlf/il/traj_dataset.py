@@ -135,8 +135,9 @@ class TrajDataset(ImitationLearningDataset):
             if is_tensor_dict:
                 states = rutils.transpose_arr_dict(states)
             else:
-                states = torch.cat(states)
+                states = torch.stack(states, dim=0)
             ret_trajs[i] = (states, actions)
+
         ret_trajs = self._transform_dem_dataset_fn(ret_trajs, trajs)
         return ret_trajs
 

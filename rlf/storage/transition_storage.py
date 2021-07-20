@@ -155,6 +155,6 @@ class TransitionStorage(BaseStorage):
         masks_no_max = torch.as_tensor(self.masks_no_max[idxs], device=self.device)
 
         if self._modify_reward_fn is not None:
-            rewards = self._modify_reward_fn(obses, actions, next_obses)
+            rewards = self._modify_reward_fn(obses, actions, next_obses, masks)
 
         return obses, actions, rewards, next_obses, masks, masks_no_max
