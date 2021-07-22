@@ -4,6 +4,7 @@ The license is at `rlf/algos/off_policy/denis_yarats_LICENSE.md`
 """
 import random
 from collections import defaultdict
+from typing import Optional
 
 import numpy as np
 import rlf.rl.utils as rutils
@@ -36,10 +37,18 @@ class TransitionStorage(BaseStorage):
 
         self._modify_reward_fn = None
 
-    def get_generator(self, from_recent, num_samples, mini_batch_size, **kwargs):
+    def get_generator(
+        self,
+        from_recent: bool,
+        num_samples: Optional[int],
+        mini_batch_size: int,
+        **kwargs
+    ):
         """To do the same thing as the on policy rollout storage, this does not
         return the next state.
         """
+        if num_samples is None:
+            num_samples = len(self)
         if num_samples > len(self):
             return None
         if from_recent:
@@ -59,12 +68,16 @@ class TransitionStorage(BaseStorage):
             idxs = np.random.choice(all_indices, mini_batch_size)
 
             obses = torch.as_tensor(self.obses[idxs], device=self.device).float()
+            next_obses = torch.as_tensor(
+                self.next_obses[idxs], device=self.device
+            ).float()
             actions = torch.as_tensor(self.actions[idxs], device=self.device)
             rewards = torch.as_tensor(self.rewards[idxs], device=self.device)
             masks = torch.as_tensor(self.masks[idxs], device=self.device)
 
             yield {
                 "state": obses,
+                "next_state": next_obses,
                 "reward": rewards,
                 "action": actions,
                 "mask": masks,

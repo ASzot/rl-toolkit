@@ -1,9 +1,15 @@
-from rlf.algos.base_algo import BaseAlgo
 from typing import Optional
 
+from rlf.algos.base_algo import BaseAlgo
+
+
 class NestedAlgo(BaseAlgo):
-    def __init__(self, modules, designated_rl_idx, designated_settings_idx=0,
-            num_steps_idx: Optional[int]=None):
+    def __init__(
+        self,
+        modules,
+        designated_rl_idx,
+        designated_settings_idx=0,
+    ):
         """
         :param modules: ([rlf.algos.base_algo.BaseAlgo])
         :param designated_rl_idx: (int) which module to use to return
@@ -15,37 +21,36 @@ class NestedAlgo(BaseAlgo):
         self.modules = modules
         self.designated_rl_idx = designated_rl_idx
         self.designated_settings_idx = designated_settings_idx
-        if num_steps_idx is None:
-            self.num_steps_idx = self.designated_rl_idx
-        else:
-            self.num_steps_idx = num_steps_idx
-
 
     def init(self, policy, args):
         for module in self.modules:
             module.init(policy, args)
 
+    def get_steps_generator(self, update_iter):
+        return self.modules[self.designated_rl_idx].get_steps_generator(update_iter)
+
+    def get_num_updates(self):
+        return self.modules[self.designated_rl_idx].get_num_updates()
+
     def set_env_ref(self, envs):
         for module in self.modules:
             module.set_env_ref(envs)
-
-    def get_num_updates(self):
-        return self.modules[self.num_steps_idx].get_num_updates()
 
     def get_completed_update_steps(self, num_updates):
         n_updates = self.modules[0].get_completed_update_steps(num_updates)
         for m in self.modules[1:]:
             if m.get_completed_update_steps(num_updates) != n_updates:
-                raise ValueError('All submodules must return the same number of updates')
+                raise ValueError(
+                    "All submodules must return the same number of updates"
+                )
         return n_updates
 
     def set_get_policy(self, get_policy_fn, policy_args):
         for module in self.modules:
             module.set_get_policy(get_policy_fn, policy_args)
 
-
     def _copy_policy(self):
-        raise NotImplementedError('Need to implement copy policy for NestedAlgo')
+        raise NotImplementedError("Need to implement copy policy for NestedAlgo")
 
     def load_resume(self, checkpointer):
         for module in self.modules:
@@ -64,8 +69,9 @@ class NestedAlgo(BaseAlgo):
             module.pre_update(cur_update)
 
     def get_storage_buffer(self, policy, envs, args):
-        return self.modules[self.designated_rl_idx].get_storage_buffer(policy,
-                envs, args)
+        return self.modules[self.designated_rl_idx].get_storage_buffer(
+            policy, envs, args
+        )
 
     def get_env_settings(self, args):
         return self.modules[self.designated_settings_idx].get_env_settings(args)

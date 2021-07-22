@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Iterable
 
 import attr
 import numpy as np
@@ -59,6 +59,10 @@ class BaseAlgo(object):
         self.update_i = 0
         self.policy = policy
         self.args = args
+
+    def get_steps_generator(self, update_iter: int) -> Iterable[int]:
+        """Generates an iterable for the number of rollout steps."""
+        return range(self.args.num_steps)
 
     def set_env_ref(self, envs):
         env_norm = get_vec_normalize(envs)

@@ -37,7 +37,8 @@ class Runner:
     def training_iter(self, update_iter):
         self.log.start_interval_log()
         self.updater.pre_update(update_iter)
-        for step in range(self.args.num_steps):
+
+        for step in self.updater.get_steps_generator(update_iter):
             # Sample actions
             obs = self.storage.get_obs(step)
 
@@ -64,7 +65,6 @@ class Runner:
             self.log.collect_step_info(step_log_vals)
 
             self.storage.insert(obs, next_obs, reward, done, infos, ac_info)
-
         updater_log_vals = self.updater.update(self.storage)
 
         self.storage.after_update()
