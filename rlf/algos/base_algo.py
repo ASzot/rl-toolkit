@@ -83,7 +83,8 @@ class BaseAlgo(object):
 
     def first_train(self, log, eval_policy, env_interface):
         """
-        Called before any RL training loop starts.
+        Called before any RL training loop starts but after `self.init` is
+        called.
         - log: logger object to log any statistics.
         - eval_policy: (policy: BasePolicy, total_num_steps: int, args) -> None
           function that evaluates the given policy with the args at timestep

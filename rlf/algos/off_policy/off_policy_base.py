@@ -9,7 +9,7 @@ def create_storage_buff(obs_space, action_space, buff_size, args):
         obs_space.shape,
         action_space.shape,
         buff_size,
-        args.device,
+        args,
     )
 
 

@@ -87,8 +87,9 @@ class TrajDataset(ImitationLearningDataset):
         return done[j]
 
     def _generate_trajectories(self, trajs):
-        trajs = convert_to_tensors(trajs)
         is_tensor_dict = not isinstance(trajs["obs"], torch.Tensor)
+        if not is_tensor_dict:
+            trajs = convert_to_tensors(trajs)
 
         # Get by trajectory instead of transition
         if is_tensor_dict:

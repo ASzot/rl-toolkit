@@ -8,7 +8,7 @@ from abc import ABC
 from collections import defaultdict
 from contextlib import ContextDecorator, contextmanager
 from timeit import default_timer
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 import cv2
 # import moviepy.editor as mpy
@@ -54,13 +54,16 @@ def plot_line(
     x_name=None,
     y_name=None,
     title=None,
+    err=None,
+    file_suffix="",
 ):
     """
     Plot a simple rough line.
     """
     if x_vals is None:
         x_vals = np.arange(len(plot_vals))
-    save_path = osp.join(save_dir, str(save_name) + ".png")
+    save_path = osp.join(save_dir, f"{save_name}_{file_suffix}.png")
+
     if title is None:
         plt.title(save_name)
     else:
@@ -71,7 +74,10 @@ def plot_line(
     if y_name is not None:
         plt.ylabel(y_name)
 
-    plt.plot(x_vals, plot_vals)
+    if err is None:
+        plt.plot(x_vals, plot_vals)
+    else:
+        plt.errorbar(x_vals, plot_vals, err)
     plt.grid(b=True, which="major", color="lightgray", linestyle="--")
     plt_save(save_path)
 
@@ -196,6 +202,19 @@ def flatten_obs_dict(ob_shape, keep_keys):
         high=np.float32(high_val),
         dtype=np.float32,
     )
+
+
+def obs_op(obs: Any, op: Callable[[Any], Any]) -> Any:
+    """Apply an operation to every value in a dictionary."""
+    if isinstance(obs, dict):
+        return {k: op(obs[k]) for k in obs}
+    return op(obs)
+
+
+def obs_select(obs, idx):
+    if isinstance(obs, dict):
+        return {k: obs[k][idx] for k in obs}
+    return obs[idx]
 
 
 #########################################
