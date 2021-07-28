@@ -200,7 +200,7 @@ class BaseLogger(object):
     def log_video(self, video_file, step_count, fps):
         pass
 
-    def watch_model(self, model):
+    def watch_model(self, model, **kwargs):
         """
         - model (torch.nn.Module) the set of parameters to watch
         """

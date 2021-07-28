@@ -160,10 +160,17 @@ class TransitionStorage(BaseStorage):
             "masks": masks,
             "hxs": ac_info.hxs,
         }
-        if isinstance(obs, torch.Tensor):
-            obs = obs.cpu().numpy()
-        if isinstance(next_obs, torch.Tensor):
-            next_obs = next_obs.cpu().numpy()
+        for k in self.ob_keys:
+            if k is None:
+                if isinstance(obs, torch.Tensor):
+                    obs = obs.cpu().numpy()
+                if isinstance(next_obs, torch.Tensor):
+                    next_obs = next_obs.cpu().numpy()
+            else:
+                if isinstance(obs[k], torch.Tensor):
+                    obs[k] = obs[k].cpu().numpy()
+                if isinstance(next_obs[k], torch.Tensor):
+                    next_obs[k] = next_obs[k].cpu().numpy()
         action = ac_info.take_action
 
         def copy_from_to(buffer_start, batch_start, how_many):
@@ -186,14 +193,15 @@ class TransitionStorage(BaseStorage):
             np.copyto(self.masks_no_max[buffer_slice], bad_masks[batch_slice])
 
         _batch_start = 0
-        buffer_end = self.idx + len(obs)
+        obs_len = rutils.get_def_obs(obs).shape[0]
+        buffer_end = self.idx + obs_len
         if buffer_end > self.capacity:
             copy_from_to(self.idx, _batch_start, self.capacity - self.idx)
             _batch_start = self.capacity - self.idx
             self.idx = 0
             self.full = True
 
-        _how_many = len(obs) - _batch_start
+        _how_many = obs_len - _batch_start
         copy_from_to(self.idx, _batch_start, _how_many)
         self.idx = (self.idx + _how_many) % self.capacity
         self.full = self.full or self.idx == 0

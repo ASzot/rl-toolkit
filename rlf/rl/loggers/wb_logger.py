@@ -46,6 +46,9 @@ def get_wb_ray_config(config):
 def get_wb_media(v):
     if isinstance(v, torch.Tensor) and len(v.shape) == 1 and v.shape[0] > 1:
         v = wandb.Histogram(v.numpy())
+    if isinstance(v, np.ndarray) and len(v.shape) == 1 and v.shape[0] > 1:
+        v = wandb.Histogram(v)
+
     return v
 
 
@@ -92,8 +95,8 @@ class WbLogger(BaseLogger):
         #    self.is_closed = True
         #    print("Wb logger was closed when trying to log")
 
-    def watch_model(self, model):
-        wandb.watch(model)
+    def watch_model(self, model, log_type="gradients", log_freq=1000, **kwargs):
+        wandb.watch(model, log=log_type, log_freq=log_freq)
 
     def log_image(self, k, img_file, step_count):
         wandb.log({k: wandb.Image(img_file)}, step=step_count)
