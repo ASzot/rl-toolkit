@@ -160,17 +160,20 @@ class TransitionStorage(BaseStorage):
             "masks": masks,
             "hxs": ac_info.hxs,
         }
+
+        use_next_obs = {}
+        use_obs = {}
         for k in self.ob_keys:
             if k is None:
                 if isinstance(obs, torch.Tensor):
-                    obs = obs.cpu().numpy()
+                    use_obs = obs.cpu().numpy()
                 if isinstance(next_obs, torch.Tensor):
-                    next_obs = next_obs.cpu().numpy()
+                    use_next_obs = next_obs.cpu().numpy()
             else:
                 if isinstance(obs[k], torch.Tensor):
-                    obs[k] = obs[k].cpu().numpy()
+                    use_obs[k] = obs[k].cpu().numpy()
                 if isinstance(next_obs[k], torch.Tensor):
-                    next_obs[k] = next_obs[k].cpu().numpy()
+                    use_next_obs[k] = next_obs[k].cpu().numpy()
         action = ac_info.take_action
 
         def copy_from_to(buffer_start, batch_start, how_many):
@@ -179,12 +182,12 @@ class TransitionStorage(BaseStorage):
 
             for k, ob_shape in self.ob_keys.items():
                 if k is None:
-                    np.copyto(self.obses[buffer_slice], obs[batch_slice])
-                    np.copyto(self.next_obses[buffer_slice], next_obs[batch_slice])
+                    np.copyto(self.obses[buffer_slice], use_obs[batch_slice])
+                    np.copyto(self.next_obses[buffer_slice], use_next_obs[batch_slice])
                 else:
-                    np.copyto(self.obses[k][buffer_slice], obs[k][batch_slice])
+                    np.copyto(self.obses[k][buffer_slice], use_obs[k][batch_slice])
                     np.copyto(
-                        self.next_obses[k][buffer_slice], next_obs[k][batch_slice]
+                        self.next_obses[k][buffer_slice], use_next_obs[k][batch_slice]
                     )
 
             np.copyto(self.actions[buffer_slice], action[batch_slice])
@@ -193,7 +196,7 @@ class TransitionStorage(BaseStorage):
             np.copyto(self.masks_no_max[buffer_slice], bad_masks[batch_slice])
 
         _batch_start = 0
-        obs_len = rutils.get_def_obs(obs).shape[0]
+        obs_len = rutils.get_def_obs(use_obs).shape[0]
         buffer_end = self.idx + obs_len
         if buffer_end > self.capacity:
             copy_from_to(self.idx, _batch_start, self.capacity - self.idx)

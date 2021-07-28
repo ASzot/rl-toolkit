@@ -9,6 +9,7 @@ from rlf.policies.base_policy import get_step_info
 from rlf.rl import utils
 from rlf.rl.envs import get_vec_normalize, make_vec_envs
 from rlf.rl.evaluation import full_eval, train_eval
+from typing import Dict, Any
 
 
 class Runner:
@@ -34,7 +35,7 @@ class Runner:
         else:
             self.train_ctx = torch.no_grad
 
-    def training_iter(self, update_iter):
+    def training_iter(self, update_iter: int) -> Dict[str, Any]:
         self.log.start_interval_log()
         self.updater.pre_update(update_iter)
 
@@ -71,7 +72,17 @@ class Runner:
 
         return updater_log_vals
 
-    def setup(self):
+    @property
+    def should_start_with_eval(self) -> bool:
+        """
+        If true, will evaluate the policy before the main training loop begins.
+        """
+        return False
+
+    def setup(self) -> None:
+        """
+        Runs before any evaluation or training.
+        """
         self.episode_count = 0
         self.alg_env_settings = self.updater.get_env_settings(self.args)
         self.updater.first_train(self.log, self._eval_policy, self.env_interface)
@@ -100,7 +111,7 @@ class Runner:
             self.args,
         )
 
-    def save(self, update_iter):
+    def save(self, update_iter: int) -> None:
         if (
             (self.episode_count > 0) or (self.args.num_steps == 0)
         ) and self.checkpointer.should_save():
