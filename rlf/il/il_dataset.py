@@ -6,13 +6,17 @@ import torch.utils.data
 
 
 def convert_to_tensors(trajs):
-    if not isinstance(trajs["obs"], torch.Tensor):
+    if not isinstance(trajs["obs"], dict) and not isinstance(
+        trajs["obs"], torch.Tensor
+    ):
         trajs["obs"] = torch.tensor(trajs["obs"])
     if not isinstance(trajs["done"], torch.Tensor):
         trajs["done"] = torch.tensor(trajs["done"])
     if not isinstance(trajs["actions"], torch.Tensor):
         trajs["actions"] = torch.tensor(trajs["actions"])
-    if not isinstance(trajs["next_obs"], torch.Tensor):
+    if not isinstance(trajs["next_obs"], dict) and not isinstance(
+        trajs["next_obs"], torch.Tensor
+    ):
         trajs["next_obs"] = torch.tensor(trajs["next_obs"])
     return trajs
 

@@ -6,7 +6,7 @@ from rlf.storage.transition_storage import TransitionStorage
 
 def create_storage_buff(obs_space, action_space, buff_size, args):
     return TransitionStorage(
-        obs_space.shape,
+        obs_space,
         action_space.shape,
         buff_size,
         args,
