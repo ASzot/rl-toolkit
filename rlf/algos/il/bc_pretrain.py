@@ -15,7 +15,7 @@ class BehavioralCloningPretrain(NestedAlgo):
         super().init(policy, args)
         self.bc.init(policy, args)
 
-    def first_train(self, log, eval_policy):
+    def first_train(self, log, eval_policy, env_interface):
         rutils.pstart_sep()
         print('Pre-training policy with BC')
         self.bc.full_train()
@@ -30,7 +30,7 @@ class BehavioralCloningPretrain(NestedAlgo):
 
         rutils.pend_sep()
 
-        super().first_train(log, eval_policy)
+        super().first_train(log, eval_policy, env_interface)
 
     def get_add_args(self, parser):
         self.bc.get_add_args(parser)

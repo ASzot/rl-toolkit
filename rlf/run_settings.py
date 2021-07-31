@@ -1,28 +1,24 @@
+import argparse
+import os
+import os.path as osp
+import random
+import sys
+
+import numpy as np
+import torch
+from gym.spaces import Box
+
+import rlf
+import rlf.rl.utils as rutils
+from rlf.args import get_default_parser
+from rlf.envs.env_interface import get_env_interface
+from rlf.exp_mgr import config_mgr
+from rlf.il.traj_mgr import TrajSaver
 from rlf.rl.checkpointer import Checkpointer
 from rlf.rl.envs import make_vec_envs
 from rlf.rl.evaluation import full_eval
-from rlf.args import get_default_parser
-from rlf.envs.env_interface import get_env_interface
-import argparse
 from rlf.rl.loggers.base_logger import BaseLogger
-import rlf.rl.utils as rutils
-import torch
-from rlf.exp_mgr import config_mgr
-from rlf.il.traj_mgr import TrajSaver
-import rlf.rl.utils as rutils
 from rlf.rl.runner import Runner
-import numpy as np
-import random
-import os.path as osp
-from gym.spaces import Box
-import os
-import sys
-from rlf.rl.loggers import sanity_checker
-
-# Import the env interfaces
-import rlf.envs.minigrid_interface
-import rlf.envs.bit_flip
-import rlf.envs.blackjack
 
 
 def init_seeds(args):
@@ -34,29 +30,41 @@ def init_seeds(args):
 
     torch.set_num_threads(1)
 
+
 try:
     from ray import tune
+
     MasterClass = tune.Trainable
 except:
+
     class BlankTrainable:
         def __init__(self, config, logger_creator):
             pass
+
     MasterClass = BlankTrainable
 
+
 class RunSettings(MasterClass):
-    def __init__(self, args_str=None, config=None, logger_creator=None):
+    """
+    Sets up the training, environments, and all other information needed for
+    running an algorithm.
+    """
+
+    def __init__(self, args_str: str = None, config=None, logger_creator=None):
         """
-        - config: The config for tune.Trainable if used.
-        - logger_creator: Also used for tune.Trainble if used.
+        Args:
+        :param args_str: Parse the arguments from this string.
+        :param config: The config for tune.Trainable if used.
+        :param logger_creator: Also used for tune.Trainble if used.
         """
-        self.args_str = args_str
+        self._preset_args = None if args_str is None else args_str.split(" ")
         self.working_dir = os.getcwd()
 
         base_parser = self._get_base_parser()
-        if self.args_str is None:
+        if self._preset_args is None:
             self.base_args, _ = base_parser.parse_known_args()
         else:
-            self.base_args, _ = base_parser.parse_known_args(self.args_str)
+            self.base_args, _ = base_parser.parse_known_args(self._preset_args)
         super().__init__(config, logger_creator)
 
     def _get_base_parser(self):
@@ -64,15 +72,18 @@ class RunSettings(MasterClass):
         self.get_add_args(base_parser)
         return base_parser
 
-    def get_config_file(self):
+    def get_config_file(self) -> str:
         """
-        - Returns (string)
-        Returns the location to a config file that holds whatever information
-        about the project.
+        :return: The location to a config file that holds whatever information
+            about the project.
         """
-        return osp.join(self.working_dir, 'config.yaml')
+        return osp.join(self.working_dir, "config.yaml")
 
-    def create_traj_saver(self, save_path):
+    def create_traj_saver(self, save_path: str) -> rlf.il.TrajSaver:
+        """
+        How trajectories should be saved if desired.
+        :save_path: file name to write the trajectories to
+        """
         return TrajSaver(save_path)
 
     def get_add_args(self, parser):
@@ -87,17 +98,17 @@ class RunSettings(MasterClass):
     def get_add_ray_kwargs(self):
         return {}
 
-    def get_policy(self):
+    def get_policy(self) -> rlf.policies.BasePolicy:
         """
-        Return: rlf.base_policy.BasePolicy
+        :return: The policy for training
         """
-        raise NotImplementedError('Must return policy to be used.')
+        raise NotImplementedError("Must return policy to be used.")
 
-    def get_algo(self):
+    def get_algo(self) -> rlf.algos.BaseAlgo:
         """
-        Return: rlf.base_algo.BaseAlgo
+        :return: The algorithm to update the policy with.
         """
-        raise NotImplementedError('Must return algorithm to be used')
+        raise NotImplementedError("Must return algorithm to be used")
 
     def _get_env_interface(self, args, task_id=None):
         env_interface = get_env_interface(args.env_name)(args)
@@ -112,10 +123,10 @@ class RunSettings(MasterClass):
         algo.get_add_args(parser)
         policy.get_add_args(parser)
 
-        if self.args_str is None:
+        if self._preset_args is None:
             args, rest = parser.parse_known_args()
         else:
-            args, rest = parser.parse_known_args(self.args_str)
+            args, rest = parser.parse_known_args(self._preset_args)
 
         env_parser = argparse.ArgumentParser()
         get_env_interface(args.env_name)(args).get_add_args(env_parser)
@@ -125,15 +136,15 @@ class RunSettings(MasterClass):
 
         # Check that there are no arguments not accounted for in `base_args`
         _, rest_of_args = self._get_base_parser().parse_known_args(rest)
-        if '-v' in rest_of_args:
-            del rest_of_args[rest_of_args.index('-v')]
+        if "-v" in rest_of_args:
+            del rest_of_args[rest_of_args.index("-v")]
             print("Env args:")
             env_parser.print_help()
             print("Alg args:")
             parser.print_help()
             sys.exit(0)
         if len(rest_of_args) != 0:
-            raise ValueError('Unrecognized arguments %s' % str(rest_of_args))
+            raise ValueError("Unrecognized arguments %s" % str(rest_of_args))
 
         # Convert the types of some of the standard types that don't allow the
         # scientific notation when expecting integer inputs.
@@ -149,11 +160,11 @@ class RunSettings(MasterClass):
         # Set up args used for training
         args = self.get_args(algo, policy)
         args.cwd = self.working_dir
-        if 'wandb' in add_args:
-            del add_args['wandb']
+        if "wandb" in add_args:
+            del add_args["wandb"]
         rutils.update_args(args, add_args, True)
-        if 'cwd' in add_args:
-            self.working_dir = add_args['cwd']
+        if "cwd" in add_args:
+            self.working_dir = add_args["cwd"]
 
         config_mgr.init(self.get_config_file())
         if args.ray:
@@ -163,19 +174,20 @@ class RunSettings(MasterClass):
             if ray_create:
                 return None, None
             log = self.get_logger()
-        for k,v in vars(self.base_args).items():
+        for k, v in vars(self.base_args).items():
             if k not in args:
                 setattr(args, k, v)
         log.init(args)
         log.set_prefix(args)
 
-        sanity_checker.set_sanity_checker(args)
-
         args.device = torch.device("cuda:0" if args.cuda else "cpu")
         init_seeds(args)
         return args, log
 
-    def create_runner(self, add_args={}, ray_create=False):
+    def create_runner(self, add_args={}, ray_create=False) -> rlf.Runner:
+        """
+        Gets the runner used for training.
+        """
         policy = self.get_policy()
         algo = self.get_algo()
 
@@ -190,16 +202,24 @@ class RunSettings(MasterClass):
         alg_env_settings = algo.get_env_settings(args)
 
         # Setup environment
-        envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
-                             args.gamma, args.device,
-                             args.eval_only, env_interface, args,
-                             alg_env_settings, set_eval=args.eval_only)
+        envs = make_vec_envs(
+            args.env_name,
+            args.seed,
+            args.num_processes,
+            args.gamma,
+            args.device,
+            True,
+            env_interface,
+            args,
+            alg_env_settings,
+            set_eval=args.eval_only,
+        )
 
         rutils.pstart_sep()
-        print('Action space:', envs.action_space)
+        print("Action space:", envs.action_space)
         if isinstance(envs.action_space, Box):
-            print('Action range:', (envs.action_space.low, envs.action_space.high))
-        print('Observation space', envs.observation_space)
+            print("Action range:", (envs.action_space.low, envs.action_space.high))
+        print("Observation space", envs.observation_space)
         rutils.pend_sep()
 
         # Setup policy
@@ -222,13 +242,24 @@ class RunSettings(MasterClass):
         storage.init_storage(envs.reset())
         storage.set_traj_done_callback(algo.on_traj_finished)
 
-        runner = Runner(envs, storage, policy, log, env_interface, checkpointer, args, algo)
+        runner = self._get_runner_cls(algo, policy)(
+            envs, storage, policy, log, env_interface, checkpointer, args, algo
+        )
         return runner
 
+    def _get_runner_cls(self, algo, policy):
+        return Runner
+
     def import_add(self):
+        """
+        Needed for ray training.
+        """
         pass
 
     def setup(self, config):
+        """
+        Only called during ray training.
+        """
         self.import_add()
         self.ray_runner = self.create_runner(config, ray_create=True)
         if self.ray_runner is None:
@@ -240,12 +271,17 @@ class RunSettings(MasterClass):
             self.ray_runner.log.disable_print()
 
     def step(self):
+        """
+        Only called during ray training
+        """
         updater_log_vals = self.ray_runner.training_iter(self.training_iteration)
-        if (self.training_iteration+1) % self.ray_args.log_interval == 0:
-            log_dict = self.ray_runner.log_vals(updater_log_vals, self.training_iteration)
-        if (self.training_iteration+1) % self.ray_args.save_interval == 0:
-            self.ray_runner.save()
-        if (self.training_iteration+1) % self.ray_args.eval_interval == 0:
-            self.ray_runner.eval()
+        if (self.training_iteration + 1) % self.ray_args.log_interval == 0:
+            log_dict = self.ray_runner.log_vals(
+                updater_log_vals, self.training_iteration
+            )
+        if (self.training_iteration + 1) % self.ray_args.save_interval == 0:
+            self.ray_runner.save(self.training_iteration)
+        if (self.training_iteration + 1) % self.ray_args.eval_interval == 0:
+            self.ray_runner.eval(self.training_iteration)
 
         return log_dict

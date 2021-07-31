@@ -41,7 +41,7 @@ See learning curves for these algorithms [below](https://github.com/ASzot/rl-too
 - Auto figure creation.
 
 ## Installation
-Requires Python 3.7. With conda: 
+Requires Python 3.7 or higher. With conda: 
 
 - Clone the repo
 - `conda create -n rlf python=3.7`

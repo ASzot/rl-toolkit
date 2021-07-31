@@ -74,7 +74,8 @@ def add_args(parser):
         help='how many training CPU processes to use (default: 32)')
 
     parser.add_argument('--env-name',
-        help='environment to train on (default: PongNoFrameskip-v4)')
+        help='environment to train on (default: PongNoFrameskip-v4)',
+        required=True)
 
     parser.add_argument(
         '--gamma',
@@ -155,6 +156,7 @@ def add_args(parser):
     parser.add_argument('--clip-actions', type=str2bool, default=False)
     parser.add_argument('--frame-stack', type=str2bool, default=True)
     parser.add_argument('--policy-ob-key', type=str, default='observation')
+    parser.add_argument('--force-multi-proc', type=str2bool, default=False)
     parser.add_argument('--context-mode', type=str, default='fork',
             help="""
             The mode used for multi-processing. Valid options are "fork",

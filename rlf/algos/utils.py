@@ -1,14 +1,15 @@
-import torch.nn.functional as F
-import torch
 import gym.spaces as spaces
-from torch import autograd
 import numpy as np
+import torch
+import torch.nn.functional as F
+from torch import autograd
+
 
 def linear_lr_schedule(cur_update, total_updates, initial_lr, opt):
-    lr = initial_lr - \
-        (initial_lr * (cur_update / float(total_updates)))
+    lr = initial_lr - (initial_lr * (cur_update / float(total_updates)))
     for param_group in opt.param_groups:
-        param_group['lr'] = lr
+        param_group["lr"] = lr
+
 
 def td_loss(target, policy, cur_states, cur_actions, add_info={}, cont_actions=False):
     """
@@ -23,6 +24,7 @@ def td_loss(target, policy, cur_states, cur_actions, add_info={}, cont_actions=F
     loss = F.mse_loss(cur_q_vals.view(-1), target.view(-1))
     return loss
 
+
 def soft_update(model, model_target, tau):
     """
     Copy data from `model` to `model_target` with a decay specified by tau. A
@@ -30,8 +32,9 @@ def soft_update(model, model_target, tau):
     model.
     """
     for param, target_param in zip(model.parameters(), model_target.parameters()):
-        target_param.detach()
+        # target_param.detach()
         target_param.data.copy_((tau * param.data) + ((1.0 - tau) * target_param.data))
+
 
 def hard_update(model, model_target):
     """
@@ -50,7 +53,7 @@ def reparam_sample(dist):
     elif isinstance(dist, torch.distributions.Categorical):
         return dist.logits
     else:
-        raise ValueError('Unrecognized distribution')
+        raise ValueError("Unrecognized distribution")
 
 
 def compute_ac_loss(pred_actions, true_actions, ac_space):
@@ -64,14 +67,14 @@ def compute_ac_loss(pred_actions, true_actions, ac_space):
     return loss
 
 
-
 # Adapted from https://github.com/Khrylx/PyTorch-RL/blob/f44b4444c9db5c1562c5d0bc04080c319ba9141a/utils/torch.py#L26
 def set_flat_params_to(params, flat_params):
     prev_ind = 0
     for param in params:
         flat_size = int(np.prod(list(param.size())))
         param.data.copy_(
-            flat_params[prev_ind:prev_ind + flat_size].view(param.size()))
+            flat_params[prev_ind : prev_ind + flat_size].view(param.size())
+        )
         prev_ind += flat_size
 
 
@@ -80,27 +83,32 @@ def get_flat_params_from(params):
     return torch.cat([param.view(-1) for param in params])
 
 
-def wass_grad_pen(expert_state, expert_action, policy_state, policy_action,
-        use_actions, disc_fn):
+def wass_grad_pen(
+    expert_state, expert_action, policy_state, policy_action, use_actions, disc_fn
+):
     num_dims = len(expert_state.shape) - 1
     alpha = torch.rand(expert_state.size(0), 1)
-    alpha_state = alpha.view(-1, *[1 for _ in range(num_dims)]
-                             ).expand_as(expert_state).to(expert_state.device)
-    mixup_data_state = alpha_state * expert_state + \
-        (1 - alpha_state) * policy_state
+    alpha_state = (
+        alpha.view(-1, *[1 for _ in range(num_dims)])
+        .expand_as(expert_state)
+        .to(expert_state.device)
+    )
+    mixup_data_state = alpha_state * expert_state + (1 - alpha_state) * policy_state
     mixup_data_state.requires_grad = True
+    inputs = [mixup_data_state]
 
-    alpha_action = alpha.expand_as(expert_action).to(expert_action.device)
-    mixup_data_action = alpha_action * expert_action + \
-        (1 - alpha_action) * policy_action
-    mixup_data_action.requires_grad = True
+    if use_actions:
+        alpha_action = alpha.expand_as(expert_action).to(expert_action.device)
+        mixup_data_action = (
+            alpha_action * expert_action + (1 - alpha_action) * policy_action
+        )
+        mixup_data_action.requires_grad = True
+        inputs.append(mixup_data_action)
+    else:
+        mixup_data_action = []
 
     disc = disc_fn(mixup_data_state, mixup_data_action)
     ones = torch.ones(disc.size()).to(disc.device)
-
-    inputs = [mixup_data_state]
-    if use_actions:
-        inputs.append(mixup_data_action)
 
     grad = autograd.grad(
         outputs=disc,
@@ -108,66 +116,8 @@ def wass_grad_pen(expert_state, expert_action, policy_state, policy_action,
         grad_outputs=ones,
         create_graph=True,
         retain_graph=True,
-        only_inputs=True)[0]
+        only_inputs=True,
+    )[0]
 
     grad_pen = (grad.norm(2, dim=1) - 1).pow(2).mean()
     return grad_pen
-
-class StackHelper:
-    """
-    A helper for stacking observations.
-    """
-
-    def __init__(self, ob_shape, n_stack, device, n_procs=None):
-        self.input_dim = ob_shape[0]
-        self.n_procs = n_procs
-        self.real_shape = (n_stack*self.input_dim, *ob_shape[1:])
-        if self.n_procs is not None:
-            self.stacked_obs = torch.zeros((n_procs, *self.real_shape))
-            if device is not None:
-                self.stacked_obs = self.stacked_obs.to(device)
-        else:
-            self.stacked_obs = np.zeros(self.real_shape)
-
-    def update_obs(self, obs, dones=None, infos=None):
-        """
-        - obs: torch.tensor
-        """
-        if self.n_procs is not None:
-            self.stacked_obs[:, :-self.input_dim] = self.stacked_obs[:, self.input_dim:].clone()
-            for (i, new) in enumerate(dones):
-                if new:
-                    self.stacked_obs[i] = 0
-            self.stacked_obs[:, -self.input_dim:] = obs
-
-            # Update info so the final observation frame stack has the final
-            # observation as the final frame in the stack.
-            for i in range(len(infos)):
-                if 'final_obs' in infos[i]:
-                    new_final = torch.zeros(*self.stacked_obs.shape[1:])
-                    new_final[:-1] = self.stacked_obs[i][1:]
-                    new_final[-1] = torch.tensor(infos[i]['final_obs']).to(self.stacked_obs.device)
-                    infos[i]['final_obs'] = new_final
-            return self.stacked_obs.clone(), infos
-        else:
-            self.stacked_obs[:-self.input_dim] = self.stacked_obs[self.input_dim:].copy()
-            self.stacked_obs[-self.input_dim:] = obs
-
-            return self.stacked_obs.copy(), infos
-
-    def reset(self, obs):
-        if self.n_procs is not None:
-            if torch.backends.cudnn.deterministic:
-                self.stacked_obs = torch.zeros(self.stacked_obs.shape)
-            else:
-                self.stacked_obs.zero_()
-            self.stacked_obs[:, -self.input_dim:] = obs
-            return self.stacked_obs.clone()
-        else:
-            self.stacked_obs = np.zeros(self.stacked_obs.shape)
-            self.stacked_obs[-self.input_dim:] = obs
-            return self.stacked_obs.copy()
-
-    def get_shape(self):
-        return self.real_shape
-

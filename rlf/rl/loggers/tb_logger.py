@@ -36,7 +36,7 @@ class TbLogger(BaseLogger):
 
         return writer
 
-    def log_vals(self, key_vals, step_count):
+    def _internal_log_vals(self, key_vals, step_count):
         for k, v in key_vals.items():
             self.writer.add_scalar('data/' + k, v, step_count)
 

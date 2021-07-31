@@ -1,6 +1,6 @@
 {
   "conda_env": "rlf",
-  "cmds_loc": "tests/test_cmds/",
+  "cmds_loc": "examples/test_cmds/",
   "wb_entity": "aszot",
   "proj_name": "andrew-random",
 }

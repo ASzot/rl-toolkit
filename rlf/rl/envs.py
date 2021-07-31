@@ -13,7 +13,6 @@ from rlf.baselines.vec_env.shmem_vec_env import ShmemVecEnv
 from rlf.baselines.vec_env.vec_normalize import \
     VecNormalize as VecNormalize_
 import rlf.rl.utils as rutils
-import rlf.algos.utils as autils
 from functools import partial
 
 
@@ -28,7 +27,7 @@ def get_vec_normalize(venv):
 def make_env(rank, env_id, seed, allow_early_resets, env_interface,
         set_eval, alg_env_settings, args, immediate_call=False):
     """
-    - immediate_call: Whether to return the created environment or to return
+    :param immediate_call: Whether to return the created environment or to return
       the lambda that creates the environment.
     """
     def _thunk():
@@ -107,7 +106,7 @@ def make_vec_envs(env_name,
             for i in range(num_processes)
             ]
 
-    if len(envs) > 1:
+    if len(envs) > 1 or args.force_multi_proc:
         custom_envs = env_interface.get_setup_multiproc_fn(make_env, env_name,
                 seed, allow_early_resets, env_interface, set_eval,
                 alg_env_settings, args)
@@ -386,7 +385,7 @@ class VecPyTorchFrameStack(VecEnvWrapper):
 
         ob_space = rutils.get_obs_space(venv.observation_space)
 
-        self.stacked_obs = autils.StackHelper(ob_space.shape, nstack, device, venv.num_envs)
+        self.stacked_obs = rutils.StackHelper(ob_space.shape, nstack, device, venv.num_envs)
         new_obs_space = rutils.update_obs_space(
                 venv.observation_space,
                 rutils.reshape_obs_space(ob_space, self.stacked_obs.get_shape()))
