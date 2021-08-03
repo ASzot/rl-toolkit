@@ -108,11 +108,16 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
             lines.append((all_lines[i*2+1],all_lines[i*2]))
 
     for name, sub_df in avg_y_df.groupby(level=0):
-        print(f"{name}: n_seeds: {len(method_runs[name])} (from WB run IDs {list(method_runs[name])})")
         names.append(name)
         #sub_df = smooth_data(sub_df, smooth_factor, y_name, [group_key, avg_key])
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
+
+        if x_disp_bounds is not None:
+            use_y_vals = sub_df[sub_df.index.get_level_values(x_name) < x_disp_bounds[1]][y_name].to_numpy()
+        else:
+            use_y_vals = y_vals
+        print(f"{name}: n_seeds: {len(method_runs[name])} (from WB run IDs {list(method_runs[name])})", max(use_y_vals), use_y_vals[-1])
         y_std = sub_df['std'].fillna(0).to_numpy()
         if isinstance(smooth_factor, dict):
             use_smooth_factor = (smooth_factor[name]
