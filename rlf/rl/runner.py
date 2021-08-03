@@ -1,5 +1,5 @@
 import contextlib
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 import torch
@@ -9,7 +9,6 @@ from rlf.policies.base_policy import get_step_info
 from rlf.rl import utils
 from rlf.rl.envs import get_vec_normalize, make_vec_envs
 from rlf.rl.evaluation import full_eval, train_eval
-from typing import Dict, Any
 
 
 class Runner:
@@ -128,7 +127,11 @@ class Runner:
                 self.log.backup(self.args, update_iter + 1)
 
     def eval(self, update_iter):
-        if (self.episode_count > 0) or (self.args.num_steps <= 1):
+        if (
+            (self.episode_count > 0)
+            or (self.args.num_steps <= 1)
+            or self.should_start_with_eval
+        ):
             total_num_steps = self.updater.get_completed_update_steps(update_iter + 1)
             self.train_eval_envs = self._eval_policy(
                 self.policy, total_num_steps, self.args

@@ -94,6 +94,9 @@ def add_args(parser):
         help='number of forward steps in A2C/PPO (old default: 128)')
 
     parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
+    parser.add_argument('--detect-nan', type=str2bool, default=False, help="""
+            If true, will use `torch.autograd.set_detect_anomaly`.
+            """)
 
 
     #############################

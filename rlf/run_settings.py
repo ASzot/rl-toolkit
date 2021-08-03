@@ -182,6 +182,8 @@ class RunSettings(MasterClass):
 
         args.device = torch.device("cuda:0" if args.cuda else "cpu")
         init_seeds(args)
+        if args.detect_nan:
+            torch.autograd.set_detect_anomaly(True)
         return args, log
 
     def create_runner(self, add_args={}, ray_create=False) -> rlf.Runner:
