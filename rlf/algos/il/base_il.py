@@ -70,9 +70,10 @@ class BaseILAlgo(BaseNetAlgo):
                 [N - n_val, n_val],
                 torch.Generator().manual_seed(self.args.seed),
             )
+            val_traj_batch_size = min(len(val_dataset), self.args.traj_batch_size)
             self.val_train_loader = torch.utils.data.DataLoader(
                 dataset=val_dataset,
-                batch_size=args.traj_batch_size,
+                batch_size=val_traj_batch_size,
                 shuffle=True,
                 drop_last=True,
             )
