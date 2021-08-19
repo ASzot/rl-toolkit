@@ -15,6 +15,7 @@ from rlf.args import str2bool
 from rlf.baselines.common.running_mean_std import RunningMeanStd
 from rlf.exp_mgr.viz_utils import append_text_to_image
 from rlf.rl.model import ConcatLayer, InjectNet
+from torch.nn.utils import spectral_norm
 
 
 def get_default_discrim():
@@ -68,6 +69,24 @@ class GailDiscrim(BaseIRLAlgo):
         self.action_space = self.policy.action_space
 
         self.discrim_net: nn.Module = self._create_discrim()
+
+        if self.args.use_spectral_norm:
+            for name, module in self.discrim_net.named_modules():
+                # Only applies the spectral transformation to the high-level
+                # modules and goes into the sequential modules and applies to
+                # each element.
+                if name == '' or '.' in name:
+                    continue
+                if isinstance(module, nn.Sequential):
+                    new_layers = []
+                    for i in range(len(module)):
+                        layer = module[i]
+                        if isinstance(layer, nn.Linear):
+                            layer = spectral_norm(layer)
+                        new_layers.append(layer)
+                    setattr(self.discrim_net, name, nn.Sequential(*new_layers))
+                elif isinstance(module, nn.Linear):
+                    setattr(self.discrim_net, name, spectral_norm(layer))
 
         self.returns = None
         self.ret_rms = RunningMeanStd(shape=())
@@ -266,6 +285,7 @@ class GailDiscrim(BaseIRLAlgo):
         #########################################
         # New args
         parser.add_argument("--action-input", type=str2bool, default=False)
+        parser.add_argument("--use-spectral-norm", type=str2bool, default=False)
         parser.add_argument("--gail-reward-norm", type=str2bool, default=False)
         parser.add_argument("--gail-state-norm", type=str2bool, default=True)
         parser.add_argument("--disc-lr", type=float, default=0.0001)
