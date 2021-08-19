@@ -88,9 +88,11 @@ class TransitionDataset(ImitationLearningDataset):
             "actions": self.trajs["actions"][i],
         }
 
-    def compute_split(self, traj_frac):
+    def compute_split(self, traj_frac, rnd_seed):
         use_count = int(len(self) * traj_frac)
         all_idxs = np.arange(0, len(self))
-        np.random.shuffle(all_idxs)
+
+        rng = np.random.default_rng(rnd_seed)
+        rng.shuffle(all_idxs)
         idxs = all_idxs[:use_count]
         return torch.utils.data.Subset(self, idxs)

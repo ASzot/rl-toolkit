@@ -57,7 +57,9 @@ class BaseILAlgo(BaseNetAlgo):
         # dataset.
         self.expert_dataset = self.orig_dataset
         if args.traj_frac != 1.0:
-            self.expert_dataset = self.expert_dataset.compute_split(args.traj_frac)
+            self.expert_dataset = self.expert_dataset.compute_split(
+                args.traj_frac, args.seed
+            )
         if args.traj_viz:
             self.expert_dataset.viz(args)
 
@@ -70,9 +72,10 @@ class BaseILAlgo(BaseNetAlgo):
                 [N - n_val, n_val],
                 torch.Generator().manual_seed(self.args.seed),
             )
+            val_traj_batch_size = min(len(val_dataset), self.args.traj_batch_size)
             self.val_train_loader = torch.utils.data.DataLoader(
                 dataset=val_dataset,
-                batch_size=args.traj_batch_size,
+                batch_size=val_traj_batch_size,
                 shuffle=True,
                 drop_last=True,
             )

@@ -1,8 +1,76 @@
+"""
+Includes clipping utilies, wrapping utilies, common RL algorithm components.
+"""
+
+from typing import Dict, List, Tuple
+
 import gym.spaces as spaces
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import autograd
+
+
+def clip(
+    ac: torch.Tensor, lower_lim: torch.Tensor, upper_lim: torch.Tensor
+) -> torch.Tensor:
+    """
+    Per-dimension clip
+    """
+    if isinstance(ac, torch.Tensor):
+        return torch.max(torch.min(ac, upper_lim), lower_lim)
+    else:
+        return np.maximum(np.minimum(ac, upper_lim), lower_lim)
+
+
+def get_joint_limits(
+    limits_per_joint: List[Dict[str, float]],
+    lower_lim: float,
+    upper_lim: float,
+    device=None,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    inf_joints = torch.tensor(
+        [joint["lower"] == 0.0 for joint in limits_per_joint[:7]],
+        device=device,
+    )
+    joint_limits_min = torch.tensor(
+        [
+            joint["lower"] if joint["lower"] != 0.0 else lower_lim
+            for joint in limits_per_joint[:7]
+        ],
+        device=device,
+    )
+    joint_limits_max = torch.tensor(
+        [
+            joint["upper"] if joint["upper"] != 0.0 else upper_lim
+            for joint in limits_per_joint[:7]
+        ],
+        device=device,
+    )
+    return joint_limits_min, joint_limits_max, inf_joints
+
+
+def wrap_joints(
+    js: torch.Tensor, lower_lim: float, upper_lim: float, wrap_mask
+) -> torch.Tensor:
+    res = js.clone()
+    lower = torch.tensor(lower_lim)
+    upper = torch.tensor(upper_lim)
+
+    mask = (js > upper) | (js == lower)
+    res *= ~mask
+    res += mask * (
+        lower + torch.abs(js + upper) % (torch.abs(lower) + torch.abs(upper))
+    )
+
+    mask = (js < lower) | (js == upper)
+    res *= ~mask
+    res += mask * (
+        upper - torch.abs(js - lower) % (torch.abs(lower) + torch.abs(upper))
+    )
+
+    res = (lower * (res == upper)) + ((res != upper) * js)
+    return ((~wrap_mask) * js) + (wrap_mask * res)
 
 
 def linear_lr_schedule(cur_update, total_updates, initial_lr, opt):

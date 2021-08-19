@@ -56,7 +56,7 @@ class ImitationLearningDataset(torch.utils.data.Dataset, ABC):
         pass
 
     @abstractmethod
-    def compute_split(self, traj_frac):
+    def compute_split(self, traj_frac, rnd_seed):
         pass
 
     def clip_actions(self, low_val, high_val):
