@@ -317,12 +317,6 @@ def set_def_obs(obs, new_obs, k="observation"):
     return obs
 
 
-def obs_select(obs, idx):
-    if isinstance(obs, dict):
-        return {k: obs[k][idx] for k in obs}
-    return obs[idx]
-
-
 def deep_get_other_obs(obs):
     return [get_other_obs(o) for o in obs]
 

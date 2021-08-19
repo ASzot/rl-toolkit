@@ -3,7 +3,8 @@ Utilities for manipulating images, rendering images, and rendering videos.
 """
 import os
 import os.path as osp
-from typing import List
+from argparse import Namespace
+from typing import List, Optional, Union
 
 import cv2
 import matplotlib.pyplot as plt
@@ -104,26 +105,48 @@ def save_mp4(frames, vid_dir, name, fps=60.0, no_frame_drop=False, should_print=
 def plot_traj_data(
     pred: np.ndarray,
     real: np.ndarray,
-    save_path: str,
-    full_save_name: str,
-    y_axis_name: str,
+    save_name: str,
+    log_name: str,
+    save_path_info: Union[Namespace, str],
     step: int,
-    no_wb: bool,
+    y_axis_name: str = "State %i",
+    no_wb: Optional[bool] = None,
     title: str = "",
 ):
     """
     Plots each state dimension of a trajectory comparing a predicted and real trajectory.
     :param pred: Shape [H, D] for a trajectory of length H and state dimension D.
-    D plots will be created.
+        D plots will be created.
     :param real: Shape [H, D].
+    :param save_name: Appended to log_name. This should likely be unique so
+        files on the disk are not overriden. Include file extension.
+    :param log_name: Has %i in the name to dynamically insert the state dimension.
+        Should NOT be unique so the log key is updated.
+    :param save_path_info: The save path will either be extracted from the args or the
+        path passed as a string.
+    :param y_axis_name: string with %i to dynamically insert state dimension.
     """
+
+    save_name = log_name + "_" + save_name
+    if isinstance(save_path_info, str):
+        save_path = osp.join(save_path_info, save_name)
+    else:
+        save_path = osp.join(rutils.get_save_dir(save_path_info), save_name)
+
+    if no_wb is None:
+        if not isinstance(save_path_info, Namespace) and "no_wb" not in vars(
+            save_path_info
+        ):
+            raise ValueError(
+                f"Could not find property `no_wb` in the passed `save_path_info`"
+            )
+        no_wb = save_path_info.no_wb
 
     per_state_mse = np.mean((pred - real) ** 2, axis=0)
     per_state_sqrt_mse = np.sqrt(per_state_mse)
 
     H, state_dim = real.shape
     for state_i in range(state_dim):
-        use_full_save_name = full_save_name % state_i
         use_save_path = save_path % state_i
         plt.plot(np.arange(H), real[:, state_i], label="Real")
         plt.plot(np.arange(H), pred[:, state_i], label="Pred")
@@ -147,7 +170,8 @@ def plot_traj_data(
 
         rutils.plt_save(use_save_path)
         if not no_wb:
+            use_full_log_name = log_name % state_i
             wandb.log(
-                {use_full_save_name: [wandb.Image(use_save_path)]},
+                {use_full_log_name: [wandb.Image(use_save_path)]},
                 step=step,
             )

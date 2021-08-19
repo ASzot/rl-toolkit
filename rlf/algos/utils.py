@@ -2,7 +2,7 @@
 Includes clipping utilies, wrapping utilies, common RL algorithm components.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 import numpy as np
@@ -28,22 +28,29 @@ def get_joint_limits(
     lower_lim: float,
     upper_lim: float,
     device=None,
+    take_count: Optional[int] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    if take_count is not None:
+        use_limits_per_joint = limits_per_joint[:take_count]
+    else:
+        use_limits_per_joint = limits_per_joint
+
     inf_joints = torch.tensor(
-        [joint["lower"] == 0.0 for joint in limits_per_joint[:7]],
+        [joint["lower"] == 0.0 for joint in use_limits_per_joint],
         device=device,
     )
+
     joint_limits_min = torch.tensor(
         [
             joint["lower"] if joint["lower"] != 0.0 else lower_lim
-            for joint in limits_per_joint[:7]
+            for joint in use_limits_per_joint
         ],
         device=device,
     )
     joint_limits_max = torch.tensor(
         [
             joint["upper"] if joint["upper"] != 0.0 else upper_lim
-            for joint in limits_per_joint[:7]
+            for joint in use_limits_per_joint
         ],
         device=device,
     )
