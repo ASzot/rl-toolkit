@@ -34,10 +34,12 @@ class TrajDataset(ImitationLearningDataset):
     def get_num_trajs(self):
         return self.n_trajs
 
-    def compute_split(self, traj_frac):
+    def compute_split(self, traj_frac, rnd_seed):
         traj_count = int(len(self.trajs) * traj_frac)
         all_idxs = np.arange(0, len(self.trajs))
-        np.random.shuffle(all_idxs)
+
+        rng = np.random.default_rng(rnd_seed)
+        rng.shuffle(all_idxs)
         idxs = all_idxs[:traj_count]
         self.holdout_idxs = all_idxs[traj_count:]
         self.n_trajs = traj_count

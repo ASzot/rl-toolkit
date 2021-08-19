@@ -57,7 +57,9 @@ class BaseILAlgo(BaseNetAlgo):
         # dataset.
         self.expert_dataset = self.orig_dataset
         if args.traj_frac != 1.0:
-            self.expert_dataset = self.expert_dataset.compute_split(args.traj_frac)
+            self.expert_dataset = self.expert_dataset.compute_split(
+                args.traj_frac, args.seed
+            )
         if args.traj_viz:
             self.expert_dataset.viz(args)
 
