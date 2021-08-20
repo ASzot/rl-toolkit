@@ -57,9 +57,17 @@ class BaseILAlgo(BaseNetAlgo):
         # dataset.
         self.expert_dataset = self.orig_dataset
         if args.traj_frac != 1.0:
+            if (args.traj_frac * len(self.expert_dataset)) < 1:
+                raise ValueError(
+                    (
+                        f"Cannot use {args.traj_frac} of demonstration dataset"
+                        "of size {len(self.expert_dataset)}. Please adjust `args.traj_frac`"
+                    )
+                )
             self.expert_dataset = self.expert_dataset.compute_split(
                 args.traj_frac, args.seed
             )
+
         if args.traj_viz:
             self.expert_dataset.viz(args)
 
