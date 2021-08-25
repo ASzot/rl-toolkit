@@ -50,7 +50,7 @@ class BaseILAlgo(BaseNetAlgo):
     @property
     @functools.lru_cache()
     def expert_stats(self):
-        return self.orig_dataset.get_expert_stats(self.args.device)
+        return self.expert_dataset.get_expert_stats(self.args.device)
 
     def _create_train_loader(self, args):
         # Always keep track of the non-shuffled, non-split version of the

@@ -236,6 +236,8 @@ class RunSettings(MasterClass):
         algo.init(policy, args)
         algo.set_env_ref(envs)
 
+        policy.set_algo_ref(algo)
+
         # Setup storage buffer
         storage = algo.get_storage_buffer(policy, envs, args)
         for ik, get_shape in alg_env_settings.include_info_keys:

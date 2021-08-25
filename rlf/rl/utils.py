@@ -136,7 +136,7 @@ def pstart_sep():
 
 
 def pend_sep():
-    print("-" * 10)
+    print("-" * 30)
     print("")
 
 

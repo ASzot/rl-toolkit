@@ -70,10 +70,16 @@ class BasePolicy:
     """
     Foundation for all RL policies to derive from. Defines basic behavior which
     could be needed. Agents do not need to necessarily implement all method.
+    Lifecycle:
+        1. __init__(...)
+        2. init(...)
+        3. watch(...)
+        4. set_env_ref(...)
+        5. set_algo_ref(...)
     """
 
     def __init__(self):
-        pass
+        self._algo = None
 
     def requires_inference_grads(self) -> bool:
         """If true, there is no `torch.no_grad()` during policy inference"""
@@ -83,6 +89,9 @@ class BasePolicy:
         self.action_space = action_space
         self.obs_space = obs_space
         self.args = args
+
+    def set_algo_ref(self, algo):
+        self._algo = algo
 
     def get_storage_hidden_states(self):
         return {}

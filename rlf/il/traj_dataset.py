@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import numpy as np
 import rlf.rl.utils as rutils
 import torch
@@ -62,18 +64,37 @@ class TrajDataset(ImitationLearningDataset):
 
     def get_expert_stats(self, device):
         # Compute statistics across the trajectories.
-        all_obs = torch.cat([t[0] for t in self.trajs])
-        all_actions = torch.cat([t[1] for t in self.trajs])
 
-        self.state_mean = torch.mean(all_obs, dim=0)
-        self.state_std = torch.std(all_obs, dim=0)
+        all_actions = torch.cat([t[1] for t in self.data])
         self.action_mean = torch.mean(all_actions, dim=0)
         self.action_std = torch.std(all_actions, dim=0)
 
-        return {
-            "state": (self.state_mean.to(device), self.state_std.to(device)),
-            "action": (self.action_mean.to(device), self.action_std.to(device)),
-        }
+        is_tensor_dict = not isinstance(self.data[0][0], torch.Tensor)
+        if is_tensor_dict:
+            all_obs = defaultdict(list)
+            self.state_mean = {}
+            self.state_std = {}
+            for t in self.data:
+                for k, v in t[0].items():
+                    all_obs[k].append(v)
+            for k in all_obs:
+                all_obs[k] = torch.cat(all_obs[k], dim=0)
+                self.state_mean[k] = torch.mean(all_obs[k], dim=0).to(device)
+                self.state_std[k] = torch.std(all_obs[k], dim=0).to(device)
+            return {
+                "state": (self.state_mean, self.state_std),
+                "action": (self.action_mean.to(device), self.action_std.to(device)),
+            }
+
+        else:
+            all_obs = torch.cat([t[0] for t in self.data])
+            self.state_mean = torch.mean(all_obs, dim=0)
+            self.state_std = torch.std(all_obs, dim=0)
+
+            return {
+                "state": (self.state_mean.to(device), self.state_std.to(device)),
+                "action": (self.action_mean.to(device), self.action_std.to(device)),
+            }
 
     def __getitem__(self, i):
         return self.data[i]
