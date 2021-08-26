@@ -42,11 +42,11 @@ class TrajDataset(ImitationLearningDataset):
 
         rng = np.random.default_rng(rnd_seed)
         rng.shuffle(all_idxs)
-        idxs = all_idxs[:traj_count]
+        self.keep_idxs = all_idxs[:traj_count]
         self.holdout_idxs = all_idxs[traj_count:]
         self.n_trajs = traj_count
 
-        self.data = self._gen_data([self.trajs[i] for i in idxs])
+        self.data = self._gen_data([self.trajs[i] for i in self.keep_idxs])
         return self
 
     def _setup(self, trajs):

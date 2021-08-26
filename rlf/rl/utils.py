@@ -126,8 +126,8 @@ def human_format_int(num, round_pos=2):
 
 def print_weights(m):
     for name, param in m.named_parameters():
-        print(name)
-        print(param)
+        print("     ", name, ":")
+        print("     ", param)
 
 
 def pstart_sep():
