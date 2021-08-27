@@ -1,5 +1,7 @@
 from functools import partial
+from typing import Callable, List, Optional, Tuple
 
+import gym
 import numpy as np
 import rlf.policies.utils as putils
 import torch
@@ -17,24 +19,24 @@ NOISE_GENS = {
 
 class RegActorCritic(ActorCritic):
     """
-    Defines an actor and critic type policy
+    Defines a deterministic actor and critic policy.
     """
 
     def __init__(
         self,
-        get_actor_fn=None,
-        get_actor_head_fn=None,
-        get_critic_fn=None,
-        get_critic_head_fn=None,
-        use_goal=False,
-        fuse_states=[],
-        get_base_net_fn=None,
+        get_actor_fn: Optional[
+            Callable[[Tuple[int], Tuple[int], int], nn.Module]
+        ] = None,
+        get_actor_head_fn: Optional[Callable[[int, int], nn.Module]] = None,
+        get_critic_fn: Optional[
+            Callable[[List[int], List[int], gym.Space, int], nn.Module]
+        ] = None,
+        get_critic_head_fn: Optional[Callable[[int], nn.Module]] = None,
+        use_goal: bool = False,
+        fuse_states: List[str] = [],
+        get_base_net_fn: Optional[Callable[[Tuple[int], bool], nn.Module]] = None,
     ):
         """
-        - get_actor_fn:
-          type: (obs_shape: tuple(int), input_shape: tuple(int) -> rlf.rl.model.BaseNet)
-          Returned network should output (N,hidden_size) where hidden_size is
-          arbitrary
         The actor output is scaled by the size of the action space.
         """
 
@@ -58,7 +60,9 @@ class RegActorCritic(ActorCritic):
         # Can't work with discrete actions!
         assert self.action_space.__class__.__name__ == "Box"
 
-        self.actor_net = self.get_actor_fn(obs_space.shape, self.base_net.output_shape)
+        self.actor_net = self.get_actor_fn(
+            obs_space.shape, self.base_net.output_shape, self.args.policy_hidden_dim
+        )
         self.actor_head = self.get_actor_head_fn(
             self.actor_net.output_shape[0], self.action_space.shape[0]
         )

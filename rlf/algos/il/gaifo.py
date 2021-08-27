@@ -69,6 +69,10 @@ class DoubleStateDiscrim(nn.Module):
 
 
 class GaifoDiscrim(GailDiscrim):
+    """
+    Computes the discriminator based off of state, next state transitions.
+    """
+
     def __init__(self, get_discrim=None):
         super().__init__(get_discrim)
         self._agent_obs_pairs: Dict[str, torch.Tensor] = {}

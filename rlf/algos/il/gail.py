@@ -18,22 +18,18 @@ from rlf.rl.model import ConcatLayer, InjectNet
 from torch.nn.utils import spectral_norm
 
 
-def get_default_discrim():
+def get_default_discrim(hidden_dim: int) -> nn.Module:
     """
-    - ac_dim: int will be 0 if no action are used.
-    Returns: (nn.Module) Should take state AND actions as input if ac_dim
-    != 0. If ac_dim = 0 (discriminator does not use actions) then ONLY take
-    state as input.
+    Takes as input the hidden dimension passed via the discriminator command line argument.
+    Returns the discriminator network HEAD. The base layer to encode the input is separately created.
     """
-    hidden_dim = 64
     layers = [
-        # nn.Linear(in_shape[0] + ac_dim, hidden_dim), nn.Tanh(),
         nn.Linear(hidden_dim, hidden_dim),
         nn.Tanh(),
         nn.Linear(hidden_dim, 1),
     ]
 
-    return nn.Sequential(*layers), hidden_dim
+    return nn.Sequential(*layers)
 
 
 class GAIL(NestedAlgo):
@@ -52,12 +48,12 @@ class GailDiscrim(BaseIRLAlgo):
         ob_shape = rutils.get_obs_shape(self.policy.obs_space)
         ac_dim = rutils.get_ac_dim(self.action_space)
         base_net = self.policy.get_base_net_fn(ob_shape)
-        discrim, dhidden_dim = self.get_discrim()
+        discrim = self.get_discrim(self.args.gail_disc_hidden_dim)
         discrim_head = InjectNet(
             base_net.net,
             discrim,
             base_net.output_shape[0],
-            dhidden_dim,
+            self.args.gail_disc_hidden_dim,
             ac_dim,
             self.args.action_input,
         )
@@ -75,7 +71,7 @@ class GailDiscrim(BaseIRLAlgo):
                 # Only applies the spectral transformation to the high-level
                 # modules and goes into the sequential modules and applies to
                 # each element.
-                if name == '' or '.' in name:
+                if name == "" or "." in name:
                     continue
                 if isinstance(module, nn.Sequential):
                     new_layers = []
@@ -288,6 +284,14 @@ class GailDiscrim(BaseIRLAlgo):
         parser.add_argument("--use-spectral-norm", type=str2bool, default=False)
         parser.add_argument("--gail-reward-norm", type=str2bool, default=False)
         parser.add_argument("--gail-state-norm", type=str2bool, default=True)
+        parser.add_argument(
+            "--gail-disc-hidden-dim",
+            type=int,
+            default=64,
+            help="""
+                The hidden dimension passed to the discriminator neural network creation function.
+                """,
+        )
         parser.add_argument("--disc-lr", type=float, default=0.0001)
         parser.add_argument("--disc-grad-pen", type=float, default=0.0)
         parser.add_argument("--n-gail-epochs", type=int, default=1)

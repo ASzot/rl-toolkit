@@ -58,13 +58,13 @@ def get_img_encoder(obs_shape, recurrent, hidden_size=64):
         return PassThroughBase(obs_shape, recurrent, hidden_size)
 
 
-def get_def_critic(obs_shape, input_shape, action_space):
+def get_def_critic(obs_shape, input_shape, action_space, hidden_dim):
     assert len(input_shape) == 1
 
     if is_image_obs(obs_shape):
         return IdentityBase(input_shape)
     else:
-        return def_get_hidden_net(input_shape)
+        return def_get_hidden_net(input_shape, hidden_dim)
 
 def get_def_ac_critic(obs_shape, input_shape, action_space, hidden_size=(64, 64)):
     assert len(input_shape) == 1
@@ -72,11 +72,11 @@ def get_def_ac_critic(obs_shape, input_shape, action_space, hidden_size=(64, 64)
     return TwoLayerMlpWithAction(input_shape[0], hidden_size, ac_dim)
 
 
-def get_def_actor(obs_shape, input_shape):
+def get_def_actor(obs_shape, input_shape, hidden_size):
     if is_image_obs(obs_shape):
         return IdentityBase(input_shape)
     else:
-        return def_get_hidden_net(input_shape)
+        return def_get_hidden_net(input_shape, hidden_size)
 
 
 def get_def_dist(input_shape, action_space):

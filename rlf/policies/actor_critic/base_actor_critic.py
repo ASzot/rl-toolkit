@@ -1,9 +1,11 @@
-from rlf.policies.base_net_policy import BaseNetPolicy
-import torch.nn as nn
+from typing import Callable, List, Optional, Tuple
+
+import gym
 import rlf.policies.utils as putils
 import rlf.rl.utils as rutils
-from rlf.rl.model import def_mlp_weight_init
-from rlf.rl.model import weight_init
+import torch.nn as nn
+from rlf.policies.base_net_policy import BaseNetPolicy
+from rlf.rl.model import def_mlp_weight_init, weight_init
 
 
 class ActorCritic(BaseNetPolicy):
@@ -11,19 +13,21 @@ class ActorCritic(BaseNetPolicy):
     Defines an actor and critic type policy
     """
 
-    def __init__(self,
-                 get_critic_fn=None,
-                 get_critic_head_fn=None,
-                 use_goal=False,
-                 fuse_states=[],
-                 get_base_net_fn=None):
+    def __init__(
+        self,
+        get_critic_fn: Optional[
+            Callable[[List[int], List[int], gym.Space, int], nn.Module]
+        ] = None,
+        get_critic_head_fn: Optional[Callable[[int], nn.Module]] = None,
+        use_goal: bool = False,
+        fuse_states: List[str] = [],
+        get_base_net_fn: Optional[Callable[[Tuple[int], bool], nn.Module]] = None,
+    ):
         """
-        - get_critic_fn: (obs_shape: (int), input_shape: (int),
-          action_space: gym.spaces.space -> rlf.rl.model.BaseNet)
-        - get_critic_head_fn: (hidden_dim: (int) -> nn.Module) should return a
-          dimension 1, for the critic value.
+        :param get_critic_fn: Callback that takes as input the input
+            observation shape, the base encoder output shape, the action space, and
+            number of hidden dimensions.
         """
-
         super().__init__(use_goal, fuse_states, get_base_net_fn)
 
         if get_critic_fn is None:
@@ -39,8 +43,12 @@ class ActorCritic(BaseNetPolicy):
 
         obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
 
-        self.critic = self.get_critic_fn(obs_shape, self._get_base_out_shape(),
-                action_space)
+        self.critic = self.get_critic_fn(
+            obs_shape,
+            self._get_base_out_shape(),
+            action_space,
+            self.args.policy_hidden_dim,
+        )
         self.critic_head = self.get_critic_head_fn(self.critic.output_shape[0])
 
     def _get_value_from_features(self, base_features, hxs, masks):
@@ -57,10 +65,11 @@ class ActorCritic(BaseNetPolicy):
         return self._get_value_from_features(base_features, hxs, masks)
 
     def get_critic_params(self):
-        return list(self.base_net.parameters()) + \
-                list(self.critic.parameters()) + \
-                list(self.critic_head.parameters())
+        return (
+            list(self.base_net.parameters())
+            + list(self.critic.parameters())
+            + list(self.critic_head.parameters())
+        )
 
     def get_actor_params(self):
-        return list(self.base_net.parameters()) + \
-                list(self.actor_net.parameters())
+        return list(self.base_net.parameters()) + list(self.actor_net.parameters())

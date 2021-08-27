@@ -1,11 +1,13 @@
-import torch.nn as nn
+import inspect
+from functools import partial
+from typing import Callable, List, Optional, Tuple
+
 import numpy as np
-import torch
 import rlf.policies.utils as putils
 import rlf.rl.utils as rutils
+import torch
+import torch.nn as nn
 from rlf.policies.base_policy import BasePolicy
-from functools import partial
-import inspect
 
 
 class BaseNetPolicy(nn.Module, BasePolicy):
@@ -15,17 +17,20 @@ class BaseNetPolicy(nn.Module, BasePolicy):
     outputs a hidden representation.
     """
 
-    def __init__(self,
-            use_goal=False,
-            fuse_states=[],
-            get_base_net_fn=None):
+    def __init__(
+        self,
+        use_goal: bool = False,
+        fuse_states: List[str] = [],
+        get_base_net_fn: Optional[Callable[[Tuple[int], bool], nn.Module]] = None,
+    ):
         """
-        - get_base_fn: (ishape: tuple(int), recurrent: bool -> rlf.rl.model.BaseNet)
-            returned module should take as input size of observation space and
-            return the size `hidden_size`. NOTE if recurrent parameter is
-            optional, if it is not specified, it will not be passed. The naming
-            of the parameter has to be EXACTLY `recurrent`.
-          default: none, use the default
+        For all the network callbacks, if None is provided, a default is used.
+        :param use_goal: If true, the goal observation in the goal observation
+            dictionary will be concatenated to the observation.
+        :fuse_states: The keys of the 1D state observations to fuse with the encoded state.
+        :param get_base_net_fn: Callback to get the network that encodes
+            observations. Arguments are the input shape, and whether to use a
+            recurrent encoder.
         """
         super().__init__()
         if get_base_net_fn is None:
@@ -37,15 +42,17 @@ class BaseNetPolicy(nn.Module, BasePolicy):
 
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
-        if 'recurrent' in inspect.getfullargspec(self.get_base_net_fn).args:
-            self.get_base_net_fn = partial(self.get_base_net_fn,
-                    recurrent=self.args.recurrent_policy)
+        if "recurrent" in inspect.getfullargspec(self.get_base_net_fn).args:
+            self.get_base_net_fn = partial(
+                self.get_base_net_fn, recurrent=self.args.recurrent_policy
+            )
         if self.use_goal:
             use_obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
             if len(use_obs_shape) != 1:
-                raise ValueError(('Goal conditioning only ',
-                    'works with flat state representation'))
-            use_obs_shape = (use_obs_shape[0] + obs_space['desired_goal'].shape[0],)
+                raise ValueError(
+                    ("Goal conditioning only ", "works with flat state representation")
+                )
+            use_obs_shape = (use_obs_shape[0] + obs_space["desired_goal"].shape[0],)
         else:
             use_obs_shape = rutils.get_obs_shape(obs_space, args.policy_ob_key)
 
@@ -53,11 +60,11 @@ class BaseNetPolicy(nn.Module, BasePolicy):
         base_out_dim = self.base_net.output_shape[0]
         for k in self.fuse_states:
             if len(obs_space.spaces[k].shape) != 1:
-                raise ValueError('Can only fuse 1D states')
+                raise ValueError("Can only fuse 1D states")
             base_out_dim += obs_space.spaces[k].shape[0]
         self.base_out_shape = (base_out_dim,)
 
-    def _get_base_out_shape(self):
+    def _get_base_out_shape(self) -> Tuple[int]:
         return self.base_out_shape
 
     def _fuse_base_out(self, base_features, add_input):
@@ -69,30 +76,40 @@ class BaseNetPolicy(nn.Module, BasePolicy):
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
-        parser.add_argument('--recurrent-policy',
-            action='store_true',
+        parser.add_argument(
+            "--policy-hidden-dim",
+            default=64,
+            type=int,
+            help="""
+                Default hidden size used for all networks related to the policy. This includes value functions.
+                """,
+        )
+        parser.add_argument(
+            "--recurrent-policy",
+            action="store_true",
             default=False,
-            help='use a recurrent policy')
+            help="use a recurrent policy",
+        )
 
     def get_storage_hidden_states(self):
         hxs = super().get_storage_hidden_states()
         if self.args.recurrent_policy:
-            hxs['rnn_hxs'] = self.base_net.gru.hidden_size
+            hxs["rnn_hxs"] = self.base_net.gru.hidden_size
         return hxs
 
     def _apply_base_net(self, state, add_state, hxs, masks):
         if self.use_goal:
             # Combine the goal and the state
-            combined_state = torch.cat([state, add_state['desired_goal']], dim=-1)
+            combined_state = torch.cat([state, add_state["desired_goal"]], dim=-1)
             return self.base_net(combined_state, hxs, masks)
         else:
             return self.base_net(state, hxs, masks)
 
     def watch(self, logger):
         super().watch(logger)
-        #logger.watch_model(self)
-        print('Using policy network:')
+        # logger.watch_model(self)
+        print("Using policy network:")
         print(self)
 
     def save_to_checkpoint(self, checkpointer):
-        checkpointer.save_key('policy', self.state_dict())
+        checkpointer.save_key("policy", self.state_dict())

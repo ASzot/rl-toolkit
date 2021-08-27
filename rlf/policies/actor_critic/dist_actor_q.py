@@ -2,6 +2,8 @@
 Code is heavily based off of https://github.com/denisyarats/pytorch_sac.
 The license is at `rlf/algos/off_policy/denis_yarats_LICENSE.md`
 """
+from typing import Callable, List, Optional, Tuple
+
 import rlf.policies.utils as putils
 import rlf.rl.utils as rutils
 import torch
@@ -30,9 +32,9 @@ class DistActorQ(BaseNetPolicy):
         self,
         get_actor_fn=None,
         get_critic_fn=None,
-        use_goal=False,
-        fuse_states=[],
-        get_base_net_fn=None,
+        use_goal: bool = False,
+        fuse_states: List[str] = [],
+        get_base_net_fn: Optional[Callable[[Tuple[int], bool], nn.Module]] = None,
     ):
 
         super().__init__(use_goal, fuse_states, get_base_net_fn)
