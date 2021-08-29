@@ -82,14 +82,17 @@ class BehavioralCloning(BaseILAlgo):
 
                 pbar.update(self.num_epochs - prev_num)
                 prev_num = self.num_epochs
-
-        rutils.plot_line(
-            action_loss,
-            f"action_loss_{update_iter}.png",
-            self.args.vid_dir,
-            not self.args.no_wb,
-            self.get_completed_update_steps(self.update_i),
-        )
+        if (
+            self.args.bc_log_interval != -1
+            and update_iter % self.args.bc_log_interval == 0
+        ):
+            rutils.plot_line(
+                action_loss,
+                f"action_loss_{update_iter}.png",
+                self.args.vid_dir,
+                not self.args.no_wb,
+                self.get_completed_update_steps(self.update_i),
+            )
         self.num_epochs = 0
 
     def pre_update(self, cur_update):
@@ -200,5 +203,6 @@ class BehavioralCloning(BaseILAlgo):
         #########################################
         # New args
         parser.add_argument("--bc-num-epochs", type=int, default=1)
+        parser.add_argument("--bc-log-interval", type=int, default=1)
         parser.add_argument("--bc-state-norm", type=str2bool, default=False)
         parser.add_argument("--bc-noise", type=float, default=None)

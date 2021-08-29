@@ -97,6 +97,7 @@ config_yaml: "./config.yaml"
 save_loc: "./data/plot"
 fig_dims: [6,4]
 legend_font_size: 'medium'
+linestyles: [dict str -> str, the value is the matplotlib line style] 
 colors:
   "RGBD_s": 0
   "input_ablation_RGB_s": 1
@@ -117,32 +118,3 @@ colors:
   "RGBD eval": 5
 ```
 
-
-## Plotting Utilities
-This can help make good looking plots. 
-* Line plots use `uncert_plot` from `rlf/exp_mgr/plotter.py`. 
-=======
-There is also a utility for creating a separate PDF file containing just the
-legend. This is run as `python rl-toolkit/rlf/exp_mgr/auto_plot.py --plot-cfg
-my_plot_cfgs/my_legend.yaml` --legend. An example of a legend YAML file is
-below. The marker attributes refer to the characteristics of the line next to
-the name. 
-
-```
----
-plot_sections:
-    ablate: "ours,gaifo,gaifo-s"
-save_loc: "./data/plot/figs/final"
-marker_size: 12
-marker_width: 0.0
-marker_darkness: 0.1
-line_width: 3.0
-name_map:
-    ours: "Ours"
-    gaifo: "GAIfO"
-    gail-s: "GAIfO-s"
-colors:
-    ours: 0 
-    gaifo: 1
-    gail-s: 2
-```
