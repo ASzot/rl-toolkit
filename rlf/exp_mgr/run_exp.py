@@ -2,6 +2,7 @@ import argparse
 import os
 import os.path as osp
 import random
+import re
 import string
 import subprocess
 import sys
@@ -226,9 +227,11 @@ def transform_prefix(s, common_id):
     prefix = parts[0]
     after_prefix = " ".join(parts[1:])
     if prefix != "debug":
-        return before_prefix + f"{use_split} {prefix}-{common_id} " + after_prefix
+        ret = before_prefix + f"{use_split} {prefix}-{common_id} " + after_prefix
     else:
-        return s
+        ret = s
+    ret = re.sub(" +", " ", ret)
+    return ret
 
 
 def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, args):
