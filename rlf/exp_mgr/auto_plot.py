@@ -320,7 +320,9 @@ def plot_from_file(plot_cfg_path):
                 plot_section["report_name"],
                 plot_key,
                 plot_section["plot_sections"],
-                get_setting(plot_section, "force_reload", defval=False),
+                get_setting(
+                    plot_section, "force_reload", local_override=False, defval=False
+                ),
                 match_pat,
                 other_plot_keys,
                 plot_settings["config_yaml"],
@@ -330,6 +332,14 @@ def plot_from_file(plot_cfg_path):
             # W&B will sometimes return NaN rows at the start and end of
             # training.
             plot_df = plot_df.dropna()
+            scaling = get_setting(plot_section, "scaling", defval={})
+            for k, scale_settings in scaling.items():
+                scale_key = scale_settings["scale_key"]
+                scale = scale_settings["scale"]
+                offset = scale_settings["offset"]
+                rows = plot_df["method"] == k
+                key_vals = plot_df[rows][scale_key]
+                plot_df.loc[rows, scale_key] = (scale * key_vals) + offset
 
             if "line_sections" in plot_section:
                 line_plot_key = get_setting(plot_section, "line_plot_key")
@@ -357,7 +367,9 @@ def plot_from_file(plot_cfg_path):
                     line_report_name,
                     fetch_keys,
                     plot_section["line_sections"],
-                    get_setting(plot_section, "force_reload", defval=False),
+                    get_setting(
+                        plot_section, "force_reload", local_override=False, defval=False
+                    ),
                     line_match_pat,
                     [],
                     plot_settings["config_yaml"],
@@ -410,6 +422,8 @@ def plot_from_file(plot_cfg_path):
                 plot_df[plot_key] *= plot_settings["scale_factor"]
                 if fetch_std:
                     plot_df[plot_key + "_std"] *= plot_settings["scale_factor"]
+            if "x_scale_factor" in plot_settings:
+                plot_df["_step"] *= plot_settings["x_scale_factor"]
             use_legend_font_size = plot_section.get(
                 "legend_font_size", plot_settings.get("legend_font_size", "x-large")
             )

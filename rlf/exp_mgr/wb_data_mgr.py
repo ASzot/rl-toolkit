@@ -217,9 +217,14 @@ def get_report_data(
                 if match_other_plot is None:
                     raise ValueError(
                         """
-                            Could not find colums from %s in %s containing %s
-                            """
-                        % (str(other_plot_fields), report_section, str(df.columns))
+                            Could not find colums from %s or %s in %s containing %s
+                        """
+                        % (
+                            str(other_plot_fields),
+                            plot_field,
+                            report_section,
+                            str(df.columns),
+                        )
                     )
                 df = df.rename(columns={match_other_plot: plot_field})
             df = df[["_step", plot_field]]

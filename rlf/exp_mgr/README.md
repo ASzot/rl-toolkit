@@ -60,34 +60,26 @@ plot_sections:
           - 'mpp2'
       plot_sections:
           - "D-s eval"
-          - "D eval"
-          - "RGB-s eval"
-          - "RGB eval"
-          - "RGBD-s eval"
+          - "ours"
           - "RGBD eval"
       force_reload: False
+      # Optional, if provided this will linearly scale the desired key of a particular plot_section 
+      # Notice we can scale the x-axis by scaling "_step". However, scaling any
+      # key is possible. Supports default in outer config
+      scaling:
+        "ours": 
+          offset: 4096
+          scale: 128
+          scale_key: '_step'
+force_reload: True # This force reload overrides the local ones.
 global_renames: [dict str -> str]
+    # You can use the y-axis values!
     "eval_metrics/ep_success": "Success (%)"
+    # Or the x-axis values
     _step: "Step"
-    "eval_metrics_ep_success": "Success (%)"
 
+    # Method names
     "D-s eval": "D+ps"
-    "D eval": "D"
-    "RGB-s eval": "RGB+ps"
-    "RGB eval": "RGB"
-    "RGBD-s eval": "RGBD+ps"
-    "RGBD eval": "RGBD"
-
-    "RGBD_s": 'RGBD+ps'
-    "input_ablation_RGBD_g": 'RGBD'
-    "input_ablation_RGB_s": 'RGB+ps'
-    "input_ablation_D_s": 'D+ps'
-    "input_ablation_s": 'ps'
-    "input_ablation_RGB_g": "RGB"
-    "input_ablation_D_g": "D"
-    "mpp": "SPA"
-    "mpg": "SPA-Priv"
-    "mpp2": "SPA"
 line_plot_key: "eval_metrics/ep_success"
 line_val_key: "eval_metrics/ep_success"
 smooth_factor: 0.8
@@ -95,7 +87,7 @@ scale_factor: 100
 line_op: 'max'
 config_yaml: "./config.yaml"
 save_loc: "./data/plot"
-fig_dims: [6,4]
+fig_dims: [6,4] # The save dimensions of the figure, by default this is [5,4]
 legend_font_size: 'medium'
 linestyles: [dict str -> str, the value is the matplotlib line style] 
 colors:
