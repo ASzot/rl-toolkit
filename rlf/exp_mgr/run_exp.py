@@ -236,6 +236,9 @@ def transform_prefix(s, common_id):
 
 def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, args):
     cmds = get_cmds(cmd_path, add_args_str, args)
+    cmds = [
+        cmd.replace("FILE_PATH", config_mgr.get_prop("file_path", "")) for cmd in cmds
+    ]
 
     n_seeds = 1
     if args.cmd_format == "reg":
@@ -516,6 +519,22 @@ def full_execute_command_file():
     args, rest = parser.parse_known_args()
     config_mgr.init(args.cfg)
 
+    cmd_path = osp.join(config_mgr.get_prop("cmds_loc"), args.cmd)
+    execute_command_file(
+        cmd_path, rest, args.cd, args.sess_name, args.sess_id, args.seed, args
+    )
+
+
+def execute_from_string(arg_str, cmds_loc, executable_path):
+    parser = get_arg_parser()
+    args, rest = parser.parse_known_args(arg_str)
+
+    config_mgr.init(args.cfg)
+
+    if cmds_loc is not None:
+        config_mgr.set_prop("cmds_loc", cmds_loc)
+    if executable_path is not None:
+        config_mgr.set_prop("file_path", executable_path)
     cmd_path = osp.join(config_mgr.get_prop("cmds_loc"), args.cmd)
     execute_command_file(
         cmd_path, rest, args.cd, args.sess_name, args.sess_id, args.seed, args

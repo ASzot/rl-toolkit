@@ -288,11 +288,18 @@ def get_ob_shape(obs_space, k):
         return obs_space.spaces[k].shape
 
 
-def get_obs_shape(ob_space, k="observation"):
+def get_obs_shape(ob_space, k="observation", default=None):
     if isinstance(ob_space, gym.spaces.Dict):
-        return ob_space.spaces[k].shape
+        if k in ob_space.spaces:
+            return ob_space.spaces[k].shape
+        else:
+            return default
     else:
-        return ob_space.shape
+        if k != 'observation':
+            return default
+        else:
+            return ob_space.shape
+
 
 
 def get_obs_space(ob_space):
@@ -302,11 +309,17 @@ def get_obs_space(ob_space):
         return ob_space
 
 
-def get_def_obs(obs, k="observation"):
+def get_def_obs(obs, k="observation", default=None):
     if isinstance(obs, dict):
-        return obs[k]
+        if k not in obs:
+            return default
+        else:
+            return obs[k]
     else:
-        return obs
+        if k != 'observation':
+            return default
+        else:
+            return obs
 
 
 def set_def_obs(obs, new_obs, k="observation"):

@@ -23,9 +23,6 @@ Codebase I use to to implement RL algorithms.
 
 See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks)
 
-## Documentation
-- Loggers: `rl-toolkit/rlf/rl/loggers/README.md`
-
 ## Code Features
 - Custom policies. 
 - Custom update functions.
@@ -56,6 +53,9 @@ See `tests/test_cmds/ppo/main.py` for an example of using PPO. Example
 commands for training PPO are in the same folder in the `.cmd` files. See the
 `tests/test_cmds/` for more examples.
 
+## Benchmarks
+* IL Benchmark: `python -m rlf.benchmarks.il`
+
 ## Run Tests
 The most important principle in this code is **working RL algorithms**.
 Automated benchmarking scripts are included under `tests/test_cmds` so you can
@@ -70,9 +70,6 @@ Easily run templated commands. Start by defining a `.cmd` file.
 - Add additional arguments to specified command. 
 - Specify which GPU to use via a flag. 
 - Choose to log to W&B. 
-
-## Custom Environments
-See `envs/README.md`
 
 ## Ray
 Install with `pip install ray` and `pip install "ray[tune]"`. To run a job with

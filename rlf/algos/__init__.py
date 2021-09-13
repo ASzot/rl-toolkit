@@ -7,6 +7,7 @@ from rlf.algos.il.bc_pretrain import BehavioralCloningPretrain
 from rlf.algos.il.bco import BehavioralCloningFromObs
 from rlf.algos.il.gaifo import GAIFO
 from rlf.algos.il.gail import GAIL, GailDiscrim
+from rlf.algos.il.sqil import SQIL
 from rlf.algos.nested_algo import NestedAlgo
 from rlf.algos.off_policy.ddpg import DDPG
 from rlf.algos.off_policy.q_learning import QLearning

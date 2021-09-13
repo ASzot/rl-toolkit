@@ -27,7 +27,14 @@ class TrajDataset(ImitationLearningDataset):
         print("Collected %i trajectories" % len(trajs))
 
         self.data = self._gen_data(trajs)
-        self.traj_lens = [len(traj[0]) for traj in trajs]
+
+        def get_data_len(x):
+            if isinstance(x, dict):
+                return len(x["observation"])
+            else:
+                return len(x)
+
+        self.traj_lens = [get_data_len(traj[0]) for traj in trajs]
         self.trajs = trajs
         self.holdout_idxs = []
 
@@ -127,7 +134,6 @@ class TrajDataset(ImitationLearningDataset):
 
         done = trajs["done"].float()
         actions = trajs["actions"].float()
-        episode_ids = trajs["episode_ids"]
 
         ret_trajs = []
 
