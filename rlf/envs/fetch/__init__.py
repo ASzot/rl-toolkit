@@ -13,6 +13,11 @@ register(
     max_episode_steps=60,
 )
 
+register(
+    id="FetchPushSanityCheck-v0",
+    entry_point="rlf.envs.fetch.push:FetchPushSanityCheck",
+    max_episode_steps=60,
+)
 
 register(
     id="FetchPickAndPlaceNoise-v0",

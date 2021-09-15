@@ -154,6 +154,7 @@ class BaseILAlgo(BaseNetAlgo):
     def get_add_args(self, parser):
         super().get_add_args(parser)
         parser.add_argument("--traj-load-path", type=str, default=None)
+        parser.add_argument("--traj-subsample-factor", type=int, default=1)
         parser.add_argument("--traj-batch-size", type=int, default=128)
         parser.add_argument(
             "--traj-val-ratio",

@@ -46,20 +46,27 @@ class VizFetchPushEnv(FetchEnv, utils.EzPickle):
         self.viewer.cam.elevation = -2
 
 
-Y_NOISE = 0.02
-X_NOISE = 0.05
-OBJ_X_NOISE = 0.05
-OFFSET = 0.10
-
-
 class FetchPushNoise(fetch_env.FetchEnv, utils.EzPickle):
-    def __init__(self, reward_type="dense"):
+    def __init__(
+        self,
+        reward_type="dense",
+        y_noise=0.02,
+        x_noise=0.05,
+        obj_x_noise=0.05,
+        sample_offset=0.10,
+    ):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
             "robot0:slide2": 0.0,
             "object0:joint": [1.25, 0.53, 0.4, 1.0, 0.0, 0.0, 0.0],
         }
+
+        self.y_noise = y_noise
+        self.x_noise = x_noise
+        self.obj_x_noise = obj_x_noise
+        self.sample_offset = sample_offset
+
         self.set_noise_ratio(1.0, 1.0)
         MODEL_XML_PATH = os.path.join("fetch", "push.xml")
         fetch_env.FetchEnv.__init__(
@@ -81,11 +88,14 @@ class FetchPushNoise(fetch_env.FetchEnv, utils.EzPickle):
         utils.EzPickle.__init__(self)
 
     def set_noise_ratio(self, noise_ratio, goal_noise_ratio):
-        self.obj_low = [-noise_ratio * OBJ_X_NOISE, 0]
-        self.obj_high = [noise_ratio * OBJ_X_NOISE, noise_ratio * Y_NOISE * 2]
+        self.obj_low = [-noise_ratio * self.obj_x_noise, 0]
+        self.obj_high = [noise_ratio * self.obj_x_noise, noise_ratio * self.y_noise * 2]
 
-        self.goal_low = [-goal_noise_ratio * X_NOISE, -goal_noise_ratio * Y_NOISE * 2]
-        self.goal_high = [goal_noise_ratio * X_NOISE, 0]
+        self.goal_low = [
+            -goal_noise_ratio * self.x_noise,
+            -goal_noise_ratio * self.y_noise * 2,
+        ]
+        self.goal_high = [goal_noise_ratio * self.x_noise, 0]
 
     def _get_obs(self):
         obs = super()._get_obs()
@@ -97,7 +107,9 @@ class FetchPushNoise(fetch_env.FetchEnv, utils.EzPickle):
 
         # Randomize start position of object.
         if self.has_object:
-            object_xpos = self.initial_gripper_xpos[:2] + np.array([0.0, OFFSET])
+            object_xpos = self.initial_gripper_xpos[:2] + np.array(
+                [0.0, self.sample_offset]
+            )
             object_xpos += self.np_random.uniform(self.obj_low, self.obj_high)
 
             object_qpos = self.sim.data.get_joint_qpos("object0:joint")
@@ -109,7 +121,9 @@ class FetchPushNoise(fetch_env.FetchEnv, utils.EzPickle):
         return True
 
     def _sample_goal(self):
-        goal = self.initial_gripper_xpos[:3] + np.array([0.0, -1 * OFFSET, 0.0])
+        goal = self.initial_gripper_xpos[:3] + np.array(
+            [0.0, -1 * self.sample_offset, 0.0]
+        )
         goal[:2] += self.np_random.uniform(self.goal_low, self.goal_high)
 
         goal += self.target_offset
@@ -132,3 +146,8 @@ class FetchPushNoise(fetch_env.FetchEnv, utils.EzPickle):
         site_id = self.sim.model.site_name2id("target0")
         self.sim.model.site_pos[site_id] = self.goal - sites_offset[0]
         self.sim.forward()
+
+
+class FetchPushSanityCheck(FetchPushNoise):
+    def __init__(self, reward_type="dense"):
+        super().__init__(reward_type, y_noise=0.0, x_noise=0.0, obj_x_noise=0.0)

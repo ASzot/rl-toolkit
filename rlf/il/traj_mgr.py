@@ -1,8 +1,9 @@
-import os.path as osp
-import torch
 import os
+import os.path as osp
 from collections import defaultdict
+
 import numpy as np
+import torch
 
 
 def decode_gw_state(state):
@@ -11,7 +12,7 @@ def decode_gw_state(state):
     for x in range(state.shape[0]):
         for y in range(state.shape[1]):
             if state[x][y][0] == 10:
-                found_idx = (x,y)
+                found_idx = (x, y)
                 break
         if found_idx is not None:
             break
@@ -25,13 +26,14 @@ class TrajSaver(object):
     any observation information for a downstream task.
     """
 
-    def __init__(self, save_dir):
+    def __init__(self, save_dir, save_name="trajs.pt"):
         self.save_dir = save_dir
         self.all_obs = []
         self.all_next_obs = []
         self.all_done = []
         self.all_actions = []
         self.all_info = []
+        self.save_name = save_name
 
         self.traj_buffer = defaultdict(list)
         if not osp.exists(self.save_dir):
@@ -52,7 +54,6 @@ class TrajSaver(object):
         self.all_actions.extend(action)
         self.all_info.extend(info)
 
-
     def collect(self, obs, next_obs, done, action, info):
         """
         Collects a transition to be later saved. Note that only full
@@ -65,14 +66,16 @@ class TrajSaver(object):
         num_done = 0
         for i in range(obs.shape[0]):
             if done[i]:
-                next_obs_cp[i] = torch.tensor(info[i]['final_obs']).to(next_obs.device)
-            self.traj_buffer[i].append((obs[i], next_obs_cp[i], done[i], action[i], info[i]))
+                next_obs_cp[i] = torch.tensor(info[i]["final_obs"]).to(next_obs.device)
+            self.traj_buffer[i].append(
+                (obs[i], next_obs_cp[i], done[i], action[i], info[i])
+            )
             if done[i]:
                 if self.should_save_traj(self.traj_buffer[i]):
                     self._collect_traj(self.traj_buffer[i])
                     num_done += 1
                 else:
-                    print('Skipping trajectory')
+                    print("Skipping trajectory")
                 self.traj_buffer[i] = []
         return num_done
 
@@ -86,7 +89,7 @@ class TrajSaver(object):
             for k, v in info.items():
                 if isinstance(v, dict):
                     add_info(v, i)
-                elif k.startswith('ep_'):
+                elif k.startswith("ep_"):
                     info_tensors[k][i] = v
 
         for i, info in enumerate(self.all_info):
@@ -96,25 +99,45 @@ class TrajSaver(object):
             info_tensors[k] = info_tensors[k].view(-1)
 
         if len(self.all_obs) == 0:
-            raise ValueError('There is no data to save')
+            raise ValueError("There is no data to save")
 
         save_obs = torch.stack(self.all_obs).cpu().detach()
         save_next_obs = torch.stack(self.all_next_obs).cpu().detach()
-        save_done = torch.tensor(np.array(self.all_done).astype(np.float32)).cpu().detach()
+        save_done = (
+            torch.tensor(np.array(self.all_done).astype(np.float32)).cpu().detach()
+        )
         save_actions = torch.stack(self.all_actions).cpu().detach()
 
-        save_name = osp.join(self.save_dir, 'trajs.pt')
+        save_name = osp.join(self.save_dir, self.save_name)
         n_steps = save_obs.shape[0]
-        print('Saving %i transitions to %s' % (n_steps, save_name))
+        print("Saving %i transitions to %s" % (n_steps, save_name))
 
-        torch.save({
-            'obs': save_obs,
-            'next_obs': save_next_obs,
-            'done': save_done,
-            'actions': save_actions,
-            **info_tensors,
-            }, save_name)
-        print('Successfully saved trajectories to %s' % save_name)
+        torch.save(
+            {
+                "obs": save_obs,
+                "next_obs": save_next_obs,
+                "done": save_done,
+                "actions": save_actions,
+                **info_tensors,
+            },
+            save_name,
+        )
+        print("Successfully saved trajectories to %s" % save_name)
         return save_name
 
 
+class GoalTrajSaver(TrajSaver):
+    """
+    Only saves trajectories if they successfully accomplish the goal.
+    """
+
+    def __init__(self, save_dir, assert_saved, save_name="trajs.pt"):
+        self.assert_saved = assert_saved
+        super().__init__(save_dir, save_name)
+
+    def should_save_traj(self, traj):
+        last_info = traj[-1][-1]
+        ret = last_info["ep_found_goal"] == 1.0
+        if self.assert_saved and not ret:
+            raise ValueError("Trajectory did not end successfully")
+        return ret

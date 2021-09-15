@@ -203,6 +203,21 @@ def flatten_obs_dict(ob_shape, keep_keys):
     )
 
 
+def cat_obs(obs1: Dict[str, Any], obs2: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Concatenates the observations of dictionary obs
+    """
+    ret = {}
+    for k, v in obs1.items():
+        if isinstance(v, torch.Tensor):
+            ret[k] = torch.cat([obs1[k], obs2[k]], dim=0)
+        elif isinstance(v, dict):
+            ret[k] = cat_obs(obs1[k], obs2[k])
+        else:
+            raise ValueError("Unrecognized type when combining dicts")
+    return ret
+
+
 def obs_op(obs: Any, op: Callable[[Any], Any]) -> Any:
     """Apply an operation to every value in a dictionary."""
     if isinstance(obs, dict):
@@ -295,11 +310,10 @@ def get_obs_shape(ob_space, k="observation", default=None):
         else:
             return default
     else:
-        if k != 'observation':
+        if k != "observation":
             return default
         else:
             return ob_space.shape
-
 
 
 def get_obs_space(ob_space):
@@ -316,7 +330,7 @@ def get_def_obs(obs, k="observation", default=None):
         else:
             return obs[k]
     else:
-        if k != 'observation':
+        if k != "observation":
             return default
         else:
             return obs

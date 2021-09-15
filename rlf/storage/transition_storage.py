@@ -2,6 +2,7 @@
 Code is heavily based off of https://github.com/denisyarats/pytorch_sac.
 The license is at `rlf/algos/off_policy/denis_yarats_LICENSE.md`
 """
+import pickle
 import random
 from collections import defaultdict
 from typing import Optional
@@ -21,6 +22,8 @@ class TransitionStorage(BaseStorage):
         self.capacity = capacity
         self.device = args.device
         self.args = args
+        self.obs_space = obs_space
+        self.action_shape = action_shape
 
         # the proprioceptive obs is stored as float32, pixels obs as uint8
         self.ob_keys = rutils.get_ob_shapes(obs_space)
@@ -48,15 +51,47 @@ class TransitionStorage(BaseStorage):
 
         self._modify_reward_fn = None
 
+    def copy_storage(self) -> BaseStorage:
+        new_storage = TransitionStorage(
+            self.obs_space, self.action_shape, self.capacity, self.args
+        )
+        new_storage.actions = np.copy(self.actions)
+        new_storage.obses = rutils.obs_op(self.obses, lambda x: np.copy(x))
+        new_storage.next_obses = rutils.obs_op(self.next_obses, lambda x: np.copy(x))
+        new_storage.rewards = np.copy(self.rewards)
+        new_storage.masks = np.copy(self.masks)
+        new_storage.masks_no_max = np.copy(self.masks_no_max)
+        new_storage.idx = self.idx
+        new_storage.last_save = self.last_save
+        new_storage.full = self.full
+        new_storage._modify_reward_fn = self._modify_reward_fn
+        return new_storage
+
+    def save_storage(self, save_path):
+        with open(save_path, "wb") as f:
+            pickle.dump(self, f)
+        print("Saved storage to ", save_path)
+
+    @staticmethod
+    def load_from_file(load_path):
+        print("Loading storage from ", load_path)
+        with open(load_path, "rb") as f:
+            return pickle.load(f)
+
     def get_generator(
         self,
         from_recent: bool,
         num_samples: Optional[int],
         mini_batch_size: int,
+        n_mini_batches: int = -1,
         **kwargs
     ):
         """To do the same thing as the on policy rollout storage, this does not
         return the next state.
+        :param from_recent: If True, this will grab the most recent `num_samples`.
+        :param num_samples:
+        :param n_mini_batches: The maximum number of batches of size mini_batch_size to return.
+            If -1, then the number of mini batches is not restricted and will be computed based off the buffer size.
         """
         if num_samples is None:
             num_samples = len(self)
@@ -74,7 +109,11 @@ class TransitionStorage(BaseStorage):
                 )
         else:
             all_indices = list(range(0, self.capacity if self.full else self.idx))
-        num_batches = num_samples // mini_batch_size
+
+        if n_mini_batches > 0:
+            num_batches = min(num_samples // mini_batch_size, n_mini_batches)
+        else:
+            num_batches = num_samples // mini_batch_size
         for _ in range(num_batches):
             idxs = np.random.choice(all_indices, mini_batch_size)
 

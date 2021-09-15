@@ -26,6 +26,10 @@ class BaseStorage(object):
         self.traj_storage = [[] for _ in range(rutils.get_def_obs(obs).shape[0])]
 
     @abstractmethod
+    def copy_storage(self):
+        pass
+
+    @abstractmethod
     def get_generator(self, **kwargs):
         pass
 
@@ -99,4 +103,4 @@ class BaseStorage(object):
         return self._add_info_keys
 
     def get_add_info(self, key):
-        raise NotImplemented("No add info is implemented for this storage type")
+        raise NotImplementedError("No add info is implemented for this storage type")

@@ -12,8 +12,9 @@ class TrajDataset(ImitationLearningDataset):
     format.
     """
 
-    def __init__(self, load_path, transform_dem_dataset_fn=None):
+    def __init__(self, load_path, transform_dem_dataset_fn=None, subsample_factor=1):
         super().__init__(load_path, transform_dem_dataset_fn)
+        self.subsample_factor = subsample_factor
         trajs = torch.load(load_path)
 
         rutils.pstart_sep()
@@ -166,6 +167,9 @@ class TrajDataset(ImitationLearningDataset):
                 states = rutils.transpose_arr_dict(states)
             else:
                 states = torch.stack(states, dim=0)
+            if self.subsample_factor != 1:
+                states = states[:: self.subsample_factor]
+
             ret_trajs[i] = (states, actions)
 
         ret_trajs = self._transform_dem_dataset_fn(ret_trajs, trajs)
