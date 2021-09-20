@@ -130,10 +130,23 @@ class BaseILAlgo(BaseNetAlgo):
     def _adjust_action(self, x):
         if not self.args.il_in_action_norm:
             return x
-        return (x) / (self.expert_stats["action"][1] + 1e-8)
+        return (x) / (self.expert_stats["action"][1] + 1e-7)
 
     def _denorm_action(self, x):
         return (x) * self.expert_stats["action"][1]
+
+    def _norm_state(self, state):
+        """
+        Normalize a state based on the expert statistics.
+        """
+        mean, std = self.expert_stats["state"]
+        if isinstance(state, dict):
+            return {k: (state[k] - mean[k]) / (std[k] + 1e-7) for k in state}
+        else:
+            if isinstance(mean, dict):
+                return (state - mean["observation"]) / (std["observation"] + 1e-7)
+            else:
+                return (state - mean) / (std + 1e-7)
 
     def init(self, policy, args):
         # Load the expert data first, so we can calculate the needed number of

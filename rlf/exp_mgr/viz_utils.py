@@ -112,6 +112,7 @@ def plot_traj_data(
     y_axis_name: str = "State %i",
     no_wb: Optional[bool] = None,
     title: str = "",
+    ylim=None,
 ):
     """
     Plots each state dimension of a trajectory comparing a predicted and real trajectory.
@@ -153,6 +154,8 @@ def plot_traj_data(
         plt.grid(b=True, which="major", color="lightgray", linestyle="--")
         plt.xlabel("t")
         plt.ylabel(y_axis_name % state_i)
+        if ylim is not None:
+            plt.ylim(ylim)
 
         if isinstance(title, list):
             use_title = title[state_i]
@@ -175,3 +178,4 @@ def plot_traj_data(
                 {use_full_log_name: [wandb.Image(use_save_path)]},
                 step=step,
             )
+    return np.mean(per_state_mse)

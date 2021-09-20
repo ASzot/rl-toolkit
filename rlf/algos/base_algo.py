@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Iterable
+from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 import attr
 import numpy as np
@@ -18,6 +18,10 @@ class AlgorithmSettings:
     - mod_render_frames_fn: (frame, last_obs, last_reward, **kwargs ->
       updated_frame) Render algorithm information on the render output. Must
       specify `--render-metric` for this to be called.
+    :property on_traj_finished: Called whenever a trajectory is finished in the
+        evaluation, None means nothing is called. Takes as input a list of state,
+        next_state, action tuples. Returns any metrics for the environment, you
+        probably want them to have the "ep_" prefix so they are logged.
     """
 
     ret_raw_obs: bool
@@ -25,6 +29,9 @@ class AlgorithmSettings:
     action_fn: Callable[[np.ndarray], np.ndarray]
     include_info_keys: list
     mod_render_frames_fn: Callable
+    on_traj_finished: Callable[
+        [List[Tuple[np.ndarray, np.ndarray, np.ndarray]]], Dict[str, Any]
+    ]
 
 
 def mod_render_frames_identity(cur_frame, obs):
@@ -117,7 +124,9 @@ class BaseAlgo(object):
         """
         Some updaters require specific things from the environment.
         """
-        return AlgorithmSettings(False, None, None, [], mod_render_frames_identity)
+        return AlgorithmSettings(
+            False, None, None, [], mod_render_frames_identity, None
+        )
 
     def set_get_policy(self, get_policy_fn, policy_args):
         """

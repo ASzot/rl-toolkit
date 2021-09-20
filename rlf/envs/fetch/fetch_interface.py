@@ -31,7 +31,7 @@ class GoalCheckerWrapper(gym.Wrapper):
 
 
 class FetchNoVelWrapper(gym.core.ObservationWrapper):
-    def __init__(self, env, remove_dict_obs=True):
+    def __init__(self, env, remove_dict_obs=True, scale=1.0):
         super().__init__(env)
         obs_space = self.observation_space.spaces["observation"]
         try:
@@ -39,10 +39,16 @@ class FetchNoVelWrapper(gym.core.ObservationWrapper):
         except AttributeError:
             pass
         self.remove_dict_obs = remove_dict_obs
+        self.scale = scale
 
+        # new_obs_space = spaces.Box(
+        #    high=obs_space.high[:-12],
+        #    low=obs_space.low[:-12],
+        #    dtype=obs_space.dtype,
+        # )
         new_obs_space = spaces.Box(
-            high=obs_space.high[:-12],
-            low=obs_space.low[:-12],
+            high=obs_space.high[:-15],
+            low=obs_space.low[:-15],
             dtype=obs_space.dtype,
         )
         if self.remove_dict_obs:
@@ -51,8 +57,8 @@ class FetchNoVelWrapper(gym.core.ObservationWrapper):
             self.observation_space.spaces["observation"] = new_obs_space
 
     def observation(self, obs):
-        obs["observation"] = obs["observation"][:-15]
-        obs["observation"] = np.concatenate([obs["observation"], obs["desired_goal"]])
+        obs["observation"] = obs["observation"][:-15] * self.scale
+        # obs["observation"] = np.concatenate([obs["observation"], obs["desired_goal"]])
         if self.remove_dict_obs:
             return obs["observation"]
         else:
@@ -107,7 +113,7 @@ class GymFetchInterface(EnvInterface):
 
             env = GoalCheckerWrapper(env, check_goal)
         if self.args.fetch_no_vel:
-            env = FetchNoVelWrapper(env)
+            env = FetchNoVelWrapper(env, scale=self.args.dist_scale)
         if self.args.mod_n_steps > 0:
             env.env.env.env._max_episode_steps = self.args.mod_n_steps
             env.env.env._max_episode_steps = self.args.mod_n_steps

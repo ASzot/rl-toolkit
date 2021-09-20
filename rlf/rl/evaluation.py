@@ -4,11 +4,12 @@ import time
 from collections import defaultdict
 
 import numpy as np
+import rlf.rl.utils as rutils
 import torch
+from rlf.algos.base_algo import AlgorithmSettings
 from rlf.exp_mgr.viz_utils import save_mp4
 from rlf.il.traj_mgr import TrajSaver
 from rlf.policies.base_policy import get_empty_step_info
-from rlf.rl import utils
 from rlf.rl.envs import get_vec_normalize, make_vec_envs
 from tqdm import tqdm
 
@@ -16,7 +17,7 @@ from tqdm import tqdm
 def eval_print(
     env_interface,
     args,
-    alg_env_settings,
+    alg_env_settings: AlgorithmSettings,
     policy,
     vec_norm,
     total_num_steps,
@@ -49,7 +50,7 @@ def eval_print(
 
 def train_eval(
     envs,
-    alg_env_settings,
+    alg_env_settings: AlgorithmSettings,
     policy,
     args,
     log,
@@ -82,7 +83,7 @@ def full_eval(
     checkpointer,
     env_interface,
     args,
-    alg_env_settings,
+    alg_env_settings: AlgorithmSettings,
     create_traj_saver_fn,
     vec_norm,
 ):
@@ -107,7 +108,7 @@ def full_eval(
 
 def evaluate(
     args,
-    alg_env_settings,
+    alg_env_settings: AlgorithmSettings,
     policy,
     true_vec_norm,
     env_interface,
@@ -202,16 +203,17 @@ def evaluate(
                 evaluated_episode_count,
             )
         )
+    trajs = [[] for _ in range(num_processes)]
 
     while evaluated_episode_count < total_num_eval:
         step_info = get_empty_step_info()
         with torch.no_grad():
-            act_obs = obfilt(utils.ob_to_np(obs), update=False)
-            act_obs = utils.ob_to_tensor(act_obs, args.device)
+            act_obs = obfilt(rutils.ob_to_np(obs), update=False)
+            act_obs = rutils.ob_to_tensor(act_obs, args.device)
 
             ac_info = policy.get_action(
-                utils.get_def_obs(act_obs),
-                utils.get_other_obs(obs),
+                rutils.get_def_obs(act_obs),
+                rutils.get_other_obs(obs),
                 hidden_states,
                 eval_masks,
                 step_info,
@@ -227,6 +229,22 @@ def evaluate(
             )
         else:
             finished_count = sum([int(d) for d in done])
+
+        if alg_env_settings.on_traj_finished is not None:
+            for i in range(num_processes):
+                if done[i]:
+                    trajs[i].append(
+                        (
+                            obs[i],
+                            torch.tensor(infos[i]["final_obs"]).to(obs.device),
+                            ac_info.action,
+                        )
+                    )
+                    add_info = alg_env_settings.on_traj_finished(trajs[i])
+                    infos[i].update(add_info)
+                    trajs[i] = []
+                else:
+                    trajs[i].append((obs[i], next_obs[i], ac_info.action))
 
         pbar.update(finished_count)
         evaluated_episode_count += finished_count
@@ -261,7 +279,7 @@ def evaluate(
             )
         obs = next_obs
 
-        step_log_vals = utils.agg_ep_log_stats(infos, ac_info.extra)
+        step_log_vals = rutils.agg_ep_log_stats(infos, ac_info.extra)
         for k, v in step_log_vals.items():
             ep_stats[k].extend(v)
 
@@ -313,7 +331,7 @@ def save_frames(frames, mode, num_steps, args):
         add = args.load_file.split("/")[-2]
         add += "_"
 
-    save_name = "%s%s_%s" % (add, utils.human_format_int(num_steps), mode)
+    save_name = "%s%s_%s" % (add, rutils.human_format_int(num_steps), mode)
 
     save_dir = osp.join(args.vid_dir, args.env_name, args.prefix)
 
@@ -341,9 +359,9 @@ def get_render_frames(
         add_kwargs = {}
         if obs is not None:
             add_kwargs = {
-                "obs": utils.ob_to_cpu(obs),
+                "obs": rutils.ob_to_cpu(obs),
                 "action": action.cpu(),
-                "next_obs": utils.ob_to_cpu(next_obs),
+                "next_obs": rutils.ob_to_cpu(next_obs),
                 "info": infos,
                 "next_mask": masks.cpu(),
             }

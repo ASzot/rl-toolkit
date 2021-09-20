@@ -224,7 +224,6 @@ def obs_op(obs: Any, op: Callable[[Any], Any]) -> Any:
         return {k: op(obs[k]) for k in obs}
     return op(obs)
 
-
 def obs_select(obs, idx):
     if isinstance(obs, dict):
         return {k: obs[k][idx] for k in obs}
@@ -460,7 +459,7 @@ def is_discrete(ac):
 
 def agg_ep_log_stats(env_infos, alg_info):
     """
-    Combine the values we want to log into one dictionary for logging.
+    Combine the values we want to log into one dictionary for logging. Only logs info from env_infos at the end of the episode.
     - env_info: (list[dict]) returns everything starting with 'ep_' and everything
       in the 'episode' key. There is a list of dicts for each environment
       process.
