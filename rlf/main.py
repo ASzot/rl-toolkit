@@ -73,12 +73,12 @@ def run_policy(run_settings, runner=None):
             if args.save_interval > 0 and (j + 1) % args.save_interval == 0:
                 runner.save(j)
             if args.eval_interval > 0 and (j + 1) % args.eval_interval == 0:
-                runner.eval(j)
+                runner.eval(j, True)
 
-        if args.eval_interval > 0:
-            runner.eval(j + 1)
         if args.save_interval > 0:
-            runner.save(j + 1)
+            runner.save(j + 1, force_save=True)
+        if args.eval_interval > 0:
+            runner.eval(j + 1, args.final_num_eval, force_eval=True)
 
         runner.close()
         # WB prefix of the run so we can later fetch the data.

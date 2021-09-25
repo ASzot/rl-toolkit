@@ -3,6 +3,7 @@ import os.path as osp
 from collections import defaultdict
 
 import numpy as np
+import rlf.rl.utils as rutils
 import torch
 
 
@@ -61,14 +62,21 @@ class TrajSaver(object):
         - obs (tensor[n_processes, *obs_dim])
         - done (list(bool)[n_processes])
         """
-        next_obs_cp = next_obs.clone()
+        next_obs_cp = rutils.obs_op(next_obs, lambda x: x.clone())
         # Only count trajectories that satisfy the `self.should_save_traj` condition
         num_done = 0
-        for i in range(obs.shape[0]):
+        batch_size = action.shape[0]
+        for i in range(batch_size):
             if done[i]:
-                next_obs_cp[i] = torch.tensor(info[i]["final_obs"]).to(next_obs.device)
+                next_obs_cp[i] = torch.tensor(info[i]["final_obs"]).to(action.device)
             self.traj_buffer[i].append(
-                (obs[i], next_obs_cp[i], done[i], action[i], info[i])
+                (
+                    rutils.obs_select(obs, i),
+                    rutils.obs_select(next_obs_cp, i),
+                    done[i],
+                    action[i],
+                    info[i],
+                )
             )
             if done[i]:
                 if self.should_save_traj(self.traj_buffer[i]):
@@ -90,7 +98,9 @@ class TrajSaver(object):
                 if isinstance(v, dict):
                     add_info(v, i)
                 elif k.startswith("ep_"):
-                    info_tensors[k][i] = v
+                    # Convert to a float because saving bools or ints won't work
+                    # in the torch tensor.
+                    info_tensors[k][i] = float(v)
 
         for i, info in enumerate(self.all_info):
             add_info(info, i)
@@ -101,15 +111,22 @@ class TrajSaver(object):
         if len(self.all_obs) == 0:
             raise ValueError("There is no data to save")
 
-        save_obs = torch.stack(self.all_obs).cpu().detach()
-        save_next_obs = torch.stack(self.all_next_obs).cpu().detach()
+        if isinstance(self.all_obs[0], torch.Tensor):
+            save_obs = torch.stack(self.all_obs).cpu().detach()
+            save_next_obs = torch.stack(self.all_next_obs).cpu().detach()
+        else:
+            save_obs = rutils.transpose_arr_dict(self.all_obs)
+            save_next_obs = rutils.transpose_arr_dict(self.all_next_obs)
+            save_obs = rutils.obs_op(save_obs, lambda x: x.cpu().detach())
+            save_next_obs = rutils.obs_op(save_next_obs, lambda x: x.cpu().detach())
+
         save_done = (
             torch.tensor(np.array(self.all_done).astype(np.float32)).cpu().detach()
         )
         save_actions = torch.stack(self.all_actions).cpu().detach()
 
         save_name = osp.join(self.save_dir, self.save_name)
-        n_steps = save_obs.shape[0]
+        n_steps = len(save_actions)
         print("Saving %i transitions to %s" % (n_steps, save_name))
 
         torch.save(

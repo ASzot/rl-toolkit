@@ -10,6 +10,7 @@ import time
 import uuid
 
 import libtmux
+from rlf.args import str2bool
 from rlf.exp_mgr import config_mgr
 from rlf.exp_mgr.wb_data_mgr import get_run_params
 
@@ -78,6 +79,7 @@ def get_arg_parser():
             """,
     )
     parser.add_argument("--skip-add", action="store_true")
+    parser.add_argument("--send-kill-after", type=str2bool, default=True)
     parser.add_argument(
         "--speed",
         action="store_true",
@@ -358,7 +360,11 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
                 if cd[cmd_idx] != "-1":
                     pane.send_keys("export CUDA_VISIBLE_DEVICES=" + cd[cmd_idx])
                     pane.enter()
-                pane.send_keys(cmd)
+                if args.send_kill_after:
+                    pane.send_keys(cmd + "; tmux kill-window")
+                else:
+                    pane.send_keys(cmd)
+
                 pane.enter()
             else:
                 # Make command into a SLURM command

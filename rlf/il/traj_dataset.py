@@ -12,10 +12,19 @@ class TrajDataset(ImitationLearningDataset):
     format.
     """
 
-    def __init__(self, load_path, transform_dem_dataset_fn=None, subsample_factor=1):
+    def __init__(
+        self,
+        load_path,
+        transform_dem_dataset_fn=None,
+        subsample_factor=1,
+        override_data=None,
+    ):
         super().__init__(load_path, transform_dem_dataset_fn)
         self.subsample_factor = subsample_factor
-        trajs = torch.load(load_path)
+        if override_data is None:
+            trajs = torch.load(load_path)
+        else:
+            trajs = override_data
 
         rutils.pstart_sep()
         self._setup(trajs)
@@ -36,6 +45,9 @@ class TrajDataset(ImitationLearningDataset):
                 return len(x)
 
         self.traj_lens = [get_data_len(traj[0]) for traj in trajs]
+        print(
+            f"Traj dataset length distribution {np.mean(self.traj_lens)}, {np.std(self.traj_lens)}"
+        )
         self.trajs = trajs
         self.holdout_idxs = []
 

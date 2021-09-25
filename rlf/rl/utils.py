@@ -203,16 +203,17 @@ def flatten_obs_dict(ob_shape, keep_keys):
     )
 
 
-def cat_obs(obs1: Dict[str, Any], obs2: Dict[str, Any]) -> Dict[str, Any]:
+def cat_obs(*args: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Concatenates the observations of dictionary obs
+    Concatenates the observations of generic observations, meaning dictionary
+    observations or tensor observations.
     """
     ret = {}
-    for k, v in obs1.items():
+    for k, v in args[0].items():
         if isinstance(v, torch.Tensor):
-            ret[k] = torch.cat([obs1[k], obs2[k]], dim=0)
+            ret[k] = torch.cat([obs[k] for obs in args], dim=0)
         elif isinstance(v, dict):
-            ret[k] = cat_obs(obs1[k], obs2[k])
+            ret[k] = cat_obs(*[obs[k] for obs in args])
         else:
             raise ValueError("Unrecognized type when combining dicts")
     return ret
@@ -224,7 +225,12 @@ def obs_op(obs: Any, op: Callable[[Any], Any]) -> Any:
         return {k: op(obs[k]) for k in obs}
     return op(obs)
 
+
 def obs_select(obs, idx):
+    """
+    Perform an indexing operation for every element of dictionary observation,
+    or every tensor observation.
+    """
     if isinstance(obs, dict):
         return {k: obs[k][idx] for k in obs}
     return obs[idx]
@@ -591,7 +597,9 @@ except:
 class TimeProfiler(ContextDecorator):
     def __init__(self, timer_name, timee=None, timer_prop=None):
         """
-        - timer_prop: str The code that is used to access `self` when using the
+        :timer_name: ID of the timer
+        :timee: The object that stores the `timer` object.
+        :param timer_prop: str The code that is used to access `self` when using the
           this as a method decorator.
         """
         self.timer_name = timer_name
@@ -644,6 +652,26 @@ class TimeProfilee:
 
     def get_time(self, timer_name):
         return (self.timers[timer_name], self.timer_call_count[timer_name])
+
+    def get_sums(self):
+        """
+        Returns the accumulated time spent in each timer block since the last call
+        """
+        return {timer_name: self.timers[timer_name] for timer_name in self.timers}
+
+    def get_means(self):
+        """
+        Returns the accumulated time spent in each timer block since the last call
+        """
+        return {
+            timer_name: self.timers[timer_name] / self.timer_call_count[timer_name]
+            for timer_name in self.timers
+        }
+
+    def get_call_counts(self):
+        return {
+            timer_name: self.timer_call_count[timer_name] for timer_name in self.timers
+        }
 
     def clear(self):
         self.timers = defaultdict(lambda: 0)

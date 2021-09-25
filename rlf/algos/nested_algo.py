@@ -26,6 +26,10 @@ class NestedAlgo(BaseAlgo):
         for module in self.modules:
             module.init(policy, args)
 
+    def add_and_clear_timer(self, log_vals):
+        for module in self.modules:
+            module.add_and_clear_timer(log_vals)
+
     def get_steps_generator(self, update_iter):
         return self.modules[self.designated_rl_idx].get_steps_generator(update_iter)
 

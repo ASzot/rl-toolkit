@@ -101,10 +101,10 @@ class BasePolicy:
             "--deterministic-policy", action="store_true", default=False
         )
 
-    def load_from_checkpoint(self, checkpointer):
+    def load(self, checkpointer):
         pass
 
-    def save_to_checkpoint(self, checkpointer):
+    def save(self, checkpointer):
         pass
 
     def load_resume(self, checkpointer):

@@ -16,7 +16,6 @@ from rlf.exp_mgr import config_mgr
 from rlf.il.traj_mgr import TrajSaver
 from rlf.rl.checkpointer import Checkpointer
 from rlf.rl.envs import make_vec_envs
-from rlf.rl.evaluation import full_eval
 from rlf.rl.loggers.base_logger import BaseLogger
 from rlf.rl.runner import Runner
 
@@ -247,7 +246,15 @@ class RunSettings(MasterClass):
         storage.set_traj_done_callback(algo.on_traj_finished)
 
         runner = self._get_runner_cls(algo, policy)(
-            envs, storage, policy, log, env_interface, checkpointer, args, algo
+            envs,
+            storage,
+            policy,
+            log,
+            env_interface,
+            checkpointer,
+            args,
+            algo,
+            create_traj_saver_fn=self.create_traj_saver,
         )
         return runner
 

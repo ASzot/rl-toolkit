@@ -22,8 +22,10 @@ class GAIFO(NestedAlgo):
 
 
 class PairTransitionDataset(TransitionDataset):
-    def __init__(self, load_path, transform_dem_dataset_fn):
-        super().__init__(load_path, transform_dem_dataset_fn)
+    def __init__(self, load_path, transform_dem_dataset_fn, override_data=None):
+        super().__init__(
+            load_path, transform_dem_dataset_fn, override_data=override_data
+        )
         self.trajs["next_obs"] = self.trajs["next_obs"].float()
 
     def __getitem__(self, i):
@@ -83,8 +85,12 @@ class GaifoDiscrim(GailDiscrim):
         base_net = self.policy.get_base_net_fn(new_shape)
         return DoubleStateDiscrim(base_net).to(self.args.device)
 
-    def _get_traj_dataset(self, traj_load_path):
-        return PairTransitionDataset(traj_load_path, self._transform_dem_dataset_fn)
+    def _get_traj_dataset(self, traj_load_path, args):
+        return PairTransitionDataset(
+            traj_load_path,
+            self._transform_dem_dataset_fn,
+            override_data=self._get_d4rl_dataset(traj_load_path, args),
+        )
 
     def _trans_batches(self, expert_batch, agent_batch):
         agent_batch = iutils.select_idx_from_dict(agent_batch, self._agent_obs_pairs)

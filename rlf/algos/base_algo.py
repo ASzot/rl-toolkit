@@ -60,7 +60,19 @@ class BaseAlgo(object):
     """
 
     def __init__(self):
-        pass
+        self.timer = rutils.TimeProfilee()
+
+    def add_and_clear_timer(self, log_vals):
+        log_vals.update(
+            {
+                **{"algo_timer_" + k: v for k, v in self.timer.get_means().items()},
+                **{
+                    "algo_call_count_" + k: v
+                    for k, v in self.timer.get_call_counts().items()
+                },
+            }
+        )
+        self.timer.clear()
 
     def init(self, policy, args):
         self.update_i = 0

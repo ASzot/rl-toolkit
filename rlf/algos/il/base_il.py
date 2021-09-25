@@ -1,12 +1,19 @@
 import functools
 import os.path as osp
 
+import gym
 import numpy as np
 import rlf.rl.utils as rutils
 import torch
 from rlf.algos.base_net_algo import BaseNetAlgo
+from rlf.il.d4rl_dataset import D4rlDataset
 from rlf.il.transition_dataset import TransitionDataset
 from rlf.rl import utils
+
+try:
+    import d4rl
+except:
+    pass
 
 
 class ExperienceGenerator(object):
@@ -35,8 +42,9 @@ class BaseILAlgo(BaseNetAlgo):
     def _load_expert_data(self, policy, args):
         assert args.traj_load_path is not None, "Must specify expert demonstrations!"
         self.args = args
+
         self.orig_dataset = self._get_traj_dataset(
-            osp.join(args.cwd, args.traj_load_path)
+            osp.join(args.cwd, args.traj_load_path), args
         )
         self.orig_dataset = self.orig_dataset.to(args.device)
         num_trajs = self._create_train_loader(args)
@@ -161,8 +169,18 @@ class BaseILAlgo(BaseNetAlgo):
     def _get_expert_traj_stats(self):
         return self.expert_mean, self.expert_std
 
-    def _get_traj_dataset(self, traj_load_path):
-        return TransitionDataset(traj_load_path, self._transform_dem_dataset_fn)
+    def _get_d4rl_dataset(self, traj_load_path, args):
+        name = traj_load_path.split("/")[-1]
+        if name != "d4rl":
+            return None
+        return D4rlDataset(args.env_name, traj_load_path).convert_to_override_data()
+
+    def _get_traj_dataset(self, traj_load_path, args):
+        return TransitionDataset(
+            traj_load_path,
+            self._transform_dem_dataset_fn,
+            override_data=self._get_d4rl_dataset(traj_load_path, args),
+        )
 
     def get_add_args(self, parser):
         super().get_add_args(parser)

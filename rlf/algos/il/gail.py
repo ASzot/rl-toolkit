@@ -196,6 +196,8 @@ class GailDiscrim(BaseIRLAlgo):
         )
 
     def _update_reward_func(self, storage):
+        if self.args.freeze_reward:
+            return {}
         self.discrim_net.train()
 
         log_vals = defaultdict(lambda: 0)
@@ -307,9 +309,21 @@ class GailDiscrim(BaseIRLAlgo):
         parser.add_argument("--off-policy-recent", type=str2bool, default=True)
         parser.add_argument("--off-policy-count", type=int, default=2048)
 
+        parser.add_argument(
+            "--freeze-reward",
+            type=str2bool,
+            default=False,
+            help="""
+                If true, the discriminator is not updated.
+            """,
+        )
+
     def load_resume(self, checkpointer):
         super().load_resume(checkpointer)
         self.opt.load_state_dict(checkpointer.get_key("gail_disc_opt"))
+
+    def load(self, checkpointer):
+        super().load(checkpointer)
         self.discrim_net.load_state_dict(checkpointer.get_key("gail_disc"))
 
     def save(self, checkpointer):

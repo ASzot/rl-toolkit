@@ -24,6 +24,8 @@ def eval_print(
     mode,
     eval_envs,
     log,
+    create_traj_saver_fn,
+    num_eval,
 ):
     print("Evaluating " + mode)
     args.evaluation_mode = True
@@ -37,7 +39,8 @@ def eval_print(
         mode,
         eval_envs,
         log,
-        None,
+        create_traj_saver_fn,
+        num_eval,
     )
 
     log.log_vals(
@@ -45,7 +48,7 @@ def eval_print(
         total_num_steps,
     )
     args.evaluation_mode = False
-    return eval_envs
+    return eval_info, eval_envs
 
 
 def train_eval(
@@ -57,11 +60,13 @@ def train_eval(
     total_num_steps,
     env_interface,
     train_eval_envs,
+    create_traj_saver_fn,
+    num_eval=None,
 ):
 
     vec_norm = get_vec_normalize(envs)
 
-    train_eval_envs = eval_print(
+    _, train_eval_envs = eval_print(
         env_interface,
         args,
         alg_env_settings,
@@ -71,6 +76,8 @@ def train_eval(
         "train",
         train_eval_envs,
         log,
+        create_traj_saver_fn,
+        num_eval,
     )
 
     return train_eval_envs
@@ -86,21 +93,21 @@ def full_eval(
     alg_env_settings: AlgorithmSettings,
     create_traj_saver_fn,
     vec_norm,
+    num_eval=None,
 ):
-    args.evaluation_mode = True
-    ret_info, envs = evaluate(
+    ret_info, envs = eval_print(
+        env_interface,
         args,
         alg_env_settings,
         policy,
         vec_norm,
-        env_interface,
         0,
         "final",
         envs,
         log,
         create_traj_saver_fn,
+        num_eval,
     )
-    args.evaluation_mode = False
     envs.close()
 
     return ret_info
@@ -117,6 +124,7 @@ def evaluate(
     eval_envs,
     log,
     create_traj_saver_fn,
+    num_eval=None,
 ):
     if args.eval_num_processes is None:
         num_processes = args.num_processes
@@ -172,7 +180,10 @@ def evaluate(
             "specifying the eval saver creator function",
         )
 
-    total_num_eval = num_processes * args.num_eval
+    if num_eval is None:
+        num_eval = args.num_eval
+
+    total_num_eval = num_processes * num_eval
 
     # Measure the number of episodes completed
     pbar = tqdm(total=total_num_eval)

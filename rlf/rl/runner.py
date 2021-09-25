@@ -17,7 +17,16 @@ class Runner:
     """
 
     def __init__(
-        self, envs, storage, policy, log, env_interface, checkpointer, args, updater
+        self,
+        envs,
+        storage,
+        policy,
+        log,
+        env_interface,
+        checkpointer,
+        args,
+        updater,
+        create_traj_saver_fn=None,
     ):
         self.envs = envs
         self.storage = storage
@@ -28,6 +37,7 @@ class Runner:
         self.args = args
         self.updater = updater
         self.train_eval_envs = None
+        self.create_traj_saver_fn = create_traj_saver_fn
 
         if self.policy.requires_inference_grads():
             self.train_ctx = contextlib.nullcontext
@@ -66,6 +76,7 @@ class Runner:
 
             self.storage.insert(obs, next_obs, reward, done, infos, ac_info)
         updater_log_vals = self.updater.update(self.storage)
+        self.updater.add_and_clear_timer(updater_log_vals)
 
         self.storage.after_update()
 
@@ -88,7 +99,11 @@ class Runner:
         if self.args.clip_actions:
             self.ac_tensor = utils.ac_space_to_tensor(self.policy.action_space)
 
-    def _eval_policy(self, policy, total_num_steps, args) -> Optional[VecEnvWrapper]:
+    def _eval_policy(
+        self, policy, total_num_steps, args, num_eval=None
+    ) -> Optional[VecEnvWrapper]:
+        if num_eval is None:
+            num_eval = args.num_eval
         return train_eval(
             self.envs,
             self.alg_env_settings,
@@ -98,6 +113,8 @@ class Runner:
             total_num_steps,
             self.env_interface,
             self.train_eval_envs,
+            self.create_traj_saver_fn,
+            num_eval,
         )
 
     def log_vals(self, updater_log_vals, update_iter):
@@ -110,31 +127,32 @@ class Runner:
             self.args,
         )
 
-    def save(self, update_iter: int) -> None:
+    def save(self, update_iter: int, force_save: bool = False) -> None:
         if (
-            (self.episode_count > 0) or (self.args.num_steps == 0)
+            (self.episode_count > 0) or (self.args.num_steps == 0) or force_save
         ) and self.checkpointer.should_save():
             vec_norm = get_vec_normalize(self.envs)
             if vec_norm is not None:
                 self.checkpointer.save_key("ob_rms", vec_norm.ob_rms_dict)
             self.checkpointer.save_key("step", update_iter)
 
-            self.policy.save_to_checkpoint(self.checkpointer)
+            self.policy.save(self.checkpointer)
             self.updater.save(self.checkpointer)
 
             self.checkpointer.flush(num_updates=update_iter)
             if self.args.sync:
                 self.log.backup(self.args, update_iter + 1)
 
-    def eval(self, update_iter):
+    def eval(self, update_iter, num_eval=None, force_eval=False):
         if (
             (self.episode_count > 0)
             or (self.args.num_steps <= 1)
             or self.should_start_with_eval
+            or force_eval
         ):
             total_num_steps = self.updater.get_completed_update_steps(update_iter + 1)
             self.train_eval_envs = self._eval_policy(
-                self.policy, total_num_steps, self.args
+                self.policy, total_num_steps, self.args, num_eval
             )
 
     def close(self):
@@ -183,10 +201,11 @@ class Runner:
             alg_env_settings,
             create_traj_saver_fn,
             vec_norm,
+            self.args.final_num_eval,
         )
 
     def load_from_checkpoint(self):
-        self.policy.load_state_dict(self.checkpointer.get_key("policy"))
+        self.policy.load(self.checkpointer)
 
         if self.checkpointer.has_load_key("ob_rms"):
             ob_rms_dict = self.checkpointer.get_key("ob_rms")

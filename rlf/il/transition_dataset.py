@@ -10,12 +10,15 @@ class TransitionDataset(ImitationLearningDataset):
     format.
     """
 
-    def __init__(self, load_path, transform_dem_dataset_fn):
+    def __init__(self, load_path, transform_dem_dataset_fn, override_data=None):
         super().__init__(load_path, transform_dem_dataset_fn)
-        if load_path.endswith(".npz"):
+        if override_data is not None:
+            trajs = override_data
+        elif load_path.endswith(".npz"):
             trajs = self._load_npz(load_path)
         else:
             trajs = self._load_pt(load_path)
+
         trajs = self._transform_dem_dataset_fn(trajs, trajs)
         trajs = convert_to_tensors(trajs)
 

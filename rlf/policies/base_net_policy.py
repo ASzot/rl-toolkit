@@ -7,6 +7,7 @@ import rlf.policies.utils as putils
 import rlf.rl.utils as rutils
 import torch
 import torch.nn as nn
+from rlf.args import str2bool
 from rlf.policies.base_policy import BasePolicy
 
 
@@ -84,6 +85,7 @@ class BaseNetPolicy(nn.Module, BasePolicy):
                 Default hidden size used for all networks related to the policy. This includes value functions.
                 """,
         )
+        parser.add_argument("--load-policy", type=str2bool, default=True)
         parser.add_argument(
             "--recurrent-policy",
             action="store_true",
@@ -111,5 +113,11 @@ class BaseNetPolicy(nn.Module, BasePolicy):
         print("Using policy network:")
         print(self)
 
-    def save_to_checkpoint(self, checkpointer):
+    def load(self, checkpointer):
+        super().load(checkpointer)
+        if self.args.load_policy:
+            self.load_state_dict(checkpointer.get_key("policy"))
+
+    def save(self, checkpointer):
+        super().save(checkpointer)
         checkpointer.save_key("policy", self.state_dict())

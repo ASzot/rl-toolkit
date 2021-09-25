@@ -41,12 +41,12 @@ def get_mlp_net_var_out_fn(hidden_sizes):
             weight_init=reg_mlp_weight_init, no_last_act=True)
 
 def def_get_hidden_net(input_shape, hidden_size=64, num_layers=2,
-        recurrent=False):
+        recurrent=False, **kwargs):
     if is_image_obs(input_shape):
-        return CNNBase(input_shape[0], False, hidden_size)
+        return CNNBase(input_shape[0], False, hidden_size, **kwargs)
     else:
         return MLPBasic(input_shape[0], hidden_size=hidden_size,
-                num_layers=num_layers)
+                num_layers=num_layers, **kwargs)
 
 def get_img_encoder(obs_shape, recurrent, hidden_size=64):
     """
@@ -72,11 +72,11 @@ def get_def_ac_critic(obs_shape, input_shape, action_space, hidden_size=(64, 64)
     return TwoLayerMlpWithAction(input_shape[0], hidden_size, ac_dim)
 
 
-def get_def_actor(obs_shape, input_shape, hidden_size):
+def get_def_actor(obs_shape, input_shape, hidden_size, **kwargs):
     if is_image_obs(obs_shape):
         return IdentityBase(input_shape)
     else:
-        return def_get_hidden_net(input_shape, hidden_size)
+        return def_get_hidden_net(input_shape, hidden_size, **kwargs)
 
 
 def get_def_dist(input_shape, action_space):
