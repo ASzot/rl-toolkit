@@ -31,6 +31,10 @@ naming convention from point
 Typically this is run as `python rl-toolkit/rlf/exp_mgr/auto_plot.py --plot-cfg
 my_plot_cfgs/plot.yaml`. 
 
+You can also create bar plots the exact same way with `python rl-toolkit/rlf/exp_mgr/auto_bar.py --plot-cfg my_plot_cfgs/plot.yaml`. 
+Bar plots only work with `line_sections` and do not work with `plot_sections`,
+but otherwise use almost exactly the same configuration format. 
+
 Documentation of the plot settings YAML file. Most properties in the
 `plot_sections` element can also be set in the base element as a default. 
 ```

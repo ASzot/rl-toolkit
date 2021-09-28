@@ -30,11 +30,14 @@ def get_arg_parser():
         "--cmd", type=str, required=True, help="list of commands to run"
     )
     parser.add_argument("--seed", type=str, default=None)
+    parser.add_argument("--proj-dat", type=str, default=None)
     parser.add_argument(
         "--run-single",
         action="store_true",
         help="""
-            If true, will run all commands in a single pane sequentially.
+            If true, will run all commands in a single pane sequentially. This
+            will chain together multiple runs in a cmd file rather than run
+            them sequentially.
     """,
     )
     parser.add_argument(
@@ -242,6 +245,11 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         cmd.replace("FILE_PATH", config_mgr.get_prop("file_path", "")) for cmd in cmds
     ]
 
+    if args.proj_dat is not None:
+        proj_data = config_mgr.get_prop("proj_data", {})
+        add_args = proj_data[args.proj_dat]
+        cmds = [cmd + " " + add_args for cmd in cmds]
+
     n_seeds = 1
     if args.cmd_format == "reg":
         cmd_format = "--"
@@ -361,7 +369,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
                     pane.send_keys("export CUDA_VISIBLE_DEVICES=" + cd[cmd_idx])
                     pane.enter()
                 if args.send_kill_after:
-                    pane.send_keys(cmd + "; tmux kill-window")
+                    pane.send_keys(cmd + "; sleep 5 ; tmux kill-window")
                 else:
                     pane.send_keys(cmd)
 

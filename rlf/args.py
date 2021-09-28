@@ -155,6 +155,7 @@ def add_args(parser):
     )
     parser.add_argument("--num-eval", type=int, default=5)
     parser.add_argument("--final-num-eval", type=int, default=None)
+    parser.add_argument("--eval-at-start", type=str2bool, default=False)
     parser.add_argument(
         "--log-smooth-len",
         type=int,

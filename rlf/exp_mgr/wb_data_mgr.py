@@ -202,7 +202,7 @@ def get_report_data(
                             (
                                 f"Requested key {k} is not present in",
                                 f" data frame with {df.columns} for run {run_id}",
-                                f" section {report_section}",
+                                f" section '{report_section}'",
                             )
                         )
 

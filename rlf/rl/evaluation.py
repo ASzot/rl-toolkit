@@ -40,7 +40,7 @@ def eval_print(
         eval_envs,
         log,
         create_traj_saver_fn,
-        num_eval,
+        num_eval=num_eval,
     )
 
     log.log_vals(
@@ -77,7 +77,7 @@ def train_eval(
         train_eval_envs,
         log,
         create_traj_saver_fn,
-        num_eval,
+        num_eval=num_eval,
     )
 
     return train_eval_envs
@@ -106,7 +106,7 @@ def full_eval(
         envs,
         log,
         create_traj_saver_fn,
-        num_eval,
+        num_eval=num_eval,
     )
     envs.close()
 

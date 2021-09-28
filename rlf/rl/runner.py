@@ -7,7 +7,7 @@ from rlf.algos.base_net_algo import BaseNetAlgo
 from rlf.baselines.vec_env import VecEnvWrapper
 from rlf.policies.base_policy import get_step_info
 from rlf.rl import utils
-from rlf.rl.envs import get_vec_normalize, make_vec_envs
+from rlf.rl.envs import get_vec_normalize, make_vec_envs, wrap_in_vec_normalize
 from rlf.rl.evaluation import full_eval, train_eval
 
 
@@ -87,7 +87,7 @@ class Runner:
         """
         If true, will evaluate the policy before the main training loop begins.
         """
-        return False
+        return self.args.eval_at_start
 
     def setup(self) -> None:
         """
@@ -114,7 +114,7 @@ class Runner:
             self.env_interface,
             self.train_eval_envs,
             self.create_traj_saver_fn,
-            num_eval,
+            num_eval=num_eval,
         )
 
     def log_vals(self, updater_log_vals, update_iter):
@@ -152,7 +152,7 @@ class Runner:
         ):
             total_num_steps = self.updater.get_completed_update_steps(update_iter + 1)
             self.train_eval_envs = self._eval_policy(
-                self.policy, total_num_steps, self.args, num_eval
+                self.policy, total_num_steps, self.args, num_eval=num_eval
             )
 
     def close(self):
@@ -172,22 +172,12 @@ class Runner:
     def full_eval(self, create_traj_saver_fn):
         alg_env_settings = self.updater.get_env_settings(self.args)
 
-        tmp_env = make_vec_envs(
-            self.args.env_name,
-            self.args.seed,
-            1,
-            self.args.gamma,
-            self.args.device,
-            False,
-            self.env_interface,
-            self.args,
-            alg_env_settings,
-            set_eval=False,
-        )
         vec_norm = None
         if self.checkpointer.has_load_key("ob_rms"):
+            vec_norm = wrap_in_vec_normalize(
+                self.envs, self.args.gamma, alg_env_settings
+            )
             ob_rms_dict = self.checkpointer.get_key("ob_rms")
-            vec_norm = get_vec_normalize(tmp_env)
             if vec_norm is not None:
                 vec_norm.ob_rms_dict = ob_rms_dict
 
@@ -201,7 +191,7 @@ class Runner:
             alg_env_settings,
             create_traj_saver_fn,
             vec_norm,
-            self.args.final_num_eval,
+            num_eval=self.args.final_num_eval,
         )
 
     def load_from_checkpoint(self):

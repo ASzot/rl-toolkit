@@ -15,6 +15,13 @@ from rlf.baselines.vec_env.shmem_vec_env import ShmemVecEnv
 from rlf.baselines.vec_env.vec_normalize import VecNormalize as VecNormalize_
 
 
+def wrap_in_vec_normalize(envs, gamma, alg_env_settings):
+    if gamma is None:
+        return VecNormalize(envs, ret=False, ret_raw_obs=alg_env_settings.ret_raw_obs)
+    else:
+        return VecNormalize(envs, gamma=gamma, ret_raw_obs=alg_env_settings.ret_raw_obs)
+
+
 def get_vec_normalize(venv):
     if isinstance(venv, VecNormalize):
         return venv
@@ -164,14 +171,7 @@ def make_vec_envs(
 
     use_env_norm = not set_eval and len(single_shapes) > 0 and args.normalize_env
     if use_env_norm:
-        if gamma is None:
-            envs = VecNormalize(
-                envs, ret=False, ret_raw_obs=alg_env_settings.ret_raw_obs
-            )
-        else:
-            envs = VecNormalize(
-                envs, gamma=gamma, ret_raw_obs=alg_env_settings.ret_raw_obs
-            )
+        envs = wrap_in_vec_normalize(envs, gamma, alg_env_settings)
 
     if env_interface.requires_tensor_wrap():
         envs = VecPyTorch(envs, device)

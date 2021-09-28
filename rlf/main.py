@@ -52,6 +52,7 @@ def run_policy(run_settings, runner=None):
 
         if args.eval_only:
             eval_result = runner.full_eval(run_settings.create_traj_saver)
+            runner.close()
             return RunResult(prefix=args.prefix, eval_result=eval_result)
 
         start_update = 0
@@ -73,12 +74,12 @@ def run_policy(run_settings, runner=None):
             if args.save_interval > 0 and (j + 1) % args.save_interval == 0:
                 runner.save(j)
             if args.eval_interval > 0 and (j + 1) % args.eval_interval == 0:
-                runner.eval(j, True)
+                runner.eval(j, force_eval=True)
 
         if args.save_interval > 0:
             runner.save(j + 1, force_save=True)
         if args.eval_interval > 0:
-            runner.eval(j + 1, args.final_num_eval, force_eval=True)
+            runner.eval(j + 1, num_eval=args.final_num_eval, force_eval=True)
 
         runner.close()
         # WB prefix of the run so we can later fetch the data.
