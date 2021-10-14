@@ -60,7 +60,7 @@ def plot_legend(plot_cfg_path):
             darkness = plot_settings["marker_darkness"]
             for name in names:
                 add_kwargs = {}
-                if name in plot_settings["linestyles"]:
+                if name in plot_settings.get("linestyles", {}):
                     linestyle = plot_settings["linestyles"][name]
                     if isinstance(linestyle, list):
                         add_kwargs["linestyle"] = linestyle[0]
