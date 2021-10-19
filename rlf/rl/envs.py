@@ -126,7 +126,13 @@ def make_vec_envs(
     alg_env_settings,
     num_frame_stack=None,
     set_eval=False,
+    previous_env=None,
 ):
+    """
+    :param previous_env: Takes the action and observation space from this
+        environment. If specified this avoids creating another dummy environment to
+        fetch the observation and action space.
+    """
 
     if args.render_metric and set_eval and num_processes > 1:
         raise ValueError(
@@ -159,7 +165,13 @@ def make_vec_envs(
             args,
         )
         if custom_envs is None:
-            envs = ShmemVecEnv(envs, context=args.context_mode)
+            extra_kwargs = {}
+            if previous_env is not None:
+                extra_kwargs["spaces"] = (
+                    previous_env.observation_space,
+                    previous_env.action_space,
+                )
+            envs = ShmemVecEnv(envs, context=args.context_mode, **extra_kwargs)
         else:
             envs = custom_envs
     else:

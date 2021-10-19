@@ -26,6 +26,7 @@ def eval_print(
     log,
     create_traj_saver_fn,
     num_eval,
+    previous_env=None,
 ):
     print("Evaluating " + mode)
     args.evaluation_mode = True
@@ -41,6 +42,7 @@ def eval_print(
         log,
         create_traj_saver_fn,
         num_eval=num_eval,
+        previous_env=previous_env,
     )
 
     log.log_vals(
@@ -78,6 +80,7 @@ def train_eval(
         log,
         create_traj_saver_fn,
         num_eval=num_eval,
+        previous_env=envs,
     )
 
     return train_eval_envs
@@ -125,6 +128,7 @@ def evaluate(
     log,
     create_traj_saver_fn,
     num_eval=None,
+    previous_env=None,
 ):
     if args.eval_num_processes is None:
         num_processes = args.num_processes
@@ -132,7 +136,6 @@ def evaluate(
         num_processes = args.eval_num_processes
 
     if eval_envs is None:
-        args.force_multi_proc = False
         eval_envs = make_vec_envs(
             args.env_name,
             args.seed + num_steps,
@@ -144,6 +147,7 @@ def evaluate(
             args,
             alg_env_settings,
             set_eval=True,
+            previous_env=previous_env,
         )
 
     assert get_vec_normalize(eval_envs) is None, "Norm is manually applied"

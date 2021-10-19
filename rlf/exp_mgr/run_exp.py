@@ -239,6 +239,19 @@ def transform_prefix(s, common_id):
     return ret
 
 
+def add_changes_to_cmd(cmd, args):
+    base_data_dir = config_mgr.get_prop("base_data_dir")
+    new_dirs = []
+    cmd_args = cmd.split(" ")
+    if not args.skip_add:
+        for k, v in config_mgr.get_prop("change_cmds").items():
+            if k in cmd_args:
+                continue
+            new_dirs.append(k + " " + osp.join(base_data_dir, v))
+        cmd += " " + (" ".join(new_dirs))
+    return cmd
+
+
 def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, args):
     cmds = get_cmds(cmd_path, add_args_str, args)
     cmds = [
@@ -311,6 +324,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
     if len(env_vars) != 0:
         env_vars += " "
 
+    cmds = [add_changes_to_cmd(cmd, args) for cmd in cmds]
+
     if sess_id == -1:
         if len(cmds) == 1:
             exec_cmd = cmds[0]
@@ -347,6 +362,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
 
         for cmd_idx, cmd in enumerate(cmds):
             new_window = get_tmux_window(sess_name, sess_id)
+
             cmd += " " + add_on
             print("running full command %s\n" % cmd)
 
@@ -376,7 +392,6 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
                 pane.enter()
             else:
                 # Make command into a SLURM command
-                base_data_dir = config_mgr.get_prop("base_data_dir")
                 python_path = osp.join(
                     osp.expanduser("~"), "miniconda3", "envs", conda_env, "bin"
                 )
@@ -391,9 +406,6 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
                         prefix = parts[i + 1].replace('"', "")
                         break
 
-                new_log_dir = osp.join(base_data_dir, "log")
-                new_vids_dir = osp.join(base_data_dir, "vids")
-                new_save_dir = osp.join(base_data_dir, "trained_models")
                 ident = str(uuid.uuid4())[:8]
                 log_file = osp.join(runs_dir, ident) + ".log"
 
@@ -401,15 +413,6 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
                 last_pane.send_keys(f"tail -f {log_file}", enter=False)
                 pane = new_window.split_window(attach=False)
                 pane.set_height(height=10)
-
-                new_dirs = []
-                cmd_args = cmd.split(" ")
-                if not args.skip_add:
-                    for k, v in config_mgr.get_prop("change_cmds").items():
-                        if k in cmd_args:
-                            continue
-                        new_dirs.append(k + " " + osp.join(base_data_dir, v))
-                    cmd += " " + (" ".join(new_dirs))
 
                 if not args.slurm_no_batch:
                     run_file, run_name = generate_hab_run_file(
