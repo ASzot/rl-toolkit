@@ -1,12 +1,17 @@
 ## Running Jobs
+Argument list
+* `--cd X` A value of -1 does not set the CUDA environment variable (which is the default). This is helpful on
+  machines where you shouldn't mess with this setting. 
+* `--skip-env` Skips adding the environment variables under `add_env_vars` from
+    config.
+* `--skip-add` Skips adding the command line arguments from `change_cmds` from
+    config.
+    
+
 ### SLURM Helper
 The SLURM helper is only activated when you are running `--sess-id X` and
-specify a value for `--st`. When `habitat_baselines` is in the command a
-`sh` file will be created with the command and then `sbatch` will be run.
-`--nodes` does not affect non-sbatch runs. 
+specify a value for `--st`. 
 
-- `--cd -1` does not set the CUDA environment variable (which is the default). This is helpful on
-  machines where you shouldn't mess with this setting. 
 
 ## Setting up W&B
 - First log into W&B: `wandb login ...`

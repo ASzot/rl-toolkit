@@ -14,6 +14,8 @@ from rlf.args import str2bool
 from rlf.exp_mgr import config_mgr
 from rlf.exp_mgr.wb_data_mgr import get_run_params
 
+RUNS_DIR = "data/log/runs"
+
 
 def get_arg_parser():
     parser = argparse.ArgumentParser()
@@ -72,7 +74,7 @@ def get_arg_parser():
 
     # SLURM OPTIONS
     parser.add_argument("--comment", type=str, default=None)
-    parser.add_argument("--overcap", action="store_true")
+    parser.add_argument("--inject-slurm-id", type=str2bool, default=True)
     parser.add_argument("--slurm-no-batch", action="store_true")
     parser.add_argument(
         "--skip-env",
@@ -252,7 +254,65 @@ def add_changes_to_cmd(cmd, args):
     return cmd
 
 
+def as_list(x, max_num):
+    if isinstance(x, int):
+        return [x for _ in range(max_num)]
+    x = x.split("|")
+    if len(x) == 1:
+        x = [x[0] for _ in range(max_num)]
+    return x
+
+
+def get_cmd_run_str(cmd, args, cd, cmd_idx, num_cmds):
+    env_vars = " ".join(config_mgr.get_prop("add_env_vars", []))
+    if len(env_vars) != 0:
+        env_vars += " "
+    conda_env = config_mgr.get_prop("conda_env")
+
+    cd = as_list(cd, num_cmds)
+    ntasks = as_list(args.ntasks, num_cmds)
+    g = as_list(args.g, num_cmds)
+    c = as_list(args.c, num_cmds)
+
+    if args.st is None:
+        return env_vars + cmd
+    else:
+        # Make command into a SLURM command
+        python_path = osp.join(
+            osp.expanduser("~"), "miniconda3", "envs", conda_env, "bin"
+        )
+        ident = str(uuid.uuid4())[:8]
+        log_file = osp.join(RUNS_DIR, ident) + ".log"
+        if not args.slurm_no_batch:
+            run_file, run_name = generate_slurm_batch_file(
+                log_file,
+                ident,
+                python_path,
+                cmd,
+                args.st,
+                ntasks[cmd_idx],
+                g[cmd_idx],
+                c[cmd_idx],
+                args,
+            )
+            return f"sbatch {run_file}"
+        else:
+            srun_settings = (
+                f"--gres=gpu:{args.g} "
+                + f"-p {args.st} "
+                + f"-c {args.c} "
+                + f"-J {ident} "
+                + f"-o {log_file}"
+            )
+
+            # This assumes the command begins with "python ..."
+            return f"srun {srun_settings} {python_path}/{cmd}"
+
+
 def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, args):
+    if not osp.exists(RUNS_DIR):
+        os.makedirs(RUNS_DIR)
+
     cmds = get_cmds(cmd_path, add_args_str, args)
     cmds = [
         cmd.replace("FILE_PATH", config_mgr.get_prop("file_path", "")) for cmd in cmds
@@ -284,8 +344,6 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         n_seeds = len(seeds)
     elif seed is not None:
         cmds = [x + f" {cmd_format}seed{spacer}{seed}" for x in cmds]
-    add_on = ""
-
     if (len(cmds) // n_seeds) > 1:
         # Make sure all the commands share the last part of the prefix so they can
         # find each other. The name is long because its really bad if a job
@@ -320,61 +378,39 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         print("IN DEBUG MODE")
         cmds = [cmds[args.debug]]
 
-    env_vars = " ".join(config_mgr.get_prop("add_env_vars", []))
-    if len(env_vars) != 0:
-        env_vars += " "
-
     cmds = [add_changes_to_cmd(cmd, args) for cmd in cmds]
+    DELIM = " ; "
+
+    if args.run_single:
+        cmds = DELIM.join(cmds)
+        cmds = [cmds]
 
     if sess_id == -1:
-        if len(cmds) == 1:
-            exec_cmd = cmds[0]
+        if args.st is not None:
+            for cmd_idx, cmd in enumerate(cmds):
+                run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds))
+                os.system(run_cmd)
+        elif len(cmds) == 1:
+            exec_cmd = get_cmd_run_str(cmds[0], args, cd, 0, len(cmds))
             if cd != "-1":
-                exec_cmd = "CUDA_VISIBLE_DEVICES=" + cd + " " + exec_cmd + " " + add_on
-            else:
-                exec_cmd = exec_cmd + " " + add_on
-            if not args.skip_env:
-                exec_cmd = env_vars + exec_cmd
+                exec_cmd = "CUDA_VISIBLE_DEVICES=" + cd + " " + exec_cmd
             print("executing ", exec_cmd)
             os.system(exec_cmd)
         else:
             raise ValueError("Running multiple jobs. You must specify tmux session id")
     else:
-
-        def as_list(x):
-            if isinstance(x, int):
-                return [x for _ in cmds]
-            x = x.split("|")
-            if len(x) == 1:
-                x = [x[0] for _ in cmds]
-            return x
-
-        cd = as_list(cd)
-        ntasks = as_list(args.ntasks)
-        g = as_list(args.g)
-        c = as_list(args.c)
-
-        DELIM = " ; "
-
-        if args.run_single:
-            cmds = DELIM.join(cmds)
-            cmds = [cmds]
-
         for cmd_idx, cmd in enumerate(cmds):
             new_window = get_tmux_window(sess_name, sess_id)
 
-            cmd += " " + add_on
             print("running full command %s\n" % cmd)
+
+            run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds))
 
             # Send the keys to run the command
             conda_env = config_mgr.get_prop("conda_env")
             if args.st is None:
-                if not args.skip_env:
-                    tmp_cmds = cmd.split(DELIM)
-                    tmp_cmds = [env_vars + x for x in tmp_cmds]
-                    cmd = DELIM.join(tmp_cmds)
                 last_pane = new_window.attached_pane
-                last_pane.send_keys(cmd, enter=False)
+                last_pane.send_keys(run_cmd, enter=False)
                 pane = new_window.split_window(attach=False)
                 pane.set_height(height=50)
                 pane.send_keys("source deactivate")
@@ -385,79 +421,27 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
                     pane.send_keys("export CUDA_VISIBLE_DEVICES=" + cd[cmd_idx])
                     pane.enter()
                 if args.send_kill_after:
-                    pane.send_keys(cmd + "; sleep 5 ; tmux kill-window")
+                    pane.send_keys(run_cmd + "; sleep 5 ; tmux kill-window")
                 else:
-                    pane.send_keys(cmd)
+                    pane.send_keys(run_cmd)
 
                 pane.enter()
             else:
-                # Make command into a SLURM command
-                python_path = osp.join(
-                    osp.expanduser("~"), "miniconda3", "envs", conda_env, "bin"
-                )
-                runs_dir = "data/log/runs"
-                if not osp.exists(runs_dir):
-                    os.makedirs(runs_dir)
-
-                parts = cmd.split(" ")
-                prefix = None
-                for i, x in enumerate(parts):
-                    if x == "--prefix" or x == "PREFIX":
-                        prefix = parts[i + 1].replace('"', "")
-                        break
-
-                ident = str(uuid.uuid4())[:8]
-                log_file = osp.join(runs_dir, ident) + ".log"
-
-                last_pane = new_window.attached_pane
-                last_pane.send_keys(f"tail -f {log_file}", enter=False)
                 pane = new_window.split_window(attach=False)
                 pane.set_height(height=10)
-
-                if not args.slurm_no_batch:
-                    run_file, run_name = generate_hab_run_file(
-                        log_file,
-                        ident,
-                        python_path,
-                        cmd,
-                        prefix,
-                        args.st,
-                        ntasks[cmd_idx],
-                        g[cmd_idx],
-                        c[cmd_idx],
-                        args.overcap,
-                        args,
-                    )
-                    print(f"Running file at {run_file}")
-                    pane.send_keys(f"sbatch {run_file}")
-                    time.sleep(2)
-                    pane.send_keys(f"scancel {run_name}", enter=False)
-                else:
-                    srun_settings = (
-                        f"--gres=gpu:{args.g} "
-                        + f"-p {args.st} "
-                        + f"-c {args.c} "
-                        + f"-J {prefix}_{ident} "
-                        + f"-o {log_file}"
-                    )
-
-                    # This assumes the command begins with "python ..."
-                    cmd = f"srun {srun_settings} {python_path}/{cmd}"
-                    pane.send_keys(cmd)
+                pane.send_keys(run_cmd)
 
         print("everything should be running...")
 
 
-def generate_hab_run_file(
-    log_file, ident, python_path, cmd, prefix, st, ntasks, g, c, use_overcap, args
+def generate_slurm_batch_file(
+    log_file, ident, python_path, cmd, st, ntasks, g, c, args
 ):
     ignore_nodes_s = ",".join(config_mgr.get_prop("slurm_ignore_nodes", []))
     if len(ignore_nodes_s) != 0:
         ignore_nodes_s = "#SBATCH -x " + ignore_nodes_s
 
     add_options = [ignore_nodes_s]
-    if use_overcap:
-        add_options.append("#SBATCH --account=overcap")
     if args.time is not None:
         add_options.append(f"#SBATCH --time={args.time}")
     if args.comment is not None:
@@ -471,6 +455,12 @@ def generate_hab_run_file(
         pre_python_txt = python_parts[0]
         cmd = "python" + python_parts[1]
         has_python = True
+
+    cmd_line_exports = ""
+    if not args.skip_env:
+        env_vars = config_mgr.get_prop("add_env_vars", [])
+        env_vars = [f"export {x}" for x in env_vars]
+        env_vars = "\n".join(env_vars)
 
     cpu_options = "#SBATCH --cpus-per-task %i" % int(c)
     if args.speed:
@@ -487,6 +477,9 @@ def generate_hab_run_file(
         run_cmd = cmd
         requeue_s = ""
 
+    if args.inject_slurm_id:
+        run_cmd += f" --slurm-id {ident}"
+
     fcontents = """#!/bin/bash
 #SBATCH --job-name=%s
 #SBATCH --output=%s
@@ -499,18 +492,14 @@ def generate_hab_run_file(
 #SBATCH -p %s
 %s
 
-export GLOG_minloglevel=2
-export MAGNUM_LOG=quiet
 export MULTI_PROC_OFFSET=%i
+%s
 
 export MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 
 set -x
 srun %s"""
-    if prefix is not None:
-        job_name = prefix + "_" + ident
-    else:
-        job_name = ident
+    job_name = ident
     log_file_loc = "/".join(log_file.split("/")[:-1])
     fcontents = fcontents % (
         job_name,
@@ -522,6 +511,7 @@ srun %s"""
         st,
         add_options,
         args.mp_offset,
+        env_vars,
         run_cmd,
     )
     job_file = osp.join(log_file_loc, job_name + ".sh")

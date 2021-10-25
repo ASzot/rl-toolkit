@@ -123,6 +123,9 @@ def add_args(parser):
         "--seed", type=int, default=31, help="random seed (default: 31)"
     )
     parser.add_argument(
+        "--slurm-id", type=str, default="", help="To track the slurm run identifier."
+    )
+    parser.add_argument(
         "--detect-nan",
         type=str2bool,
         default=False,
