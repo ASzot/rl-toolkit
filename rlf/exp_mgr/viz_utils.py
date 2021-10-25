@@ -4,12 +4,13 @@ Utilities for manipulating images, rendering images, and rendering videos.
 import os
 import os.path as osp
 from argparse import Namespace
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import rlf.rl.utils as rutils
+import seaborn as sns
 
 try:
     import wandb
@@ -179,3 +180,44 @@ def plot_traj_data(
                 step=step,
             )
     return np.mean(per_state_mse)
+
+
+def high_res_save(save_path):
+    file_format = save_path.split(".")[-1]
+    plt.savefig(save_path, format=file_format, dpi=1000, bbox_inches="tight")
+    print(f"Saved figure to {save_path}")
+
+
+def nice_scatter(
+    data_points: Dict[str, List[Tuple[float, float]]],
+    name_colors: Dict[str, int],
+    rename_map: Dict[str, str],
+    save_name: str,
+    save_dir: str,
+    x_axis_name: str,
+    y_axis_name: str,
+    title_name: str,
+    show_legend: bool,
+):
+    color_pal = sns.color_palette()
+    fig, ax = plt.subplots()
+
+    for k in data_points:
+        X = []
+        Y = []
+        colors = []
+        for x, y in data_points[k]:
+            X.append(x)
+            Y.append(y)
+            colors.append(color_pal[name_colors[k]])
+        ax.scatter(X, Y, c=colors, label=rename_map[k])
+
+    ax.set_xlabel(x_axis_name)
+    ax.set_ylabel(y_axis_name)
+    if show_legend:
+        ax.legend()
+    ax.grid(True)
+    ax.set_title(title_name)
+
+    high_res_save(osp.join(save_dir, save_name + ".pdf"))
+    plt.clf()
