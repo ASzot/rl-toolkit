@@ -32,6 +32,8 @@ def get_arg_parser():
         "--cmd", type=str, required=True, help="list of commands to run"
     )
     parser.add_argument("--seed", type=str, default=None)
+    parser.add_argument("--tag", type=str, default=None)
+    parser.add_argument("--group", type=str, default=None)
     parser.add_argument("--proj-dat", type=str, default=None)
     parser.add_argument(
         "--run-single",
@@ -75,7 +77,13 @@ def get_arg_parser():
     # SLURM OPTIONS
     parser.add_argument("--comment", type=str, default=None)
     parser.add_argument("--inject-slurm-id", type=str2bool, default=True)
-    parser.add_argument("--slurm-no-batch", action="store_true")
+    parser.add_argument(
+        "--slurm-no-batch",
+        action="store_true",
+        help="""
+            If specified, will run with srun instead of sbatch
+        """,
+    )
     parser.add_argument(
         "--skip-env",
         action="store_true",
@@ -309,6 +317,14 @@ def get_cmd_run_str(cmd, args, cd, cmd_idx, num_cmds):
             return f"srun {srun_settings} {python_path}/{cmd}"
 
 
+def add_tag_and_group_to_cmd(cmd, args):
+    if args.tag is not None:
+        cmd += f" --tag-id {args.tag}"
+    if args.group is not None:
+        cmd += f" --group-id {args.group}"
+    return cmd
+
+
 def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, args):
     if not osp.exists(RUNS_DIR):
         os.makedirs(RUNS_DIR)
@@ -317,6 +333,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
     cmds = [
         cmd.replace("FILE_PATH", config_mgr.get_prop("file_path", "")) for cmd in cmds
     ]
+
+    cmds = [add_tag_and_group_to_cmd(cmd, args) for cmd in cmds]
 
     if args.proj_dat is not None:
         proj_data = config_mgr.get_prop("proj_data", {})
@@ -389,12 +407,13 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         if args.st is not None:
             for cmd_idx, cmd in enumerate(cmds):
                 run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds))
+                print(f"Running {run_cmd}")
                 os.system(run_cmd)
         elif len(cmds) == 1:
             exec_cmd = get_cmd_run_str(cmds[0], args, cd, 0, len(cmds))
             if cd != "-1":
                 exec_cmd = "CUDA_VISIBLE_DEVICES=" + cd + " " + exec_cmd
-            print("executing ", exec_cmd)
+            print(f"Running {exec_cmd}")
             os.system(exec_cmd)
         else:
             raise ValueError("Running multiple jobs. You must specify tmux session id")

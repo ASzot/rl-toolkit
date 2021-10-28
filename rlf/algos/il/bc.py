@@ -1,4 +1,5 @@
 import copy
+from collections import defaultdict
 
 import gym
 import numpy as np
@@ -57,10 +58,7 @@ class BehavioralCloning(BaseILAlgo):
         return x
 
     def get_num_updates(self):
-        if self.exp_generator is None:
-            return len(self.expert_train_loader) * self.args.bc_num_epochs
-        else:
-            return self.args.exp_gen_num_trans * self.args.bc_num_epochs
+        return self.args.n_updates
 
     def get_completed_update_steps(self, num_updates):
         return num_updates * self.args.traj_batch_size
@@ -171,7 +169,14 @@ class BehavioralCloning(BaseILAlgo):
 
     def update(self, storage):
         top_log_vals = super().update(storage)
-        log_vals = self._bc_step(True)
+
+        all_log_vals = defaultdict(list)
+        for _ in range(self.args.bc_num_mini_batches):
+            step_log_vals = self._bc_step(True)
+            for k, v in step_log_vals.items():
+                all_log_vals[k].append(v)
+
+        log_vals = {k: np.mean(all_log_vals[k]) for k in all_log_vals}
         log_vals.update(top_log_vals)
         return log_vals
 
@@ -202,7 +207,22 @@ class BehavioralCloning(BaseILAlgo):
 
         #########################################
         # New args
-        parser.add_argument("--bc-num-epochs", type=int, default=1)
+        parser.add_argument(
+            "--n-updates",
+            type=int,
+            default=1,
+            help="""
+                The number of updates to update the policy
+                """,
+        )
+        parser.add_argument(
+            "--bc-num-mini-batches",
+            type=int,
+            default=1,
+            help="""
+                Number mini batches per update
+                """,
+        )
         parser.add_argument("--bc-log-interval", type=int, default=1)
         parser.add_argument("--bc-state-norm", type=str2bool, default=False)
         parser.add_argument("--bc-noise", type=float, default=None)

@@ -126,6 +126,12 @@ def add_args(parser):
         "--slurm-id", type=str, default="", help="To track the slurm run identifier."
     )
     parser.add_argument(
+        "--group-id", type=str, default=None, help="Group ID for the run"
+    )
+    parser.add_argument(
+        "--tag-id", type=str, default=None, help="Single tag for the run"
+    )
+    parser.add_argument(
         "--detect-nan",
         type=str2bool,
         default=False,

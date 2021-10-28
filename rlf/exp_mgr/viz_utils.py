@@ -198,6 +198,8 @@ def nice_scatter(
     y_axis_name: str,
     title_name: str,
     show_legend: bool,
+    x_lim: Optional[Tuple[float, float]],
+    y_lim: Optional[Tuple[float, float]],
 ):
     color_pal = sns.color_palette()
     fig, ax = plt.subplots()
@@ -214,6 +216,10 @@ def nice_scatter(
 
     ax.set_xlabel(x_axis_name)
     ax.set_ylabel(y_axis_name)
+    if x_lim is not None:
+        ax.set_xlim(*x_lim)
+    if y_lim is not None:
+        ax.set_ylim(*y_lim)
     if show_legend:
         ax.legend()
     ax.grid(True)

@@ -110,6 +110,12 @@ class WbLogger(BaseLogger):
         else:
             group_id = None
 
+        if args.group_id is not None:
+            group_id = args.group_id
+        kwargs = {}
+        if args.tag_id is not None:
+            kwargs["tags"] = [args.tag_id]
+
         self.run = wandb.init(
             project=self.wb_proj_name,
             name=self.prefix,
@@ -117,6 +123,7 @@ class WbLogger(BaseLogger):
             group=group_id,
             reinit=True,
             config=args,
+            **kwargs,
         )
         self.is_closed = False
         return wandb
