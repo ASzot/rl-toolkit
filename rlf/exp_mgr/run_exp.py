@@ -13,6 +13,7 @@ import libtmux
 from rlf.args import str2bool
 from rlf.exp_mgr import config_mgr
 from rlf.exp_mgr.wb_data_mgr import get_run_params
+from rlf.exp_mgr.wb_query import query_s
 
 RUNS_DIR = "data/log/runs"
 
@@ -33,7 +34,7 @@ def get_arg_parser():
     )
     parser.add_argument("--seed", type=str, default=None)
     parser.add_argument("--tag", type=str, default=None)
-    parser.add_argument("--group", type=str, default=None)
+    parser.add_argument("--group", action="store_true")
     parser.add_argument("--proj-dat", type=str, default=None)
     parser.add_argument(
         "--run-single",
@@ -277,7 +278,6 @@ def get_cmd_run_str(cmd, args, cd, cmd_idx, num_cmds):
         env_vars += " "
     conda_env = config_mgr.get_prop("conda_env")
 
-    cd = as_list(cd, num_cmds)
     ntasks = as_list(args.ntasks, num_cmds)
     g = as_list(args.g, num_cmds)
     c = as_list(args.c, num_cmds)
@@ -317,12 +317,46 @@ def get_cmd_run_str(cmd, args, cd, cmd_idx, num_cmds):
             return f"srun {srun_settings} {python_path}/{cmd}"
 
 
-def add_tag_and_group_to_cmd(cmd, args):
+def add_tag_and_group_to_cmd(cmd, group_id, args):
     if args.tag is not None:
         cmd += f" --tag-id {args.tag}"
-    if args.group is not None:
-        cmd += f" --group-id {args.group}"
+    elif args.proj_dat is not None:
+        tag = args.proj_dat.replace(",", "_")
+        cmd += f" --tag-id {tag}"
+    else:
+        cmd += f" --tag-id {args.cmd.replace('/', '_')}"
+    if group_id is not None:
+        cmd += f" --group-id {group_id}"
+
     return cmd
+
+
+def sub_wb_query(cmd, args):
+    parts = cmd.split("&")
+    if len(parts) < 3:
+        return [cmd]
+
+    new_cmd = [parts[0]]
+    parts = parts[1:]
+
+    for i in range(len(parts)):
+        if i % 2 == 0:
+            wb_query = parts[i]
+            result = query_s(wb_query)
+            if len(result) == 0:
+                raise ValueError(f"Got no response from {wb_query}")
+            sub_vals = []
+            for match in result:
+                if len(match) > 1:
+                    raise ValueError(f"Only single value query supported, got {match}")
+                sub_val = list(match.values())[0]
+                sub_vals.append(sub_val)
+
+            new_cmd = [c + sub_val for c in new_cmd for sub_val in sub_vals]
+        else:
+            for j in range(len(new_cmd)):
+                new_cmd[j] += parts[i]
+    return new_cmd
 
 
 def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, args):
@@ -334,12 +368,22 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         cmd.replace("FILE_PATH", config_mgr.get_prop("file_path", "")) for cmd in cmds
     ]
 
-    cmds = [add_tag_and_group_to_cmd(cmd, args) for cmd in cmds]
+    group_id = None
+    if args.group:
+        group_id = "".join(random.sample(string.ascii_uppercase + string.digits, k=2))
+        print("-" * 20)
+        print("Assigning group ID", group_id)
+        print("-" * 20)
+    cmds = [add_tag_and_group_to_cmd(cmd, group_id, args) for cmd in cmds]
+    cmds = [c for cmd in cmds for c in sub_wb_query(cmd, args)]
 
     if args.proj_dat is not None:
         proj_data = config_mgr.get_prop("proj_data", {})
-        add_args = proj_data[args.proj_dat]
-        cmds = [cmd + " " + add_args for cmd in cmds]
+        lookups = args.proj_dat.split(",")
+        print("Using tag: ", args.proj_dat.replace(",", "_"))
+        for k in lookups:
+            add_args = proj_data[k]
+            cmds = [cmd + " " + add_args for cmd in cmds]
 
     n_seeds = 1
     if args.cmd_format == "reg":
@@ -403,6 +447,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         cmds = DELIM.join(cmds)
         cmds = [cmds]
 
+    cd = as_list(cd, len(cmds))
+
     if sess_id == -1:
         if args.st is not None:
             for cmd_idx, cmd in enumerate(cmds):
@@ -411,8 +457,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
                 os.system(run_cmd)
         elif len(cmds) == 1:
             exec_cmd = get_cmd_run_str(cmds[0], args, cd, 0, len(cmds))
-            if cd != "-1":
-                exec_cmd = "CUDA_VISIBLE_DEVICES=" + cd + " " + exec_cmd
+            if cd[0] != "-1":
+                exec_cmd = "CUDA_VISIBLE_DEVICES=" + cd[0] + " " + exec_cmd
             print(f"Running {exec_cmd}")
             os.system(exec_cmd)
         else:

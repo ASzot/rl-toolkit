@@ -243,7 +243,7 @@ class RolloutStorage(BaseStorage):
             data_generator = self.recurrent_generator(advantages, num_mini_batch)
         else:
             data_generator = self.feed_forward_generator(
-                advantages, num_mini_batch, mini_batch_size
+                advantages, num_mini_batch, mini_batch_size, **kwargs
             )
         return data_generator
 
@@ -252,7 +252,12 @@ class RolloutStorage(BaseStorage):
         return next(gen)
 
     def feed_forward_generator(
-        self, advantages, num_mini_batch=None, mini_batch_size=None
+        self,
+        advantages,
+        num_mini_batch=None,
+        mini_batch_size=None,
+        get_next_state=False,
+        **kwargs,
     ):
         num_steps, num_processes = self.rewards.size()[0:2]
         batch_size = num_processes * num_steps
@@ -305,7 +310,7 @@ class RolloutStorage(BaseStorage):
             else:
                 adv_targ = advantages.view(-1, self.value_dim)[indices]
 
-            yield {
+            ret_dict = {
                 "state": obs_batch,
                 "other_state": other_obs_batch,
                 "reward": rewards_batch,
@@ -317,6 +322,22 @@ class RolloutStorage(BaseStorage):
                 "prev_log_prob": old_action_log_probs_batch,
                 "adv": adv_targ,
             }
+            if get_next_state:
+                next_obs_batch = None
+                next_other_obs_batch = {}
+                for k, ob_shape in self.ob_keys.items():
+                    if k is None:
+                        next_obs_batch = self.obs[1:].view(-1, *ob_shape)[indices]
+                    elif k == self.args.policy_ob_key:
+                        next_obs_batch = self.obs[k][1:].view(-1, *ob_shape)[indices]
+                    else:
+                        next_other_obs_batch[k] = self.obs[k][1:].view(-1, *ob_shape)[
+                            indices
+                        ]
+                ret_dict["next_state"] = next_obs_batch
+                ret_dict["next_other_state"] = next_other_obs_batch
+
+            yield ret_dict
 
     def get_np_tensors(self):
         """

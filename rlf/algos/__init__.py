@@ -1,5 +1,6 @@
 from rlf.algos.base_algo import BaseAlgo
 from rlf.algos.base_net_algo import BaseNetAlgo
+from rlf.algos.il.airl import AIRL, AirlDiscrim
 from rlf.algos.il.base_il import BaseILAlgo
 from rlf.algos.il.base_irl import BaseIRLAlgo
 from rlf.algos.il.bc import BehavioralCloning

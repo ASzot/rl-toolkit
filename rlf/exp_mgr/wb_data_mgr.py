@@ -259,28 +259,3 @@ def get_report_data(
     cacher.save(all_df)
 
     return all_df
-
-
-if __name__ == "__main__":
-    parser = get_arg_parser()
-    args = parser.parse_args()
-
-    # df = get_run_data([
-    #    '52-MGFR-31-KY-dpf',
-    #    '51-MGFR-51-GU-dpf',
-    #    '51-MGFR-41-HE-dpf',
-    #    ], 'avg_ep_found_goal',
-    #    'Ours', args.cfg)
-
-    df = get_report_data(
-        "gw-final-locator", "avg_ep_found_goal", ["ours"], args.force_refresh, args.cfg
-    )
-    print(df.head())
-
-    # raw_dat = get_report_data_from_spec('''
-    #        report_name: "5/2/20 Grid World Analysis"
-    #        plot_column: "avg_r"
-    #        fields:
-    #        - "ours (0.9 cover, 100%)"
-    #        - "ours (0.9 cover, 100%, ablate)"
-    #        ''', args.force_refresh, args.cfg)

@@ -166,6 +166,7 @@ class GaifoDiscrim(GailDiscrim):
             reward = -1.0 * (s + eps).log()
         else:
             raise ValueError(f"Unrecognized reward type {self.args.reward_type}")
+
         return reward
 
     def _update_reward_func(self, storage):

@@ -2,7 +2,7 @@ import argparse
 import os
 import os.path as osp
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,7 +27,8 @@ def plot_bar(
     rename_map,
     show_ticks,
     axis_font_size,
-    y_disp_bounds,
+    y_disp_bounds: Tuple[float, float],
+    title="",
 ):
     df_avg_y = plot_df.groupby(group_key).mean()
     df_std_y = plot_df.groupby(group_key).std()
@@ -78,6 +79,8 @@ def plot_bar(
     plt.xticks(xtic_locs, xtic_names, rotation=30)
     plt.ylabel(rename_map[plot_key], fontsize=axis_font_size)
     plt.ylim(*y_disp_bounds)
+    if title != "":
+        plt.title(title)
 
 
 def plot_from_file(plot_cfg_path):
