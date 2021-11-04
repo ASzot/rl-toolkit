@@ -18,7 +18,7 @@ class AirlNetDiscrim(nn.Module):
     The discriminator network is from https://github.com/ku2482/gail-airl-ppo.pytorch/blob/master/gail_airl_ppo/network/disc.py
     """
 
-    def __init__(self, state_enc, gamma, policy, hidden_dim=64):
+    def __init__(self, state_enc, gamma, hidden_dim=64):
         super().__init__()
         self.state_enc = state_enc.net
         output_size = state_enc.output_shape[0]
@@ -37,7 +37,6 @@ class AirlNetDiscrim(nn.Module):
             nn.Linear(hidden_dim, 1),
         )
         self.gamma = gamma
-        self.policy = policy
 
     def f(self, states, mask, next_states):
         states_enc = self.state_enc(states)
@@ -47,10 +46,9 @@ class AirlNetDiscrim(nn.Module):
         next_vs = self.h(next_states_enc)
         return rs + self.gamma * mask * next_vs - vs
 
-    def forward(self, states, actions, mask, next_states):
-        log_pis = self.policy.evaluate_actions(states, {}, {}, mask, actions)[
-            "log_prob"
-        ]
+    def forward(self, states, actions, mask, next_states, policy):
+        with torch.no_grad():
+            log_pis = policy.evaluate_actions(states, {}, {}, mask, actions)["log_prob"]
         return self.f(states, mask, next_states) - log_pis
 
 
@@ -60,7 +58,7 @@ class AirlDiscrim(GailDiscrim):
         base_net = self.policy.get_base_net_fn(ob_shape)
 
         return AirlNetDiscrim(
-            base_net, self.args.gamma, self.policy, self.args.gail_disc_hidden_dim
+            base_net, self.args.gamma, self.args.gail_disc_hidden_dim
         ).to(self.args.device)
 
     def _get_sampler(self, storage):
@@ -85,8 +83,12 @@ class AirlDiscrim(GailDiscrim):
         agent_actions = agent_batch["action"].to(d)
         agent_mask = agent_batch["mask"].to(d)
 
-        expert_d = self.discrim_net(exp_s0, expert_actions, expert_mask, exp_s1)
-        agent_d = self.discrim_net(agent_s0, agent_actions, agent_mask, agent_s1)
+        expert_d = self.discrim_net(
+            exp_s0, expert_actions, expert_mask, exp_s1, self.policy
+        )
+        agent_d = self.discrim_net(
+            agent_s0, agent_actions, agent_mask, agent_s1, self.policy
+        )
         return expert_d, agent_d, 0
 
     def _compute_disc_val(self, state, next_state, action):
@@ -109,5 +111,5 @@ class AirlDiscrim(GailDiscrim):
                     obsfilt(next_state[i].cpu().numpy(), update=False)
                 ).to(self.args.device)
 
-        logits = self.discrim_net(state, action, mask, next_state)
+        logits = self.discrim_net(state, action, mask, next_state, self.policy)
         return -F.logsigmoid(-logits)

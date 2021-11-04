@@ -148,7 +148,6 @@ def add_on_args(spec_args):
 def get_cmds(cmd_path, spec_args, args):
     try:
         open_cmd = osp.join(cmd_path + ".cmd")
-        print("opening", open_cmd)
         with open(open_cmd) as f:
             cmds = f.readlines()
     except:
@@ -303,7 +302,10 @@ def get_cmd_run_str(cmd, args, cd, cmd_idx, num_cmds):
                 c[cmd_idx],
                 args,
             )
-            return f"sbatch {run_file}"
+            if args.group:
+                return f"sbatch {run_file} >/dev/null"
+            else:
+                return f"sbatch {run_file}"
         else:
             srun_settings = (
                 f"--gres=gpu:{args.g} "
@@ -342,7 +344,7 @@ def sub_wb_query(cmd, args):
     for i in range(len(parts)):
         if i % 2 == 0:
             wb_query = parts[i]
-            result = query_s(wb_query)
+            result = query_s(wb_query, verbose=False)
             if len(result) == 0:
                 raise ValueError(f"Got no response from {wb_query}")
             sub_vals = []
@@ -359,6 +361,11 @@ def sub_wb_query(cmd, args):
     return new_cmd
 
 
+def log(s, args):
+    if not args.group:
+        print(s)
+
+
 def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, args):
     if not osp.exists(RUNS_DIR):
         os.makedirs(RUNS_DIR)
@@ -370,17 +377,20 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
 
     group_id = None
     if args.group:
-        group_id = "".join(random.sample(string.ascii_uppercase + string.digits, k=2))
-        print("-" * 20)
-        print("Assigning group ID", group_id)
-        print("-" * 20)
+        group_id = "".join(random.sample(string.ascii_uppercase + string.digits, k=4))
+        if args.group:
+            print(group_id)
+        else:
+            print("-" * 20)
+            print("Assigning group ID", group_id)
+            print("-" * 20)
     cmds = [add_tag_and_group_to_cmd(cmd, group_id, args) for cmd in cmds]
     cmds = [c for cmd in cmds for c in sub_wb_query(cmd, args)]
 
     if args.proj_dat is not None:
         proj_data = config_mgr.get_prop("proj_data", {})
         lookups = args.proj_dat.split(",")
-        print("Using tag: ", args.proj_dat.replace(",", "_"))
+        log("Using tag: " + args.proj_dat.replace(",", "_"), args)
         for k in lookups:
             add_args = proj_data[k]
             cmds = [cmd + " " + add_args for cmd in cmds]
@@ -453,13 +463,13 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         if args.st is not None:
             for cmd_idx, cmd in enumerate(cmds):
                 run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds))
-                print(f"Running {run_cmd}")
+                log(f"Running {run_cmd}", args)
                 os.system(run_cmd)
         elif len(cmds) == 1:
             exec_cmd = get_cmd_run_str(cmds[0], args, cd, 0, len(cmds))
             if cd[0] != "-1":
                 exec_cmd = "CUDA_VISIBLE_DEVICES=" + cd[0] + " " + exec_cmd
-            print(f"Running {exec_cmd}")
+            log(f"Running {exec_cmd}", args)
             os.system(exec_cmd)
         else:
             raise ValueError("Running multiple jobs. You must specify tmux session id")
@@ -467,7 +477,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         for cmd_idx, cmd in enumerate(cmds):
             new_window = get_tmux_window(sess_name, sess_id)
 
-            print("running full command %s\n" % cmd)
+            log("running full command %s\n" % cmd, args)
 
             run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds))
 
@@ -496,7 +506,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
                 pane.set_height(height=10)
                 pane.send_keys(run_cmd)
 
-        print("everything should be running...")
+        log("everything should be running...", args)
 
 
 def generate_slurm_batch_file(
@@ -587,7 +597,6 @@ srun %s"""
 
 def full_execute_command_file():
     parser = get_arg_parser()
-    print(os.getcwd())
     args, rest = parser.parse_known_args()
     config_mgr.init(args.cfg)
 

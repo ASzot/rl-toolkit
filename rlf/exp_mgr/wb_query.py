@@ -10,7 +10,9 @@ from typing import Dict
 from rlf.exp_mgr import config_mgr
 
 
-def query(select_fields, filter_fields: Dict[str, str], cfg="./config.yaml"):
+def query(
+    select_fields, filter_fields: Dict[str, str], cfg="./config.yaml", verbose=True
+):
     config_mgr.init(cfg)
 
     wb_proj_name = config_mgr.get_prop("proj_name")
@@ -28,11 +30,15 @@ def query(select_fields, filter_fields: Dict[str, str], cfg="./config.yaml"):
         else:
             raise ValueError(f"Filter {f}: {v} not supported")
 
-    print("Querying with")
-    print(query_dict)
+    def log(s):
+        if verbose:
+            print(s)
+
+    log("Querying with")
+    log(query_dict)
 
     runs = api.runs(f"{wb_entity}/{wb_proj_name}", query_dict)
-    print(f"Returned {len(runs)} runs")
+    log(f"Returned {len(runs)} runs")
 
     base_data_dir = config_mgr.get_prop("base_data_dir")
     ret_data = []
@@ -69,23 +75,25 @@ def query(select_fields, filter_fields: Dict[str, str], cfg="./config.yaml"):
                 else:
                     use_k = succ_keys[0]
                 v = run.summary[use_k]
+            elif f == "status":
+                v = run.state
             else:
                 # return None
                 raise ValueError(f"Select field {f} not supported")
             dat[f] = v
         ret_data.append(dat)
-    print("Got data", ret_data)
+    log(f"Got data {ret_data}")
     return ret_data
 
 
-def query_s(query_str):
+def query_s(query_str, verbose=True):
     select_s, filter_s = query_str.split(" WHERE ")
     select_fields = select_s.replace(" ", "").split(",")
 
     filter_fields = filter_s.replace(" ", "").split(",")
     filter_fields = [s.split("=") for s in filter_fields]
     filter_fields = {k: v for k, v in filter_fields}
-    return query(select_fields, filter_fields)
+    return query(select_fields, filter_fields, verbose=verbose)
 
 
 if __name__ == "__main__":
