@@ -136,6 +136,10 @@ def evaluate(
         num_processes = args.eval_num_processes
 
     if eval_envs is None:
+        # Things often break if both the train and evaluation environment are
+        # forced to multi proc.
+        args.force_multi_proc = False
+
         eval_envs = make_vec_envs(
             args.env_name,
             args.seed + num_steps,
@@ -321,6 +325,7 @@ def evaluate(
     for k, v in ep_stats.items():
         print(" - %s: %.5f" % (k, np.mean(v)))
         ret_info[k] = np.mean(v)
+        ret_info[k + "_std"] = np.std(v)
 
     if args.render_succ_fails:
         # Render the success and failures to two separate files.

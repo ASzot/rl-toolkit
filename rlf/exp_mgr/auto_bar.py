@@ -11,11 +11,14 @@ import seaborn as sns
 import wandb
 import yaml
 from matplotlib.lines import Line2D
+from pandas.api.types import is_numeric_dtype
 from rlf.exp_mgr import config_mgr
 from rlf.exp_mgr.auto_plot import get_data
 from rlf.exp_mgr.plotter import high_res_save
 from rlf.exp_mgr.wb_data_mgr import get_report_data
 from rlf.rl.utils import CacheHelper, human_format_int
+
+MISSING_VAL = 0.24444
 
 
 def plot_bar(
@@ -29,15 +32,27 @@ def plot_bar(
     axis_font_size,
     y_disp_bounds: Tuple[float, float],
     title="",
+    error_scaling=1.0,
+    missing_fill_value=0.2444,
+    error_fill_value=0.3444,
 ):
+    plot_df = plot_df.replace("missing", missing_fill_value)
+    plot_df = plot_df.replace("error", error_fill_value)
+    plot_df[plot_key] = plot_df[plot_key].astype("float")
+
     df_avg_y = plot_df.groupby(group_key).mean()
     df_std_y = plot_df.groupby(group_key).std()
 
     avg_y = []
     std_y = []
+    name_ordering = [n for n in name_ordering if n in df_avg_y.index]
+    is_missing = []
+    is_error = []
     for name in name_ordering:
+        is_missing.append(df_avg_y["success"].loc[name] == missing_fill_value)
+        is_error.append(df_avg_y["success"].loc[name] == error_fill_value)
         avg_y.append(df_avg_y.loc[name][plot_key])
-        std_y.append(df_std_y.loc[name][plot_key])
+        std_y.append(df_std_y.loc[name][plot_key] * error_scaling)
 
     bar_width = 0.35
     bar_darkness = 0.2
@@ -46,15 +61,15 @@ def plot_bar(
     use_x = np.arange(len(name_ordering))
     colors = [name_colors[x] for x in name_ordering]
 
-    N = len(name_ordering)
+    N = len(avg_y)
     start_x = 0.0
     end_x = round(start_x + N * (bar_width + bar_pad), 3)
 
     use_x = np.linspace(start_x, end_x, N)
-    # plt.figure(figsize=(base_width,6))
-    print(use_x)
 
-    plt.bar(
+    fig, ax = plt.subplots()
+
+    bars = ax.bar(
         use_x,
         avg_y,
         width=bar_width,
@@ -70,17 +85,30 @@ def plot_bar(
             capthick=2,
         ),
     )
+    for i, bar in enumerate(bars):
+        if is_missing[i]:
+            missing_opacity = 0.1
+            prev_color = bar.get_facecolor()
+            bar.set_edgecolor((1, 0, 0, missing_opacity))
+            bar.set_hatch("//")
+        elif is_error[i]:
+            missing_opacity = 0.1
+            prev_color = bar.get_facecolor()
+            bar.set_edgecolor((0, 0, 1, missing_opacity))
+            bar.set_hatch("//")
+
     if show_ticks:
         xtic_names = [rename_map[x] for x in name_ordering]
     else:
         xtic_names = ["" for x in name_ordering]
 
     xtic_locs = use_x
-    plt.xticks(xtic_locs, xtic_names, rotation=30)
-    plt.ylabel(rename_map[plot_key], fontsize=axis_font_size)
-    plt.ylim(*y_disp_bounds)
+    ax.set_xticks(xtic_locs)
+    ax.set_xticklabels(xtic_names, rotation=30)
+    ax.set_ylabel(rename_map[plot_key], fontsize=axis_font_size)
+    ax.set_ylim(*y_disp_bounds)
     if title != "":
-        plt.title(title)
+        ax.set_title(title)
 
 
 def plot_from_file(plot_cfg_path):

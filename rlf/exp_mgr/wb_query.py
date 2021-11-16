@@ -8,15 +8,26 @@ import sys
 from typing import Dict
 
 from rlf.exp_mgr import config_mgr
+from rlf.rl.utils import CacheHelper
 
 
 def query(
-    select_fields, filter_fields: Dict[str, str], cfg="./config.yaml", verbose=True
+    select_fields,
+    filter_fields: Dict[str, str],
+    cfg="./config.yaml",
+    verbose=True,
+    use_cached=False,
 ):
     config_mgr.init(cfg)
 
     wb_proj_name = config_mgr.get_prop("proj_name")
     wb_entity = config_mgr.get_prop("wb_entity")
+
+    lookup = f"{select_fields}_{filter_fields}"
+    cache = CacheHelper("wb_queries", lookup)
+
+    if use_cached and cache.exists():
+        return cache.load()
 
     api = wandb.Api()
 
@@ -72,8 +83,16 @@ def query(
                 ]
                 if len(train_succ_keys) > 0:
                     use_k = train_succ_keys[0]
-                else:
+                elif len(succ_keys) > 0:
                     use_k = succ_keys[0]
+                else:
+                    print(
+                        "Could not find success key from ",
+                        run.summary.keys(),
+                        "Possibly due to run failure. Run status",
+                        run.state,
+                    )
+                    return None
                 v = run.summary[use_k]
             elif f == "status":
                 v = run.state
@@ -82,6 +101,8 @@ def query(
                 raise ValueError(f"Select field {f} not supported")
             dat[f] = v
         ret_data.append(dat)
+
+    cache.save(ret_data)
     log(f"Got data {ret_data}")
     return ret_data
 
