@@ -1,5 +1,6 @@
 import functools
 import os.path as osp
+from typing import Optional
 
 import gym
 import numpy as np
@@ -16,9 +17,15 @@ except:
     pass
 
 
-class ExperienceGenerator(object):
+class ExperienceGenerator:
     def init(self, policy, args, exp_gen_num_trans):
         pass
+
+    def should_replace_dataset(self):
+        return False
+
+    def get_full_dataset(self):
+        return None
 
     def get_batch(self):
         pass
@@ -28,7 +35,13 @@ class ExperienceGenerator(object):
 
 
 class BaseILAlgo(BaseNetAlgo):
-    def __init__(self, exp_generator=None):
+    def __init__(self, exp_generator: Optional[ExperienceGenerator] = None):
+        """
+        :param exp_generator: Can either generate on the fly experience or be
+            used to load an entire dataset before the start of training. Useful if
+            you need to automatically generate a dataset rather than save and then
+            load it.
+        """
         super().__init__()
         self.exp_generator = exp_generator
         self.data_iter = None
@@ -40,12 +53,17 @@ class BaseILAlgo(BaseNetAlgo):
         self._transform_dem_dataset_fn = transform_dem_dataset_fn
 
     def _load_expert_data(self, policy, args):
-        assert args.traj_load_path is not None, "Must specify expert demonstrations!"
+        assert (
+            args.traj_load_path is not None or self.exp_generator is not None
+        ), "Must specify expert demonstrations!"
         self.args = args
 
-        self.orig_dataset = self._get_traj_dataset(
-            osp.join(args.cwd, args.traj_load_path), args
-        )
+        if self.exp_generator is None:
+            load_path = osp.join(args.cwd, args.traj_load_path)
+        else:
+            load_path = None
+
+        self.orig_dataset = self._get_traj_dataset(load_path, args)
         self.orig_dataset = self.orig_dataset.to(args.device)
         num_trajs = self._create_train_loader(args)
 
@@ -105,6 +123,10 @@ class BaseILAlgo(BaseNetAlgo):
             shuffle=True,
             drop_last=True,
         )
+        if len(self.expert_train_loader) == 0:
+            raise ValueError(
+                f"Batch size of {args.traj_batch_size} is too large for # of expert demos {len(train_dataset)}"
+            )
 
         if isinstance(self.expert_dataset, torch.utils.data.Subset):
             return int(args.traj_frac * self.expert_dataset.dataset.get_num_trajs())
@@ -163,23 +185,32 @@ class BaseILAlgo(BaseNetAlgo):
             self._load_expert_data(policy, args)
         else:
             self.exp_generator.init(policy, args, args.exp_gen_num_trans)
+            if self.exp_generator.should_replace_dataset():
+                self._load_expert_data(policy, args)
             print(f"Generating {args.exp_gen_num_trans} transitions for imitation")
         super().init(policy, args)
 
     def _get_expert_traj_stats(self):
         return self.expert_mean, self.expert_std
 
-    def _get_d4rl_dataset(self, traj_load_path, args):
+    def _get_dataset_override(self, traj_load_path, args):
+        if (
+            self.exp_generator is not None
+            and self.exp_generator.should_replace_dataset()
+        ):
+            return self.exp_generator.get_full_dataset()
+
         name = traj_load_path.split("/")[-1]
         if name != "d4rl":
             return None
+
         return D4rlDataset(args.env_name, traj_load_path).convert_to_override_data()
 
     def _get_traj_dataset(self, traj_load_path, args):
         return TransitionDataset(
             traj_load_path,
             self._transform_dem_dataset_fn,
-            override_data=self._get_d4rl_dataset(traj_load_path, args),
+            override_data=self._get_dataset_override(traj_load_path, args),
         )
 
     def get_add_args(self, parser):

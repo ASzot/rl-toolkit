@@ -99,6 +99,26 @@ class Runner:
         if self.args.clip_actions:
             self.ac_tensor = utils.ac_space_to_tensor(self.policy.action_space)
 
+    def easy_make_vec_envs(
+        self, args, num_processes=None, set_eval=True, seed_offset=0, env_name=None
+    ):
+        if num_processes is None:
+            num_processes = args.num_processes
+        if env_name is None:
+            env_name = args.env_name
+        return make_vec_envs(
+            args.env_name,
+            args.seed + seed_offset,
+            num_processes,
+            args.gamma,
+            args.device,
+            True,
+            self.env_interface,
+            args,
+            self.alg_env_settings,
+            set_eval=set_eval,
+        )
+
     def _eval_policy(
         self, policy, total_num_steps, args, num_eval=None
     ) -> Optional[VecEnvWrapper]:

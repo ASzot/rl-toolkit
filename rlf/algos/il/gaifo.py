@@ -89,7 +89,7 @@ class GaifoDiscrim(GailDiscrim):
         return PairTransitionDataset(
             traj_load_path,
             self._transform_dem_dataset_fn,
-            override_data=self._get_d4rl_dataset(traj_load_path, args),
+            override_data=self._get_dataset_override(traj_load_path, args),
         )
 
     def _trans_batches(self, expert_batch, agent_batch):

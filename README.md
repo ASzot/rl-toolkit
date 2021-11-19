@@ -53,15 +53,12 @@ See `tests/test_cmds/ppo/main.py` for an example of using PPO. Example
 commands for training PPO are in the same folder in the `.cmd` files. See the
 `tests/test_cmds/` for more examples.
 
+## More Topics
+* `rlf/exp_mgr/README.md` for how to use the automatic job creation and scaling script along with all the plotting utilities.
+* `rlf/envs/README.md` for integrating custom environments that take as input command line arguments. 
+
 ## Benchmarks
 * IL Benchmark: `python -m rlf.benchmarks.il`
-
-## Run Tests
-The most important principle in this code is **working RL algorithms**.
-Automated benchmarking scripts are included under `tests/test_cmds` so you can
-be sure the code is working. For example, to run the PPO benchmark on Hopper-v3
-with 5 seeds, run: `python -m rlf --cfg tests/config.yaml --cmd ppo/hopper  --seed
-"31,41,51,61,71"  --sess-id 0`.
 
 ## Experiment Runner
 Easily run templated commands. Start by defining a `.cmd` file. 

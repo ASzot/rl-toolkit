@@ -1,3 +1,6 @@
+from argparse import Namespace
+from typing import Any, Dict, Union
+
 import rlf.algos.utils as autils
 import torch.nn as nn
 import torch.optim as optim
@@ -9,14 +12,18 @@ class BaseNetAlgo(BaseAlgo):
     def __init__(self):
         super().__init__()
         self.arg_prefix = ""
+        self._override_standard_step_fn = None
 
     def _arg(self, k):
         prefix_str = self.arg_prefix.replace("-", "_")
         return self.arg_vars[prefix_str + k]
 
-    def init(self, policy, args):
+    def init(self, policy, args: Union[Dict[str, Any], Namespace]):
         super().init(policy, args)
-        self.arg_vars = vars(args)
+        if isinstance(args, dict):
+            self.arg_vars = args
+        else:
+            self.arg_vars = vars(args)
         self._optimizers = self._get_optimizers()
         self.obs_space = policy.obs_space
         self.action_space = policy.action_space
@@ -27,8 +34,8 @@ class BaseNetAlgo(BaseAlgo):
             else:
                 self.lr_updates = (
                     int(self._arg("lr_env_steps"))
-                    // args.num_steps
-                    // args.num_processes
+                    // self.arg_vars["num_steps"]
+                    // self.arg_vars["num_processes"]
                 )
 
     def get_optimizer(self, opt_key: str):
@@ -74,11 +81,17 @@ class BaseNetAlgo(BaseAlgo):
         if self._arg("max_grad_norm") > 0:
             nn.utils.clip_grad_norm_(params, self._arg("max_grad_norm"))
 
+    def override_standard_step(self, standard_step_fn):
+        self._override_standard_step_fn = standard_step_fn
+
     def _standard_step(self, loss, optimizer_key="actor_opt"):
         """
         Helper function to compute gradients, clip gradients and then take
         optimization step.
         """
+        if self._override_standard_step_fn is not None:
+            return self._override_standard_step_fn(loss, optimizer_key)
+
         opt, get_params_fn, _ = self._optimizers[optimizer_key]
         opt.zero_grad()
         loss.backward()

@@ -185,6 +185,13 @@ class RunSettings(MasterClass):
             torch.autograd.set_detect_anomaly(True)
         return args, log
 
+    def on_env_create(self, alg_env_settings, env_interface):
+        """
+        Called after the env is created but before the policy and algo are created.
+        """
+        pass
+
+
     def create_runner(self, add_args={}, ray_create=False) -> rlf.Runner:
         """
         Gets the runner used for training.
@@ -222,6 +229,8 @@ class RunSettings(MasterClass):
             print("Action range:", (envs.action_space.low, envs.action_space.high))
         print("Observation space", envs.observation_space)
         rutils.pend_sep()
+
+        self.on_env_create(alg_env_settings, env_interface)
 
         # Setup policy
         policy_args = (envs.observation_space, envs.action_space, args)

@@ -182,9 +182,14 @@ def plot_traj_data(
     return np.mean(per_state_mse)
 
 
-def high_res_save(save_path):
+def high_res_save(save_path, is_high_quality=True):
+    if is_high_quality:
+        dpi = 1000
+    else:
+        dpi = 100
+
     file_format = save_path.split(".")[-1]
-    plt.savefig(save_path, format=file_format, dpi=1000, bbox_inches="tight")
+    plt.savefig(save_path, format=file_format, dpi=dpi, bbox_inches="tight")
     print(f"Saved figure to {save_path}")
 
 

@@ -11,8 +11,8 @@ from rlf.storage import RolloutStorage
 
 
 class BaseIRLAlgo(BaseILAlgo):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, exp_generator=None):
+        super().__init__(exp_generator=exp_generator)
         self.traj_log_stats = defaultdict(list)
 
     def init(self, policy, args):
@@ -23,7 +23,10 @@ class BaseIRLAlgo(BaseILAlgo):
         )
 
     @abstractmethod
-    def _get_reward(self, state, next_state, action, mask, add_info):
+    def get_reward(self, state, next_state, action, mask, add_info):
+        """
+        Infers the reward for the batch of data.
+        """
         pass
 
     def _update_reward_func(self, storage):
@@ -42,7 +45,7 @@ class BaseIRLAlgo(BaseILAlgo):
             action = storage.actions[step]
             add_inputs = {k: v[(step + 1) - 1] for k, v in add_info.items()}
 
-            rewards, ep_log_vals = self._get_reward(
+            rewards, ep_log_vals = self.get_reward(
                 state, next_state, action, mask, add_inputs
             )
 
@@ -76,7 +79,7 @@ class BaseIRLAlgo(BaseILAlgo):
         else:
 
             def get_reward(states, actions, next_states, mask):
-                return self._get_reward(states, next_states, actions, mask, {})[0]
+                return self.get_reward(states, next_states, actions, mask, {})[0]
 
             storage.set_modify_reward_fn(get_reward)
 

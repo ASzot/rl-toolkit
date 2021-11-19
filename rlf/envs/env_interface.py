@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 import gym
 import numpy as np
+from rlf.baselines.vec_env.vec_env import VecEnv
 
 
 class EnvInterface(object):
@@ -13,7 +14,10 @@ class EnvInterface(object):
     def setup(self, args, task_id):
         self.task_id = task_id
 
-    def requires_tensor_wrap(self):
+    def requires_tensor_wrap(self) -> bool:
+        """
+        If False, there will be no numpy to torch conversion wrapper.
+        """
         return True
 
     def env_trans_fn(self, env, set_eval):
@@ -48,7 +52,7 @@ class EnvInterface(object):
         set_eval,
         alg_env_settings,
         args,
-    ):
+    ) -> VecEnv:
         """
         If returns None, the default multiprocess worker is used.
         - make_env: ((seed_rank) -> gym.Env)

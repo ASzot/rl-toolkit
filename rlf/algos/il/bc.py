@@ -72,8 +72,8 @@ class BehavioralCloning(BaseILAlgo):
         prev_num = 0
 
         # First BC
-        with tqdm(total=self.args.bc_num_epochs) as pbar:
-            while self.num_epochs < self.args.bc_num_epochs:
+        with tqdm(total=self.args.bc_pre_num_epochs) as pbar:
+            while self.num_epochs < self.args.bc_pre_num_epochs:
                 super().pre_update(self.num_bc_updates)
                 log_vals = self._bc_step(False)
                 action_loss.append(log_vals["_pr_action_loss"])
@@ -224,5 +224,6 @@ class BehavioralCloning(BaseILAlgo):
                 """,
         )
         parser.add_argument("--bc-log-interval", type=int, default=1)
+        parser.add_argument("--bc-pre-num-epochs", type=int, default=1)
         parser.add_argument("--bc-state-norm", type=str2bool, default=False)
         parser.add_argument("--bc-noise", type=float, default=None)

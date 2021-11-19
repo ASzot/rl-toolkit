@@ -33,13 +33,15 @@ def get_default_discrim(hidden_dim: int) -> nn.Module:
 
 
 class GAIL(NestedAlgo):
-    def __init__(self, agent_updater=PPO(), get_discrim=None):
-        super().__init__([GailDiscrim(get_discrim), agent_updater], 1)
+    def __init__(self, agent_updater=PPO(), get_discrim=None, exp_generator=None):
+        super().__init__(
+            [GailDiscrim(get_discrim, exp_generator=exp_generator), agent_updater], 1
+        )
 
 
 class GailDiscrim(BaseIRLAlgo):
-    def __init__(self, get_discrim=None):
-        super().__init__()
+    def __init__(self, get_discrim=None, exp_generator=None):
+        super().__init__(exp_generator=exp_generator)
         if get_discrim is None:
             get_discrim = get_default_discrim
         self.get_discrim = get_discrim
@@ -257,7 +259,7 @@ class GailDiscrim(BaseIRLAlgo):
             raise ValueError(f"Unrecognized reward type {self.args.reward_type}")
         return reward
 
-    def _get_reward(self, state, next_state, action, mask, add_inputs):
+    def get_reward(self, state, next_state, action, mask, add_inputs):
         with torch.no_grad():
             self.discrim_net.eval()
             reward = self._compute_discrim_reward(
