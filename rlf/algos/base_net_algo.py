@@ -1,5 +1,5 @@
 from argparse import Namespace
-from typing import Any, Dict, Union
+from typing import Any, Callable, Dict, Union
 
 import rlf.algos.utils as autils
 import torch.nn as nn
@@ -81,7 +81,13 @@ class BaseNetAlgo(BaseAlgo):
         if self._arg("max_grad_norm") > 0:
             nn.utils.clip_grad_norm_(params, self._arg("max_grad_norm"))
 
-    def override_standard_step(self, standard_step_fn):
+    def override_standard_step(self, standard_step_fn: Callable):
+        """
+        Used to implement custom logic in the optimizer step rather than
+        calling the default optimizer. Useful if you want to use a dynamically
+        computed optimizer such as that needed in meta-learning.
+        :param standard_step_fn: A function of the same signature as `self._standard_step`.
+        """
         self._override_standard_step_fn = standard_step_fn
 
     def _standard_step(self, loss, optimizer_key="actor_opt"):

@@ -12,30 +12,17 @@ Codebase I use to to implement RL algorithms.
   - Deep Deterministic Policy Gradients (DDPG)
   - Soft Actor Critic (SAC) 
   - Hindsight Experience Replay (HER)
-- Hierarchical RL: 
-  - Option Critic
 - Imitation learning:
   - Behavioral Cloning (BC)
   - Generative Adversarial Imitation Learning (GAIL)
+  - Adversarial Inverse Reinforcement Learning (AIRL)
 - Imitation learning from observation: 
   - Generative Adversarial Imitation from Observation (GAIfO)
   - Behavioral Cloning from Observations (BCO)
+- Hierarchical RL: 
+  - Option Critic
 
 See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks)
-
-## Code Features
-- Custom policies. 
-- Custom update functions.
-- Configurable replay buffer or trajectory storage. Control how you collect
-  agent experience. 
-- Custom loggers. Default integration for TensorBoard and W&B.
-- Define environment wrappers. Use this to log custom environment statistics,
-  define and pass command line arguments, and add wrappers. 
-- Environment multi-processing.
-- Integration with Ray auto hyperparameter tuning. 
-- Automated experiment runner. Includes command templates, multiple seed
-  runner, and tmux integration. 
-- Auto figure creation.
 
 ## Installation
 Requires Python 3.7 or higher. With conda: 
@@ -48,14 +35,10 @@ Requires Python 3.7 or higher. With conda:
 
 If you want to install MuJoCo as well: `mujoco-py==2.0.2.5` 
 
-## Usage
-See `tests/test_cmds/ppo/main.py` for an example of using PPO. Example
-commands for training PPO are in the same folder in the `.cmd` files. See the
-`tests/test_cmds/` for more examples.
-
 ## More Topics
 * `rlf/exp_mgr/README.md` for how to use the automatic job creation and scaling script along with all the plotting utilities.
 * `rlf/envs/README.md` for integrating custom environments that take as input command line arguments. 
+* `rlf/test/README.md` for details about the unit tests. 
 
 ## Benchmarks
 * IL Benchmark: `python -m rlf.benchmarks.il`

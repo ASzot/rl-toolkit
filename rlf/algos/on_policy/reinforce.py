@@ -9,7 +9,7 @@ class REINFORCE(OnPolicy):
     def update(self, rollouts):
         self._compute_returns(rollouts)
         log_vals = defaultdict(list)
-        advantages = rollouts.compute_advantages().detach()
+        advantages = rollouts.compute_advantages()
 
         for e in range(self._arg("num_epochs")):
             data_generator = rollouts.get_generator(

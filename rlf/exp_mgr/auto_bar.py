@@ -49,8 +49,8 @@ def plot_bar(
     is_missing = []
     is_error = []
     for name in name_ordering:
-        is_missing.append(df_avg_y["success"].loc[name] == missing_fill_value)
-        is_error.append(df_avg_y["success"].loc[name] == error_fill_value)
+        is_missing.append(df_avg_y[plot_key].loc[name] == missing_fill_value)
+        is_error.append(df_avg_y[plot_key].loc[name] == error_fill_value)
         avg_y.append(df_avg_y.loc[name][plot_key])
         std_y.append(df_std_y.loc[name][plot_key] * error_scaling)
 

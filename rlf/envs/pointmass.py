@@ -30,11 +30,24 @@ class PointMassEnvSpawnRange(gym.Env):
 
 
 class BatchedTorchPointMassEnvSpawnRange(VecEnv):
-    def __init__(self, fast_env, max_num_steps, device, batch_size, pm_start_idx):
+    def __init__(
+        self,
+        fast_env,
+        max_num_steps,
+        device,
+        batch_size,
+        pm_start_idx,
+        start_noise,
+        is_eval,
+        num_train_regions,
+    ):
         self._is_fast_env = fast_env
         self._max_num_steps = max_num_steps
         self._batch_size = batch_size
         self._pm_start_idx = pm_start_idx
+        self._is_eval = is_eval
+        self._start_noise = start_noise
+        self._num_train_regions = num_train_regions
 
         if self._is_fast_env:
             self.dt = 1 / 10.0
@@ -95,16 +108,20 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
 
         return (self._get_obs(), reward, all_is_done, all_info)
 
+    def _get_regions(self, offset, spread):
+        inc = np.pi / 2
+
+        centers = [offset + i * inc for i in range(4)]
+
+        return torch.tensor([[center - spread, center + spread] for center in centers])
+
     def reset(self):
-        idx = torch.randint(0, 4, (self._batch_size,))
-        regions = torch.tensor(
-            [
-                [np.pi / 6, np.pi / 3],
-                [2 * np.pi / 3, 5 * np.pi / 6],
-                [7 * np.pi / 6, 4 * np.pi / 3],
-                [5 * np.pi / 3, 11 * np.pi / 6],
-            ]
-        )
+        if self._is_eval:
+            idx = torch.randint(0, 4, (self._batch_size,))
+            regions = self._get_regions(0.0, self._start_noise)
+        else:
+            idx = torch.randint(0, self._num_train_regions, (self._batch_size,))
+            regions = self._get_regions(np.pi / 4, self._start_noise)
 
         ang = Uniform(regions[idx, 0], regions[idx, 1]).sample()
         radius = np.sqrt(2)
@@ -112,7 +129,6 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
             torch.stack([radius * torch.cos(ang), radius * torch.sin(ang)], dim=-1)
             + self._goal
         )
-
         self.cur_vel = torch.zeros(self._batch_size, 2)
         self._ep_step = 0
         self._ep_rewards = []
@@ -126,11 +142,12 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
 class BatchedTorchPointMassEnvSingleSpawn(BatchedTorchPointMassEnvSpawnRange):
     def reset(self):
         super().reset()
+        # Points must move clockwise starting from quadrant 1.
         all_start = torch.tensor(
             [
-                [-1.0, -1.0],
                 [1.0, 1.0],
                 [-1.0, 1.0],
+                [-1.0, -1.0],
                 [1.0, -1.0],
             ]
         ).view(-1, 1, 2)
@@ -161,6 +178,9 @@ class PointMassInterface(EnvInterface):
                 args.device,
                 args.num_processes,
                 args.pm_start_idx,
+                args.pm_start_state_noise,
+                set_eval,
+                args.pm_num_train_regions,
             )
         else:
             return BatchedTorchPointMassEnvSpawnRange(
@@ -169,6 +189,9 @@ class PointMassInterface(EnvInterface):
                 args.device,
                 args.num_processes,
                 args.pm_start_idx,
+                args.pm_start_state_noise,
+                set_eval,
+                args.pm_num_train_regions,
             )
 
     def get_add_args(self, parser):
@@ -187,6 +210,22 @@ class PointMassInterface(EnvInterface):
             default=5,
             help="""
                 Controls how long each episode is.
+                """,
+        )
+        parser.add_argument(
+            "--pm-num-train-regions",
+            type=int,
+            default=4,
+            help="""
+                Controls how many regions to sample from during TRAINING.
+                """,
+        )
+        parser.add_argument(
+            "--pm-start-state-noise",
+            type=float,
+            default=np.pi / 20,
+            help="""
+                Sets the amount of starting state noise.
                 """,
         )
         parser.add_argument(

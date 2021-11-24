@@ -13,6 +13,7 @@ import os
 import os.path as osp
 import pickle
 from collections import defaultdict
+from typing import List, Union
 
 import pandas as pd
 import yaml
@@ -90,7 +91,9 @@ def get_run_ids_from_report(wb_search, report_name, get_sections, api):
                 report = cur_report
                 break
     if report is None:
-        raise ValueError("Could not find report")
+        raise ValueError(
+            "Could not find report. Make sure the report starts with `ID:`"
+        )
 
     # Find which section the run sets are in
     report_section_idx = None
@@ -133,22 +136,25 @@ def get_run_ids_from_report(wb_search, report_name, get_sections, api):
 
 
 def get_report_data(
-    report_name,
-    plot_field,
-    plot_sections,
+    report_name: str,
+    plot_field: Union[List[str], str],
+    plot_sections: List[str],
     force_refresh=False,
     match_pat=None,
     other_plot_fields=[],
     cfg="./config.yaml",
     other_fetch_fields=[],
     get_any_cols=False,
-):
+) -> pd.DataFrame:
     """
     Converts the selected data sets in a W&B report into a Pandas DataFrame.
     Fetches only the plot_field you specify.
-    - get_any_cols: If true, will filter plot_field to be the subset of columns
+
+    :param get_any_cols: If true, will filter plot_field to be the subset of columns
       which in the report.
     """
+    # Plot sections is overwritten
+    plot_sections = plot_sections[:]
     config_mgr.init(cfg)
 
     wb_proj_name = config_mgr.get_prop("proj_name")

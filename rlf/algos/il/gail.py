@@ -92,8 +92,15 @@ class GailDiscrim(BaseIRLAlgo):
         self.opt = optim.Adam(self.discrim_net.parameters(), lr=self.args.disc_lr)
 
     def _get_sampler(self, storage):
+        if self.args.gail_max_agent_batch_size:
+            use_batch_size = len(storage) // len(self.expert_train_loader)
+            if use_batch_size == 0:
+                raise ValueError("Maximizing GAIL agent sampler does not work")
+        else:
+            use_batch_size = self.expert_train_loader.batch_size
+
         agent_experience = storage.get_generator(
-            mini_batch_size=self.expert_train_loader.batch_size,
+            mini_batch_size=use_batch_size,
             from_recent=self.args.off_policy_recent,
             num_samples=self.args.off_policy_count,
         )
@@ -167,9 +174,12 @@ class GailDiscrim(BaseIRLAlgo):
         expert_d = self._compute_disc_val(expert_states, expert_actions)
         agent_d = self._compute_disc_val(agent_states, agent_actions)
 
-        grad_pen = self.compute_pen(
-            expert_states, expert_actions, agent_states, agent_actions
-        )
+        if self.args.disc_grad_pen > 0:
+            grad_pen = self.compute_pen(
+                expert_states, expert_actions, agent_states, agent_actions
+            )
+        else:
+            grad_pen = 0.0
 
         return expert_d, agent_d, grad_pen
 
@@ -259,7 +269,10 @@ class GailDiscrim(BaseIRLAlgo):
             raise ValueError(f"Unrecognized reward type {self.args.reward_type}")
         return reward
 
-    def get_reward(self, state, next_state, action, mask, add_inputs):
+    def get_viz_reward(self, state, next_state, action, mask, add_info):
+        return self._get_reward(state, next_state, action, mask, add_info)[0]
+
+    def _get_reward(self, state, next_state, action, mask, add_inputs):
         with torch.no_grad():
             self.discrim_net.eval()
             reward = self._compute_discrim_reward(
@@ -306,6 +319,19 @@ class GailDiscrim(BaseIRLAlgo):
             help="""
                 One of [airl, raw, gail]. Changes the reward computation. Does
                 not change training.
+                """,
+        )
+        parser.add_argument(
+            "--gail-max-agent-batch-size",
+            type=str2bool,
+            default=False,
+            help="""
+                If true, this will not use traj-batch-size as the batch size of
+                agent experience when updating the discriminator and instead
+                use the largest possible batch size such that the number of
+                batches equals the number of batches from the expert data
+                sampler. This is helpful for when there are not many expert
+                demonstrations.
                 """,
         )
         parser.add_argument("--off-policy-recent", type=str2bool, default=True)

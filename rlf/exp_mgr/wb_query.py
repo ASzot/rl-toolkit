@@ -76,10 +76,14 @@ def query(
                 succ_keys = [
                     k
                     for k in list(run.summary.keys())
-                    if isinstance(k, str) and "success" in k
+                    if isinstance(k, str)
+                    and "success" in k
+                    and "std" not in k
+                    and "max" not in k
+                    and "min" not in k
                 ]
                 train_succ_keys = [
-                    k for k in succ_keys if "eval_train" not in k and "avg_" in k
+                    k for k in succ_keys if "eval_final" in k or "eval_train" in k
                 ]
                 if len(train_succ_keys) > 0:
                     use_k = train_succ_keys[0]

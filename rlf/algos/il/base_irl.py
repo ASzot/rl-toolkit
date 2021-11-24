@@ -23,11 +23,14 @@ class BaseIRLAlgo(BaseILAlgo):
         )
 
     @abstractmethod
-    def get_reward(self, state, next_state, action, mask, add_info):
+    def _get_reward(self, state, next_state, action, mask, add_info):
         """
         Infers the reward for the batch of data.
         """
-        pass
+        raise NotImplementedError()
+
+    def get_viz_reward(self, state, next_state, action, mask, add_info):
+        raise NotImplementedError()
 
     def _update_reward_func(self, storage):
         return {}
@@ -45,7 +48,7 @@ class BaseIRLAlgo(BaseILAlgo):
             action = storage.actions[step]
             add_inputs = {k: v[(step + 1) - 1] for k, v in add_info.items()}
 
-            rewards, ep_log_vals = self.get_reward(
+            rewards, ep_log_vals = self._get_reward(
                 state, next_state, action, mask, add_inputs
             )
 
@@ -79,7 +82,7 @@ class BaseIRLAlgo(BaseILAlgo):
         else:
 
             def get_reward(states, actions, next_states, mask):
-                return self.get_reward(states, next_states, actions, mask, {})[0]
+                return self._get_reward(states, next_states, actions, mask, {})[0]
 
             storage.set_modify_reward_fn(get_reward)
 

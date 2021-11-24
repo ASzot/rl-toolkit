@@ -10,13 +10,15 @@ from rlf.args import str2bool
 
 
 class AIRL(NestedAlgo):
-    def __init__(self, agent_updater=PPO(), get_discrim=None):
-        super().__init__([AirlDiscrim(get_discrim), agent_updater], 1)
+    def __init__(self, agent_updater=PPO(), get_discrim=None, exp_generator=None):
+        super().__init__(
+            [AirlDiscrim(get_discrim, exp_generator=exp_generator), agent_updater], 1
+        )
 
 
 class AirlNetDiscrim(nn.Module):
     """
-    The discriminator network is from https://github.com/ku2482/gail-airl-ppo.pytorch/blob/master/gail_airl_ppo/network/disc.py
+    The discriminator network is based on https://github.com/ku2482/gail-airl-ppo.pytorch/blob/master/gail_airl_ppo/network/disc.py
     """
 
     def __init__(self, state_enc, gamma, use_shaped_reward, hidden_dim=64):
@@ -40,15 +42,14 @@ class AirlNetDiscrim(nn.Module):
         self.gamma = gamma
         self.use_shaped_reward = use_shaped_reward
 
-    def reward_forward(self, states, actions, mask, next_states):
+    def reward_forward(self, states, actions, mask, next_states, can_use_shaped=True):
         states_enc = self.state_enc(states)
-        next_states_enc = self.state_enc(next_states)
-
         rs = self.g(states_enc)
-        vs = self.h(states_enc)
-        next_vs = self.h(next_states_enc)
 
-        if self.use_shaped_reward:
+        if self.use_shaped_reward and can_use_shaped:
+            next_states_enc = self.state_enc(next_states)
+            vs = self.h(states_enc)
+            next_vs = self.h(next_states_enc)
             return rs + self.gamma * mask * next_vs - vs
         else:
             return rs
@@ -127,6 +128,11 @@ class AirlDiscrim(GailDiscrim):
             [("final_obs", lambda env: rutils.get_obs_shape(env.observation_space))]
         )
         return settings
+
+    def get_viz_reward(self, state, next_state, action, mask, add_info):
+        return self.discrim_net.reward_forward(
+            state, action, mask, next_state, can_use_shaped=False
+        )
 
     def _compute_discrim_reward(self, state, next_state, action, mask, add_inputs):
         finished_episodes = [i for i in range(len(mask)) if mask[i] == 0.0]

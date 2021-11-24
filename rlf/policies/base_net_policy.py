@@ -85,7 +85,15 @@ class BaseNetPolicy(nn.Module, BasePolicy):
                 Default hidden size used for all networks related to the policy. This includes value functions.
                 """,
         )
-        parser.add_argument("--load-policy", type=str2bool, default=True)
+        parser.add_argument(
+            "--load-policy",
+            type=str2bool,
+            default=True,
+            help="""
+                If False when loading, skips loading the saved policy and
+                instead randomly initializes the policy.
+        """,
+        )
         parser.add_argument(
             "--recurrent-policy",
             action="store_true",

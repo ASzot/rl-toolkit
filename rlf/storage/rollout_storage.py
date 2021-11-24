@@ -84,6 +84,9 @@ class RolloutStorage(BaseStorage):
         self.n_procs = num_processes
         self.step = 0
 
+    def __len__(self):
+        return self.num_steps * self.n_procs
+
     def get_def_obs_seq(self):
         if isinstance(self.obs, dict):
             return rutils.get_def_obs(self.obs)
