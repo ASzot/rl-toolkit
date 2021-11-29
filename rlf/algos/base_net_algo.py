@@ -28,15 +28,14 @@ class BaseNetAlgo(BaseAlgo):
         self.obs_space = policy.obs_space
         self.action_space = policy.action_space
 
-        if self._arg("linear_lr_decay"):
-            if self._arg("lr_env_steps") is None:
-                self.lr_updates = self.get_num_updates()
-            else:
-                self.lr_updates = (
-                    int(self._arg("lr_env_steps"))
-                    // self.arg_vars["num_steps"]
-                    // self.arg_vars["num_processes"]
-                )
+        if self._arg("lr_env_steps") is None:
+            self.lr_updates = self.get_num_updates()
+        else:
+            self.lr_updates = (
+                int(self._arg("lr_env_steps"))
+                // self.arg_vars["num_steps"]
+                // self.arg_vars["num_processes"]
+            )
 
     def get_optimizer(self, opt_key: str):
         return self._optimizers[opt_key][0]
@@ -50,11 +49,12 @@ class BaseNetAlgo(BaseAlgo):
             log_vals[k + "_lr"] = lr
         return log_vals
 
-    def _copy_policy(self):
+    def _copy_policy(self, keep_params=True):
         cp_policy = super()._copy_policy()
         if next(self.policy.parameters()).is_cuda:
             cp_policy = cp_policy.cuda()
-        autils.hard_update(self.policy, cp_policy)
+        if keep_params:
+            autils.hard_update(self.policy, cp_policy)
         return cp_policy
 
     def load_resume(self, checkpointer):

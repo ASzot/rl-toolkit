@@ -7,7 +7,7 @@ import torch
 class BaseStorage(object):
     def __init__(self):
         self._add_info_keys = []
-        self.on_traj_done_fn = None
+        self._on_traj_done_callback = lambda done_trajs: None
 
     def set_traj_done_callback(self, on_traj_done_fn):
         self._on_traj_done_callback = on_traj_done_fn

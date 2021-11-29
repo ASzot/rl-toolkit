@@ -148,9 +148,10 @@ class BaseAlgo(object):
         self._get_policy_fn = get_policy_fn
         self._policy_args = policy_args
 
-    def _copy_policy(self):
+    def _copy_policy(self, keep_params=True):
         """
         Creates a copy of the current policy.
+        :param keep_params: If true, copies the same parameters as `self.policy`
 
         returns: (rlf.BasePolicy) with same params as `self.policy`
         """

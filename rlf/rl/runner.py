@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 import torch
 from rlf.algos.base_net_algo import BaseNetAlgo
+from rlf.algos.custom_iter_algo import CustomIterAlgo
 from rlf.baselines.vec_env import VecEnvWrapper
 from rlf.policies.base_policy import get_step_info
 from rlf.rl import utils
@@ -44,22 +45,35 @@ class Runner:
         else:
             self.train_ctx = torch.no_grad
 
-    def training_iter(self, update_iter: int) -> Dict[str, Any]:
-        self.log.start_interval_log()
-        self.updater.pre_update(update_iter)
+    def rl_rollout(
+        self,
+        policy,
+        storage,
+        update_iter,
+        should_log_env=True,
+        init_storage=False,
+        num_steps=None,
+    ):
+        if init_storage:
+            storage.init_storage(self.envs.reset())
 
-        for step in self.updater.get_steps_generator(update_iter):
+        if num_steps is None:
+            use_step_gen = self.updater.get_steps_generator(update_iter)
+        else:
+            use_step_gen = range(num_steps)
+
+        for step in use_step_gen:
             # Sample actions
-            obs = self.storage.get_obs(step)
+            obs = storage.get_obs(step)
 
             step_info = get_step_info(update_iter, step, self.episode_count, self.args)
 
             with self.train_ctx():
-                ac_info = self.policy.get_action(
+                ac_info = policy.get_action(
                     utils.get_def_obs(obs, self.args.policy_ob_key),
                     utils.get_other_obs(obs),
-                    self.storage.get_hidden_state(step),
-                    self.storage.get_masks(step),
+                    storage.get_hidden_state(step),
+                    storage.get_masks(step),
                     step_info,
                 )
                 if self.args.clip_actions:
@@ -74,8 +88,20 @@ class Runner:
             self.episode_count += sum([int(d) for d in done])
             self.log.collect_step_info(step_log_vals)
 
-            self.storage.insert(obs, next_obs, reward, done, infos, ac_info)
-        updater_log_vals = self.updater.update(self.storage)
+            storage.insert(obs, next_obs, reward, done, infos, ac_info)
+        return self.storage
+
+    def training_iter(self, update_iter: int) -> Dict[str, Any]:
+        self.log.start_interval_log()
+        self.updater.pre_update(update_iter)
+
+        if isinstance(self.updater, CustomIterAlgo):
+            updater_log_vals = self.updater.training_iter(
+                self.rl_rollout, self.storage, update_iter
+            )
+        else:
+            self.rl_rollout(self.policy, self.storage, update_iter)
+            updater_log_vals = self.updater.update(self.storage)
         self.updater.add_and_clear_timer(updater_log_vals)
 
         self.storage.after_update()

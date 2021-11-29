@@ -105,6 +105,11 @@ class RolloutStorage(BaseStorage):
             else:
                 self.obs[k][0].copy_(obs[k])
 
+        self.masks = self.masks.zero_()
+        self.bad_masks = self.bad_masks.zero_()
+        for k, dim in self.hidden_states.items():
+            self.hidden_states[k] = self.hidden_states[k].zero_()
+
     def get_add_info(self, key):
         return self.add_data[key]
 

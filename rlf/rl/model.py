@@ -1,3 +1,5 @@
+from typing import Callable
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -356,3 +358,25 @@ class DoubleQCritic(BaseNet):
         q2, _ = self.Q2(obs_action, None, None)
 
         return q1, q2
+
+
+class NnEnsemble(nn.Module):
+    def __init__(self, create_net_fn: Callable[[], nn.Module], num_ensembles: int):
+        super().__init__()
+        self.nets = nn.ModuleList([create_net_fn() for _ in range(num_ensembles)])
+
+    def get_mean(self, *argv):
+        return self.forward(*argv).mean(0)
+
+    def get_std(self, *argv):
+        return self.forward(*argv).std(0)
+
+    def forward(self, *argv):
+        outs = []
+        for net in self.nets:
+            net_out = net(*argv)
+            outs.append(net_out)
+
+        if isinstance(outs[0], torch.Tensor):
+            return torch.stack(outs)
+        return outs

@@ -341,10 +341,17 @@ def sub_wb_query(cmd, args):
     new_cmd = [parts[0]]
     parts = parts[1:]
 
+    mod_seeds = None
+
     for i in range(len(parts)):
         if i % 2 == 0:
             wb_query = parts[i]
             result = query_s(wb_query, verbose=False)
+            if len(result) > 0 and "last_model" in result[0]:
+                mod_seeds = [
+                    " --seed " + x["last_model"].split("/")[-2].split("-")[2]
+                    for x in result
+                ]
             if len(result) == 0:
                 raise ValueError(f"Got no response from {wb_query}")
             sub_vals = []
@@ -358,6 +365,9 @@ def sub_wb_query(cmd, args):
         else:
             for j in range(len(new_cmd)):
                 new_cmd[j] += parts[i]
+    if mod_seeds is not None:
+        new_cmd = [c + seed for c, seed in zip(new_cmd, mod_seeds)]
+
     return new_cmd
 
 
