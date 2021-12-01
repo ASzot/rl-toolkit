@@ -16,6 +16,7 @@ def query(
     filter_fields: Dict[str, str],
     cfg="./config.yaml",
     verbose=True,
+    limit=None,
     use_cached=False,
 ):
     config_mgr.init(cfg)
@@ -105,6 +106,8 @@ def query(
                 raise ValueError(f"Select field {f} not supported")
             dat[f] = v
         ret_data.append(dat)
+        if limit is not None and len(ret_data) >= limit:
+            break
 
     cache.save(ret_data)
     log(f"Got data {ret_data}")
@@ -115,10 +118,18 @@ def query_s(query_str, verbose=True):
     select_s, filter_s = query_str.split(" WHERE ")
     select_fields = select_s.replace(" ", "").split(",")
 
+    parts = filter_s.split(" LIMIT ")
+    filter_s = parts[0]
+
+    limit = None
+    if len(parts) > 1:
+        limit = int(parts[1])
+
     filter_fields = filter_s.replace(" ", "").split(",")
     filter_fields = [s.split("=") for s in filter_fields]
     filter_fields = {k: v for k, v in filter_fields}
-    return query(select_fields, filter_fields, verbose=verbose)
+
+    return query(select_fields, filter_fields, verbose=verbose, limit=limit)
 
 
 if __name__ == "__main__":
