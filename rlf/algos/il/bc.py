@@ -102,10 +102,6 @@ class BehavioralCloning(BaseILAlgo):
             super().pre_update(self.num_bc_updates)
         expert_batch = self._get_next_data()
 
-        if expert_batch is None:
-            self._reset_data_fetcher()
-            expert_batch = self._get_next_data()
-
         states, true_actions = self._get_data(expert_batch)
 
         log_dict = {}

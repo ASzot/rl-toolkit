@@ -134,17 +134,27 @@ class BaseILAlgo(BaseNetAlgo):
             return self.expert_dataset.get_num_trajs()
 
     def _get_next_data(self):
+        """
+        Gets the next batch of expert data. If we go through an entire epoch of
+        the data, this will return the next batch of the next epoch, but call
+        `_reset_data_fetcher` in between.
+        """
         if self.exp_generator is None:
             if self.data_iter is None:
                 self.data_iter = iter(self.expert_train_loader)
             try:
-                return next(self.data_iter, None)
-            except IndexError:
-                return None
+                return next(self.data_iter)
+            except (IndexError, StopIteration):
+                self._reset_data_fetcher()
+                # Next should always now be valid
+                return next(self.data_iter)
         else:
             return self.exp_generator.get_batch()
 
     def _reset_data_fetcher(self):
+        """
+        Called when we went through an entire epoch over the expert dataset.
+        """
         if self.exp_generator is None:
             self.data_iter = iter(self.expert_train_loader)
         else:
@@ -189,9 +199,6 @@ class BaseILAlgo(BaseNetAlgo):
                 self._load_expert_data(policy, args)
             print(f"Generating {args.exp_gen_num_trans} transitions for imitation")
         super().init(policy, args)
-
-    def _get_expert_traj_stats(self):
-        return self.expert_mean, self.expert_std
 
     def _get_dataset_override(self, traj_load_path, args):
         if (

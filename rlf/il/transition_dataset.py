@@ -91,11 +91,37 @@ class TransitionDataset(ImitationLearningDataset):
             "actions": self.trajs["actions"][i],
         }
 
+    def _group_into_trajs(self):
+        idxs = range(self.trajs["obs"].shape[0])
+
+        trajs = []
+        cur_traj = []
+
+        for i, obs, done, actions, next_obs in zip(
+            idxs,
+            self.trajs["obs"],
+            self.trajs["done"],
+            self.trajs["actions"],
+            self.trajs["next_obs"],
+        ):
+            cur_traj.append((i, obs, done, actions, next_obs))
+            if done.item():
+                trajs.append(cur_traj)
+                cur_traj = []
+        if len(cur_traj) != 0:
+            raise ValueError("Trajectory from dataset does not end in termination")
+        return trajs
+
     def compute_split(self, traj_frac, rnd_seed):
-        use_count = int(len(self) * traj_frac)
-        all_idxs = np.arange(0, len(self))
+        # Need to split by trajectories, not transitions
+        trajs = self._group_into_trajs()
+
+        use_count = int(len(trajs) * traj_frac)
 
         rng = np.random.default_rng(rnd_seed)
-        rng.shuffle(all_idxs)
-        idxs = all_idxs[:use_count]
+        rng.shuffle(trajs)
+        trajs = trajs[:use_count]
+
+        idxs = [step[0] for traj in trajs for step in traj]
+
         return torch.utils.data.Subset(self, idxs)

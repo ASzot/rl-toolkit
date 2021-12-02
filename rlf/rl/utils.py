@@ -94,7 +94,6 @@ def plt_save(*path_parts):
     if not osp.exists(save_dir):
         os.makedirs(save_dir)
     plt.savefig(save_name)
-    print(f"Saved fig to {save_name}")
     plt.clf()
 
 
