@@ -114,6 +114,7 @@ def plot_traj_data(
     no_wb: Optional[bool] = None,
     title: str = "",
     ylim=None,
+    plot_line=True,
 ):
     """
     Plots each state dimension of a trajectory comparing a predicted and real trajectory.
@@ -126,6 +127,8 @@ def plot_traj_data(
         Should NOT be unique so the log key is updated.
     :param save_path_info: The save path will either be extracted from the args or the
         path passed as a string.
+    :param step: Number of environment steps to log this plot to W&B with. Note
+        this is likely different than the number of updates!
     :param y_axis_name: string with %i to dynamically insert state dimension.
     """
 
@@ -150,8 +153,12 @@ def plot_traj_data(
     H, state_dim = real.shape
     for state_i in range(state_dim):
         use_save_path = save_path % state_i
-        plt.plot(np.arange(H), real[:, state_i], label="Real")
-        plt.plot(np.arange(H), pred[:, state_i], label="Pred")
+        if plot_line:
+            plt.plot(np.arange(H), real[:, state_i], label="Real")
+            plt.plot(np.arange(H), pred[:, state_i], label="Pred")
+        else:
+            plt.scatter(np.arange(H), real[:, state_i], label="Real")
+            plt.scatter(np.arange(H), pred[:, state_i], label="Pred")
         plt.grid(b=True, which="major", color="lightgray", linestyle="--")
         plt.xlabel("t")
         plt.ylabel(y_axis_name % state_i)

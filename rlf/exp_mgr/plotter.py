@@ -221,8 +221,9 @@ def uncert_plot(
         ax.set_title(title, fontsize=title_font_size)
 
 
-def high_res_save(save_path, is_high_quality=True):
+def high_res_save(save_path: str, is_high_quality=True):
     """
+    You need to include the extension in the path.
     :param is_high_quality: If true will save with higher DPI.
     """
     file_format = save_path.split(".")[-1]
