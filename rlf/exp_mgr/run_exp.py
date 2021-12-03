@@ -276,6 +276,8 @@ def get_cmd_run_str(cmd, args, cd, cmd_idx, num_cmds):
     if len(env_vars) != 0:
         env_vars += " "
     conda_env = config_mgr.get_prop("conda_env")
+    python_path = osp.join(osp.expanduser("~"), "miniconda3", "envs", conda_env, "bin")
+    python_path = config_mgr.get_prop("conda_path", def_val=python_path)
 
     ntasks = as_list(args.ntasks, num_cmds)
     g = as_list(args.g, num_cmds)
@@ -285,9 +287,6 @@ def get_cmd_run_str(cmd, args, cd, cmd_idx, num_cmds):
         return env_vars + cmd
     else:
         # Make command into a SLURM command
-        python_path = osp.join(
-            osp.expanduser("~"), "miniconda3", "envs", conda_env, "bin"
-        )
         ident = str(uuid.uuid4())[:8]
         log_file = osp.join(RUNS_DIR, ident) + ".log"
         if not args.slurm_no_batch:

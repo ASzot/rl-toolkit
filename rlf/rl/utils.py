@@ -8,7 +8,7 @@ from abc import ABC
 from collections import defaultdict
 from contextlib import ContextDecorator, contextmanager
 from timeit import default_timer
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import cv2
 import gym
@@ -307,7 +307,13 @@ def get_ob_shape(obs_space, k):
         return obs_space.spaces[k].shape
 
 
-def get_obs_shape(ob_space, k="observation", default=None):
+def get_obs_shape(
+    ob_space: gym.Space, k: str = "observation", default: Optional[Any] = None
+) -> Tuple:
+    """
+    Handles getting the shape of an observation from a potential dictionary
+    observation space.
+    """
     if isinstance(ob_space, gym.spaces.Dict):
         if k in ob_space.spaces:
             return ob_space.spaces[k].shape
