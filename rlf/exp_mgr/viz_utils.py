@@ -6,6 +6,10 @@ import os.path as osp
 from argparse import Namespace
 from typing import Dict, List, Optional, Tuple, Union
 
+import matplotlib
+
+matplotlib.use("Agg")
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
