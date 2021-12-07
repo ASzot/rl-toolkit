@@ -269,9 +269,6 @@ class GailDiscrim(BaseIRLAlgo):
             raise ValueError(f"Unrecognized reward type {self.args.reward_type}")
         return reward
 
-    def get_viz_reward(self, state, next_state, action, mask, add_info):
-        return self._get_reward(state, next_state, action, mask, add_info)[0]
-
     def _get_reward(self, state, next_state, action, mask, add_inputs):
         with torch.no_grad():
             self.discrim_net.eval()
