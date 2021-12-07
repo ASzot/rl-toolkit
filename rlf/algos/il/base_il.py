@@ -1,6 +1,6 @@
 import functools
 import os.path as osp
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import gym
 import numpy as np
@@ -27,8 +27,10 @@ class ExperienceGenerator:
     def get_full_dataset(self):
         return None
 
-    def get_batch(self):
-        pass
+    def get_batch(self) -> Dict[str, Any]:
+        raise ValueError(
+            "Get batch not implemented. Likely the dataset was meant to override the storage"
+        )
 
     def reset(self):
         pass
@@ -133,13 +135,14 @@ class BaseILAlgo(BaseNetAlgo):
         else:
             return self.expert_dataset.get_num_trajs()
 
-    def _get_next_data(self):
+    def _get_next_data(self) -> Dict[str, Any]:
         """
         Gets the next batch of expert data. If we go through an entire epoch of
         the data, this will return the next batch of the next epoch, but call
         `_reset_data_fetcher` in between.
         """
-        if self.exp_generator is None:
+        # Check if we are generating experience on the fly
+        if self._is_using_dataset():
             if self.data_iter is None:
                 self.data_iter = iter(self.expert_train_loader)
             try:
@@ -151,11 +154,17 @@ class BaseILAlgo(BaseNetAlgo):
         else:
             return self.exp_generator.get_batch()
 
-    def _reset_data_fetcher(self):
+    def _is_using_dataset(self) -> bool:
+        """
+        Returns true if a dataset is being used rather than an on the fly experience generator.
+        """
+        return self.exp_generator is None or self.exp_generator.should_replace_dataset()
+
+    def _reset_data_fetcher(self) -> None:
         """
         Called when we went through an entire epoch over the expert dataset.
         """
-        if self.exp_generator is None:
+        if self._is_using_dataset():
             self.data_iter = iter(self.expert_train_loader)
         else:
             self.exp_generator.reset()
