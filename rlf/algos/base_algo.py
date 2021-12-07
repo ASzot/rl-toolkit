@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, Iterable, List, Tuple
 import attr
 import numpy as np
 import rlf.rl.utils as rutils
+from rlf.baselines.vec_env.vec_env import VecEnv
 from rlf.rl.envs import get_vec_normalize
 from rlf.storage import BaseStorage, RolloutStorage
 
@@ -83,7 +84,11 @@ class BaseAlgo(object):
         """Generates an iterable for the number of rollout steps."""
         return range(self.args.num_steps)
 
-    def set_env_ref(self, envs):
+    def set_env_ref(self, envs: VecEnv) -> None:
+        """
+        Passes a reference to the vectorized environment. Called after the algo
+        `init` method is called but before any updates.
+        """
         env_norm = get_vec_normalize(envs)
 
         def get_vec_normalize_fn():
