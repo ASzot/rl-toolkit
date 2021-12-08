@@ -110,6 +110,9 @@ class BaseIRLAlgo(BaseILAlgo):
         """
         return {}
 
+    def _trans_agent_state(self, state, other_state=None):
+        return rutils.get_def_obs(state)
+
     def _infer_rollout_storage_reward(self, storage, log_vals):
         add_info = {k: storage.get_add_info(k) for k in storage.get_extract_info_keys()}
         for k in storage.ob_keys:

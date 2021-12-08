@@ -155,7 +155,7 @@ class GailDiscrim(BaseIRLAlgo):
             if other_state is None:
                 return state["raw_obs"]
             return other_state["raw_obs"]
-        return rutils.get_def_obs(state)
+        return super()._trans_agent_state(state, other_state)
 
     def _compute_discrim_loss(self, agent_batch, expert_batch, obsfilt):
         expert_actions = expert_batch["actions"].to(self.args.device)
