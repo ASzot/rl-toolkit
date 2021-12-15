@@ -462,18 +462,22 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
     cmds = [add_changes_to_cmd(cmd, args) for cmd in cmds]
     DELIM = " ; "
 
-    if args.run_single:
-        cmds = DELIM.join(cmds)
-        cmds = [cmds]
-
     cd = as_list(cd, len(cmds))
 
     if sess_id == -1:
+
         if args.st is not None:
             for cmd_idx, cmd in enumerate(cmds):
                 run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds))
                 log(f"Running {run_cmd}", args)
                 os.system(run_cmd)
+        elif args.run_single:
+            cmds = [get_cmd_run_str(x, args, cd, 0, 1) for x in cmds]
+            exec_cmd = DELIM.join(cmds)
+
+            log(f"Running {exec_cmd}", args)
+            os.system(exec_cmd)
+
         elif len(cmds) == 1:
             exec_cmd = get_cmd_run_str(cmds[0], args, cd, 0, len(cmds))
             if cd[0] != "-1":
@@ -483,6 +487,11 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         else:
             raise ValueError("Running multiple jobs. You must specify tmux session id")
     else:
+
+        if args.run_single:
+            cmds = DELIM.join(cmds)
+            cmds = [cmds]
+
         for cmd_idx, cmd in enumerate(cmds):
             new_window = get_tmux_window(sess_name, sess_id)
 

@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from rlf.args import str2bool
 from rlf.policies.base_policy import BasePolicy
+from rlf.rl.model import BaseNet
 
 
 class BaseNetPolicy(nn.Module, BasePolicy):
@@ -107,7 +108,10 @@ class BaseNetPolicy(nn.Module, BasePolicy):
             hxs["rnn_hxs"] = self.base_net.gru.hidden_size
         return hxs
 
-    def _apply_base_net(self, state, add_state, hxs, masks):
+    def _apply_base_net(self, state, add_state, hxs, masks) -> BaseNet:
+        """
+        Retrieves the state encoder.
+        """
         if self.use_goal:
             # Combine the goal and the state
             combined_state = torch.cat([state, add_state["desired_goal"]], dim=-1)

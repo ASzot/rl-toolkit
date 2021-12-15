@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Tuple
 
 import numpy as np
 import torch
@@ -380,3 +380,27 @@ class NnEnsemble(nn.Module):
         if isinstance(outs[0], torch.Tensor):
             return torch.stack(outs)
         return outs
+
+
+class LambdaLayer(BaseNet):
+    """
+    Performs arbitrary transform to output of `BaseNet` module.
+    """
+
+    def __init__(
+        self,
+        wrapped_base_net: BaseNet,
+        take_operation: Callable[[torch.Tensor], torch.Tensor],
+        new_shape: Tuple[int],
+    ):
+        super().__init__(False, None, None)
+        self._base_net = wrapped_base_net
+        self._take_op = take_operation
+        self._new_shape = new_shape
+
+    def net(self, x):
+        return self._take_op(self._base_net.net(x))
+
+    @property
+    def output_shape(self):
+        return self._new_shape

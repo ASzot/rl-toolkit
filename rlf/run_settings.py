@@ -78,12 +78,12 @@ class RunSettings(MasterClass):
         """
         return osp.join(self.working_dir, "config.yaml")
 
-    def create_traj_saver(self, save_path: str) -> rlf.il.TrajSaver:
+    def create_traj_saver(self, save_path: str, args) -> rlf.il.TrajSaver:
         """
         How trajectories should be saved if desired.
-        :save_path: file name to write the trajectories to
+        :save_path: directory to write the trajectories to.
         """
-        return TrajSaver(save_path)
+        return TrajSaver(save_path, is_stochastic_policy=not args.deterministic_policy)
 
     def get_add_args(self, parser):
         pass
@@ -190,7 +190,6 @@ class RunSettings(MasterClass):
         Called after the env is created but before the policy and algo are created.
         """
         pass
-
 
     def create_runner(self, add_args={}, ray_create=False) -> rlf.Runner:
         """

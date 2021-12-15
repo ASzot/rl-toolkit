@@ -8,7 +8,6 @@ import rlf.rl.utils as rutils
 import torch
 from rlf.algos.base_algo import AlgorithmSettings
 from rlf.exp_mgr.viz_utils import save_mp4
-from rlf.il.traj_mgr import TrajSaver
 from rlf.policies.base_policy import get_empty_step_info
 from rlf.rl.envs import get_vec_normalize, make_vec_envs
 from tqdm import tqdm
@@ -179,9 +178,8 @@ def evaluate(
 
     policy.eval()
     if args.eval_save and create_traj_saver_fn is not None:
-        traj_saver = create_traj_saver_fn(
-            osp.join(args.traj_dir, args.env_name, args.prefix)
-        )
+        save_dir = osp.join(args.traj_dir, args.env_name, args.prefix)
+        traj_saver = create_traj_saver_fn(save_dir, args)
     else:
         assert not args.eval_save, (
             "Cannot save evaluation without ",

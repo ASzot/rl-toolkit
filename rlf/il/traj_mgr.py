@@ -27,14 +27,18 @@ class TrajSaver(object):
     any observation information for a downstream task.
     """
 
-    def __init__(self, save_dir, save_name="trajs.pt"):
+    def __init__(self, save_dir, is_stochastic_policy=False):
         self.save_dir = save_dir
         self.all_obs = []
         self.all_next_obs = []
         self.all_done = []
         self.all_actions = []
         self.all_info = []
-        self.save_name = save_name
+        if is_stochastic_policy:
+            add_txt = "_stochastic"
+        else:
+            add_txt = ""
+        self.save_name = f"trajs{add_txt}.pt"
 
         self.traj_buffer = defaultdict(list)
         if not osp.exists(self.save_dir):
@@ -89,7 +93,8 @@ class TrajSaver(object):
 
     def save(self):
         """
-        Saves all data in info starting with key `ep_`
+        Saves all observations, actions, and masks from trajectories. Saves all
+        data in info starting with key `ep_`.
         """
         info_tensors = defaultdict(lambda: torch.zeros(len(self.all_info)))
 
@@ -148,13 +153,30 @@ class GoalTrajSaver(TrajSaver):
     Only saves trajectories if they successfully accomplish the goal.
     """
 
-    def __init__(self, save_dir, assert_saved, save_name="trajs.pt"):
+    def __init__(
+        self,
+        save_dir,
+        look_for_subkey: str,
+        assert_saved: bool = False,
+        is_stochastic_policy=False,
+    ):
+        """
+        :param assert_saved: If true, will raise an exception if the trajectory did not end in success.
+        :param look_for_subkey: A substring of a key in the info dictionary
+            that will be used to determine if the trajectory ended in success or
+            not.
+
+        """
         self.assert_saved = assert_saved
-        super().__init__(save_dir, save_name)
+        super().__init__(save_dir, is_stochastic_policy)
 
     def should_save_traj(self, traj):
         last_info = traj[-1][-1]
-        ret = last_info["ep_found_goal"] == 1.0
+        succ_key = [x for x in last_info.keys() if "success" in x]
+        if len(succ_key) != 1:
+            raise ValueError(f"Cannot find success key: {succ_key}")
+        ret = last_info[succ_key[0]] == 1.0
+
         if self.assert_saved and not ret:
             raise ValueError("Trajectory did not end successfully")
         return ret

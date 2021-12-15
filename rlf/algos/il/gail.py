@@ -14,7 +14,7 @@ from rlf.algos.on_policy.ppo import PPO
 from rlf.args import str2bool
 from rlf.baselines.common.running_mean_std import RunningMeanStd
 from rlf.exp_mgr.viz_utils import append_text_to_image
-from rlf.rl.model import ConcatLayer, InjectNet
+from rlf.rl.model import BaseNet, ConcatLayer, InjectNet, LambdaLayer
 from torch.nn.utils import spectral_norm
 
 
@@ -46,11 +46,21 @@ class GailDiscrim(BaseIRLAlgo):
             get_discrim = get_default_discrim
         self.get_discrim = get_discrim
 
+    def _get_base_net_fn(self, ob_shape) -> BaseNet:
+        base_net = self.policy.get_base_net_fn(ob_shape)
+        if self.args.cost_take_dim is None:
+            return base_net
+        else:
+            return LambdaLayer(
+                base_net, lambda x: x[:, -3:], (self.args.cost_take_dim,)
+            )
+
     def _create_discrim(self):
         ob_shape = rutils.get_obs_shape(self.policy.obs_space)
         ac_dim = rutils.get_ac_dim(self.action_space)
-        base_net = self.policy.get_base_net_fn(ob_shape)
+        base_net = self._get_base_net_fn(ob_shape)
         discrim = self.get_discrim(self.args.gail_disc_hidden_dim)
+
         discrim_head = InjectNet(
             base_net.net,
             discrim,
@@ -298,6 +308,7 @@ class GailDiscrim(BaseIRLAlgo):
         parser.add_argument("--use-spectral-norm", type=str2bool, default=False)
         parser.add_argument("--gail-reward-norm", type=str2bool, default=False)
         parser.add_argument("--gail-state-norm", type=str2bool, default=True)
+        parser.add_argument("--cost-take-dim", type=int, default=None)
         parser.add_argument(
             "--gail-disc-hidden-dim",
             type=int,

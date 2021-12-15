@@ -24,16 +24,16 @@ class AirlNetDiscrim(nn.Module):
     def __init__(self, state_enc, gamma, use_shaped_reward, hidden_dim=64):
         super().__init__()
         self.state_enc = state_enc.net
-        output_size = state_enc.output_shape[0]
+
         self.g = nn.Sequential(
-            nn.Linear(output_size, hidden_dim),
+            nn.Linear(state_enc.output_shape[0], hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1),
         )
         self.h = nn.Sequential(
-            nn.Linear(output_size, hidden_dim),
+            nn.Linear(state_enc.output_shape[0], hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
@@ -74,7 +74,7 @@ class AirlNetDiscrim(nn.Module):
 class AirlDiscrim(GailDiscrim):
     def _create_discrim(self):
         ob_shape = rutils.get_obs_shape(self.policy.obs_space)
-        base_net = self.policy.get_base_net_fn(ob_shape)
+        base_net = self._get_base_net_fn(ob_shape)
 
         return AirlNetDiscrim(
             base_net,
