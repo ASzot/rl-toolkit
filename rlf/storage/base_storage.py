@@ -87,7 +87,10 @@ class BaseStorage(object):
         ret_dict = {}
         for k in self.get_extract_info_keys():
             if k in info:
-                assign_val = torch.tensor(info[k]).to(self.args.device)
+                if isinstance(info[k], torch.Tensor):
+                    assign_val = info[k].to(self.args.device)
+                else:
+                    assign_val = torch.tensor(info[k]).to(self.args.device)
                 ret_dict[k] = assign_val
 
         return obs, action, mask, ret_dict, reward

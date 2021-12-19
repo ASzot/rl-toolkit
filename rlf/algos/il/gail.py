@@ -279,23 +279,22 @@ class GailDiscrim(BaseIRLAlgo):
             raise ValueError(f"Unrecognized reward type {self.args.reward_type}")
         return reward
 
-    def _get_reward(self, state, next_state, action, mask, add_inputs):
-        with torch.no_grad():
-            self.discrim_net.eval()
-            reward = self._compute_discrim_reward(
-                state, next_state, action, mask, add_inputs
-            )
+    def get_reward(self, state, next_state, action, mask, add_inputs):
+        self.discrim_net.eval()
+        reward = self._compute_discrim_reward(
+            state, next_state, action, mask, add_inputs
+        )
 
-            if self.args.gail_reward_norm:
-                if self.returns is None:
-                    self.returns = reward.clone()
+        if self.args.gail_reward_norm:
+            if self.returns is None:
+                self.returns = reward.clone()
 
-                self.returns = self.returns * mask * self.args.gamma + reward
-                self.ret_rms.update(self.returns.cpu().numpy())
+            self.returns = self.returns * mask * self.args.gamma + reward
+            self.ret_rms.update(self.returns.cpu().numpy())
 
-                return reward / np.sqrt(self.ret_rms.var[0] + 1e-8), {}
-            else:
-                return reward, {}
+            return reward / np.sqrt(self.ret_rms.var[0] + 1e-8), {}
+        else:
+            return reward, {}
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
@@ -344,15 +343,6 @@ class GailDiscrim(BaseIRLAlgo):
         )
         parser.add_argument("--off-policy-recent", type=str2bool, default=True)
         parser.add_argument("--off-policy-count", type=int, default=2048)
-
-        parser.add_argument(
-            "--freeze-reward",
-            type=str2bool,
-            default=False,
-            help="""
-                If true, the discriminator is not updated.
-            """,
-        )
 
     def load_resume(self, checkpointer):
         super().load_resume(checkpointer)

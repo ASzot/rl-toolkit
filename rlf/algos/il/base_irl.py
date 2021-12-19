@@ -8,6 +8,7 @@ import numpy as np
 import rlf.rl.utils as rutils
 import torch
 from rlf.algos.il.base_il import BaseILAlgo
+from rlf.args import str2bool
 from rlf.storage import BaseStorage, RolloutStorage
 
 
@@ -17,7 +18,7 @@ class BaseIRLAlgo(BaseILAlgo):
     functionality to track inferred rewards in episodes, clear out environment
     rewards, and make updating easier.
 
-    `_get_reward` and `_update_reward_func` should be overriden. Example algorithm for learning a linear reward:
+    `get_reward` and `_update_reward_func` should be overriden. Example algorithm for learning a linear reward:
 
     class MyIRLAlgo(BaseIRLAlgo):
         def init(self, policy, args):
@@ -28,14 +29,13 @@ class BaseIRLAlgo(BaseILAlgo):
 
             self.learned_reward_net = nn.Linear(ob_dim+ac_dim, 1)
 
-        def _get_reward(self, state, next_state, action, mask, add_inputs):
-            # You should probably call torch.no_grad for efficiency if you
-            # don't need gradients
-            with torch.no_grad():
-                input = torch.cat([state, action], dim=-1)
-                return self.learned_reward_net(input), {
-                    "value_to_log_from_reward_inference": 0.0
-                    }
+        def get_reward(self, state, next_state, action, mask, add_inputs):
+            # torch.no_grad wraps this, so no need to call torch.no_grad from
+            # within
+            input = torch.cat([state, action], dim=-1)
+            return self.learned_reward_net(input), {
+                "value_to_log_from_reward_inference": 0.0
+                }
 
         def _update_reward_func(self, storage: BaseStorage) -> Dict[str, Any]:
             batch_sampler = storage.get_generator(
@@ -94,16 +94,6 @@ class BaseIRLAlgo(BaseILAlgo):
         """
         raise NotImplementedError()
 
-    def get_viz_reward(
-        self,
-        state: torch.Tensor,
-        next_state: torch.Tensor,
-        action: torch.Tensor,
-        mask: torch.Tensor,
-        add_info: Dict[str, Any],
-    ) -> torch.Tensor:
-        return self._get_reward(state, next_state, action, mask, add_info)[0]
-
     def _update_reward_func(self, storage: BaseStorage) -> Dict[str, Any]:
         """
         :returns: Dictionary of values to be logged.
@@ -126,9 +116,10 @@ class BaseIRLAlgo(BaseILAlgo):
             action = storage.actions[step]
             add_inputs = {k: v[(step + 1) - 1] for k, v in add_info.items()}
 
-            rewards, ep_log_vals = self._get_reward(
-                state, next_state, action, mask, add_inputs
-            )
+            with torch.no_grad():
+                rewards, ep_log_vals = self.get_reward(
+                    state, next_state, action, mask, add_inputs
+                )
 
             ep_log_vals["reward"] = rewards
             storage.rewards[step] = rewards
@@ -160,7 +151,8 @@ class BaseIRLAlgo(BaseILAlgo):
         else:
 
             def get_reward(states, actions, next_states, mask):
-                return self._get_reward(states, next_states, actions, mask, {})[0]
+                with torch.no_grad():
+                    return self.get_reward(states, next_states, actions, mask, {})[0]
 
             storage.set_modify_reward_fn(get_reward)
 
@@ -168,3 +160,15 @@ class BaseIRLAlgo(BaseILAlgo):
 
     def on_traj_finished(self, trajs):
         pass
+
+    def get_add_args(self, parser):
+        super().get_add_args(parser)
+
+        parser.add_argument(
+            "--freeze-reward",
+            type=str2bool,
+            default=False,
+            help="""
+                If true, the learned reward is not updated.
+            """,
+        )

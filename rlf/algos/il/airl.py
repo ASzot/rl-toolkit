@@ -129,12 +129,14 @@ class AirlDiscrim(GailDiscrim):
         )
         return settings
 
-    def get_viz_reward(self, state, next_state, action, mask, add_info):
-        return self.discrim_net.reward_forward(
-            state, action, mask, next_state, can_use_shaped=False
-        )
-
     def _compute_discrim_reward(self, state, next_state, action, mask, add_inputs):
+        if next_state is None:
+            # We must be visualizing a single state reward, so don't use
+            # shaping term
+            return self.discrim_net.reward_forward(
+                state, action, mask, next_state, can_use_shaped=False
+            )
+
         finished_episodes = [i for i in range(len(mask)) if mask[i] == 0.0]
         obsfilt = self.get_env_ob_filt()
         for i in finished_episodes:

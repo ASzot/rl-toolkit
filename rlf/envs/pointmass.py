@@ -40,6 +40,7 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
         start_noise,
         is_eval,
         num_train_regions,
+        should_clip,
     ):
         self._is_fast_env = fast_env
         self._max_num_steps = max_num_steps
@@ -48,6 +49,7 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
         self._is_eval = is_eval
         self._start_noise = start_noise
         self._num_train_regions = num_train_regions
+        self._should_clip = should_clip
 
         if self._is_fast_env:
             self.dt = 1 / 10.0
@@ -77,6 +79,9 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
         if not self._is_fast_env:
             new_vel = torch.clip(new_vel, -VEL_LIMIT, VEL_LIMIT)
         new_pos = cur_pos + (cur_vel * self.dt)
+
+        if self._should_clip:
+            new_pos = torch.clamp(new_pos, -1.5, 1.5)
         return new_pos, new_vel
 
     def step(self, action):
@@ -108,7 +113,8 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
 
         return (self._get_obs(), reward, all_is_done, all_info)
 
-    def _get_regions(self, offset, spread):
+    @staticmethod
+    def get_regions(offset, spread):
         inc = np.pi / 2
 
         centers = [offset + i * inc for i in range(4)]
@@ -118,10 +124,14 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
     def reset(self):
         if self._is_eval:
             idx = torch.randint(0, 4, (self._batch_size,))
-            regions = self._get_regions(0.0, self._start_noise)
+            regions = BatchedTorchPointMassEnvSpawnRange.get_regions(
+                0.0, self._start_noise
+            )
         else:
             idx = torch.randint(0, self._num_train_regions, (self._batch_size,))
-            regions = self._get_regions(np.pi / 4, self._start_noise)
+            regions = BatchedTorchPointMassEnvSpawnRange.get_regions(
+                np.pi / 4, self._start_noise
+            )
 
         ang = Uniform(regions[idx, 0], regions[idx, 1]).sample()
         radius = np.sqrt(2)
@@ -179,8 +189,9 @@ class PointMassInterface(EnvInterface):
                 args.num_processes,
                 args.pm_start_idx,
                 args.pm_start_state_noise,
-                set_eval,
+                set_eval or args.pm_force_eval_start_dist,
                 args.pm_num_train_regions,
+                args.pm_clip,
             )
         else:
             return BatchedTorchPointMassEnvSpawnRange(
@@ -190,8 +201,9 @@ class PointMassInterface(EnvInterface):
                 args.num_processes,
                 args.pm_start_idx,
                 args.pm_start_state_noise,
-                set_eval,
+                set_eval or args.pm_force_eval_start_dist,
                 args.pm_num_train_regions,
+                args.pm_clip,
             )
 
     def get_add_args(self, parser):
@@ -202,6 +214,19 @@ class PointMassInterface(EnvInterface):
             default=True,
             help="""
                 True increases the dynamics speed.
+                """,
+        )
+        parser.add_argument(
+            "--pm-force-eval-start-dist",
+            type=str2bool,
+            default=False,
+        )
+        parser.add_argument(
+            "--pm-clip",
+            type=str2bool,
+            default=True,
+            help="""
+                If true, clips the agent to a region
                 """,
         )
         parser.add_argument(
@@ -228,6 +253,7 @@ class PointMassInterface(EnvInterface):
                 Sets the amount of starting state noise.
                 """,
         )
+
         parser.add_argument(
             "--pm-start-idx",
             type=int,
