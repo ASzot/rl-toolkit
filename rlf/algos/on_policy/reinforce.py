@@ -10,6 +10,7 @@ class REINFORCE(OnPolicy):
         self._compute_returns(rollouts)
         log_vals = defaultdict(list)
         advantages = rollouts.compute_advantages()
+        sample = rollouts.get_rollout_data()
 
         for e in range(self._arg("num_epochs")):
             data_generator = rollouts.get_generator(
@@ -32,3 +33,19 @@ class REINFORCE(OnPolicy):
                 log_vals["loss"].append(loss.item())
         log_vals = {k: np.mean(v) for k, v in log_vals.items()}
         return log_vals
+
+    def get_add_args(self, parser):
+        super().get_add_args(parser)
+        # Override defaults
+        parser.add_argument(
+            f"--{self.arg_prefix}num-epochs",
+            type=int,
+            default=1,
+            help="number of ppo epochs (default: 4)",
+        )
+        parser.add_argument(
+            f"--{self.arg_prefix}num-mini-batch",
+            type=int,
+            default=1,
+            help="number of batches for ppo (default: 4)",
+        )

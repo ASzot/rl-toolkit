@@ -216,7 +216,11 @@ def nice_scatter(
     show_legend: bool,
     x_lim: Optional[Tuple[float, float]],
     y_lim: Optional[Tuple[float, float]],
+    name_opacities: Dict[str, float] = {},
 ):
+    """
+    :param data_points: key is the label, value is the list of X,Y points.
+    """
     color_pal = sns.color_palette()
     fig, ax = plt.subplots()
 
@@ -227,7 +231,12 @@ def nice_scatter(
         for x, y in data_points[k]:
             X.append(x)
             Y.append(y)
-            colors.append(color_pal[name_colors[k]])
+            use_color = color_pal[name_colors[k]]
+            if k in name_opacities:
+                opacity = name_opacities[k]
+                use_color = (*use_color, opacity)
+
+            colors.append(use_color)
         ax.scatter(X, Y, c=colors, label=rename_map[k])
 
     ax.set_xlabel(x_axis_name)
@@ -239,7 +248,8 @@ def nice_scatter(
     if show_legend:
         ax.legend()
     ax.grid(True)
-    ax.set_title(title_name)
+    if title_name != "":
+        ax.set_title(title_name)
 
     high_res_save(osp.join(save_dir, save_name + ".pdf"))
     plt.clf()

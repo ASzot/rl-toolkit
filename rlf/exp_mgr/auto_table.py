@@ -2,6 +2,8 @@ from typing import Callable, Dict, List, Optional
 
 import pandas as pd
 
+MISSING_VALUE = 0.2444
+
 
 def plot_table(
     df: pd.DataFrame,
@@ -10,15 +12,21 @@ def plot_table(
     cell_key: str,
     col_order: List[str],
     row_order: List[str],
-    renames: Dict[str, str],
+    renames: Dict[str, str] = {},
     error_scaling=1.0,
     n_decimals=2,
-    missing_fill_value=0.2444,
+    missing_fill_value=MISSING_VALUE,
     error_fill_value=0.3444,
     auto_wrap=False,
     get_row_highlight: Optional[Callable[[str, pd.DataFrame], Optional[str]]] = None,
     write_to=None,
 ):
+    """
+    :param df: The index of the data frame does not matter only the row values and column names.
+    :param col_key: A string from the set of columns.
+    :param row_key: A string from the set of columns (but this is used to form the rows of the table).
+    :param renames: Only used for display name conversions. Does not affect functionality.
+    """
     df = df.replace("missing", missing_fill_value)
     df = df.replace("error", error_fill_value)
 

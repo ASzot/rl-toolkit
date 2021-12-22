@@ -5,20 +5,28 @@ except:
 import os
 import os.path as osp
 import sys
-from typing import Dict
+from collections import defaultdict
+from typing import Callable, Dict, List, Optional
 
 from rlf.exp_mgr import config_mgr
 from rlf.rl.utils import CacheHelper
 
 
 def query(
-    select_fields,
+    select_fields: List[str],
     filter_fields: Dict[str, str],
     cfg="./config.yaml",
     verbose=True,
     limit=None,
     use_cached=False,
+    reduce_op: Optional[Callable[[List], float]] = None,
 ):
+    """
+    :param select_fields: The list of data to retrieve.
+    :param filter_fields: Key is the filter type (like group or tag) and value
+        is the filter value (like the name of the group or tag to match)
+    :param reduce_op: `np.mean` would take the average of the results.
+    """
     config_mgr.init(cfg)
 
     wb_proj_name = config_mgr.get_prop("proj_name")
@@ -101,15 +109,23 @@ def query(
                 v = run.summary[use_k]
             elif f == "status":
                 v = run.state
+            elif f.startswith("config."):
+                v = run.config[f.split("config.")[0]]
             else:
-                # return None
-                raise ValueError(f"Select field {f} not supported")
+                v = run.summary[f]
             dat[f] = v
         ret_data.append(dat)
         if limit is not None and len(ret_data) >= limit:
             break
 
     cache.save(ret_data)
+    if reduce_op is not None:
+        reduce_data = defaultdict(list)
+        for p in ret_data:
+            for k, v in p.items():
+                reduce_data[k].append(v)
+        ret_data = {k: reduce_op(v) for k, v in reduce_data.items()}
+
     log(f"Got data {ret_data}")
     return ret_data
 
