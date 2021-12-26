@@ -217,12 +217,15 @@ def nice_scatter(
     x_lim: Optional[Tuple[float, float]],
     y_lim: Optional[Tuple[float, float]],
     name_opacities: Dict[str, float] = {},
+    fig_size=(4,4),
 ):
     """
     :param data_points: key is the label, value is the list of X,Y points.
+    :param save_dir: Will create the directory if it does not exist.
     """
+    os.makedirs(save_dir, exist_ok=True)
     color_pal = sns.color_palette()
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=fig_size)
 
     for k in data_points:
         X = []
