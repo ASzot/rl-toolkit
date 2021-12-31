@@ -27,16 +27,16 @@ class AirlNetDiscrim(nn.Module):
 
         self.g = nn.Sequential(
             nn.Linear(state_enc.output_shape[0], hidden_dim),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(hidden_dim, 1),
         )
         self.h = nn.Sequential(
             nn.Linear(state_enc.output_shape[0], hidden_dim),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(hidden_dim, 1),
         )
         self.gamma = gamma
