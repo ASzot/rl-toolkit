@@ -72,7 +72,7 @@ class BaseIRLAlgo(BaseILAlgo):
         )
 
     @abstractmethod
-    def _get_reward(
+    def get_reward(
         self,
         state: torch.Tensor,
         next_state: torch.Tensor,

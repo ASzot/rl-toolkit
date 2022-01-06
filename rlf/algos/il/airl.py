@@ -1,3 +1,8 @@
+"""
+This code is based on these resources:
+- https://github.com/ku2482/gail-airl-ppo.pytorch/blob/master/gail_airl_ppo/network/disc.py
+- https://github.com/justinjfu/inverse_rl/blob/master/inverse_rl/models/airl_state.py
+"""
 import rlf.rl.utils as rutils
 import torch
 import torch.nn as nn
@@ -17,13 +22,10 @@ class AIRL(NestedAlgo):
 
 
 class AirlNetDiscrim(nn.Module):
-    """
-    The discriminator network is based on https://github.com/ku2482/gail-airl-ppo.pytorch/blob/master/gail_airl_ppo/network/disc.py
-    """
-
-    def __init__(self, state_enc, gamma, use_shaped_reward, hidden_dim=64):
+    def __init__(self, state_enc, args):
         super().__init__()
         self.state_enc = state_enc.net
+        hidden_dim = args.gail_disc_hidden_dim
 
         self.g = nn.Sequential(
             nn.Linear(state_enc.output_shape[0], hidden_dim),
@@ -39,36 +41,42 @@ class AirlNetDiscrim(nn.Module):
             nn.Tanh(),
             nn.Linear(hidden_dim, 1),
         )
-        self.gamma = gamma
-        self.use_shaped_reward = use_shaped_reward
+        self.args = args
 
-    def reward_forward(self, states, actions, mask, next_states, can_use_shaped=True):
+    def reward_forward(
+        self, states, actions, mask, next_states, policy, base_reward_only=False
+    ):
+        log_p = self.f(states, actions, mask, next_states, policy, not base_reward_only)
+        if base_reward_only:
+            return log_p
+
+        with torch.no_grad():
+            log_q = policy.evaluate_actions(states, {}, {}, mask, actions)["log_prob"]
+
+        logits = log_p - (self.args.airl_entropy_bonus * log_q)
+        s = torch.sigmoid(logits)
+        eps = 1e-20
+        return (s + eps).log() - (1 - s + eps).log()
+
+    def f(self, states, actions, mask, next_states, policy, can_use_shaped=True):
         states_enc = self.state_enc(states)
         rs = self.g(states_enc)
 
-        if self.use_shaped_reward and can_use_shaped:
+        if self.args.airl_reward_shaping and can_use_shaped:
             next_states_enc = self.state_enc(next_states)
             vs = self.h(states_enc)
             next_vs = self.h(next_states_enc)
-            return rs + self.gamma * mask * next_vs - vs
+
+            return rs + (self.args.gamma * mask.view(-1, 1) * next_vs) - vs
         else:
             return rs
 
     def discrim_forward(self, states, actions, mask, next_states, policy):
-        states_enc = self.state_enc(states)
-        next_states_enc = self.state_enc(next_states)
-
-        rs = self.g(states_enc)
-        vs = self.h(states_enc)
-        next_vs = self.h(next_states_enc)
-        log_p = rs + self.gamma * mask * next_vs - vs
+        log_p = self.f(states, actions, mask, next_states, policy)
         with torch.no_grad():
             log_q = policy.evaluate_actions(states, {}, {}, mask, actions)["log_prob"]
 
-        # A more numerically stable way of computing the loss than in the
-        # paper.
         return log_p - log_q
-        # return torch.exp(log_p) / (torch.exp(log_p) + torch.exp(log_q))
 
 
 class AirlDiscrim(GailDiscrim):
@@ -76,12 +84,7 @@ class AirlDiscrim(GailDiscrim):
         ob_shape = rutils.get_obs_shape(self.policy.obs_space)
         base_net = self._get_base_net_fn(ob_shape)
 
-        return AirlNetDiscrim(
-            base_net,
-            self.args.gamma,
-            self.args.airl_reward_shaping,
-            self.args.gail_disc_hidden_dim,
-        ).to(self.args.device)
+        return AirlNetDiscrim(base_net, self.args).to(self.args.device)
 
     def _get_sampler(self, storage):
         agent_experience = storage.get_generator(
@@ -113,15 +116,6 @@ class AirlDiscrim(GailDiscrim):
         )
         return expert_d, agent_d, 0
 
-    def _compute_expert_loss(self, expert_d, expert_batch):
-        return -F.logsigmoid(expert_d).mean()
-
-    def _compute_agent_loss(self, agent_d, agent_batch):
-        return -F.logsigmoid(-agent_d).mean()
-
-    def _compute_disc_val(self, state, next_state, action):
-        raise NotImplementedError("Not used in AIRL")
-
     def get_env_settings(self, args):
         settings = super().get_env_settings(args)
         settings.include_info_keys.extend(
@@ -134,7 +128,7 @@ class AirlDiscrim(GailDiscrim):
             # We must be visualizing a single state reward, so don't use
             # shaping term
             return self.discrim_net.reward_forward(
-                state, action, mask, next_state, can_use_shaped=False
+                state, action, mask, next_state, self.policy, base_reward_only=True
             )
 
         finished_episodes = [i for i in range(len(mask)) if mask[i] == 0.0]
@@ -146,8 +140,18 @@ class AirlDiscrim(GailDiscrim):
                     obsfilt(next_state[i].cpu().numpy(), update=False)
                 ).to(self.args.device)
 
-        return self.discrim_net.reward_forward(state, action, mask, next_state)
+        return self.discrim_net.reward_forward(
+            state, action, mask, next_state, self.policy
+        )
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
         parser.add_argument("--airl-reward-shaping", type=str2bool, default=True)
+        parser.add_argument(
+            "--airl-entropy-bonus",
+            type=float,
+            default=1.0,
+            help="""
+                The entropy bonus scaling factor to include in the reward.
+            """,
+        )

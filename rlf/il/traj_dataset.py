@@ -80,7 +80,8 @@ class TrajDataset(ImitationLearningDataset):
         import seaborn as sns
 
         sns.distplot(self.traj_lens)
-        rutils.plt_save(args.save_dir, args.env_name, args.prefix, "traj_len_dist.png")
+        save_path = rutils.plt_save(rutils.get_save_dir(args), "traj_len_dist.png")
+        print(f"Saved expert data visualization to {save_path}")
 
     def get_expert_stats(self, device):
         # Compute statistics across the trajectories.

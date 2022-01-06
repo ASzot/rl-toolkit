@@ -133,7 +133,10 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
                 np.pi / 4, self._start_noise
             )
 
-        ang = Uniform(regions[idx, 0], regions[idx, 1]).sample()
+        if torch.isclose(regions[idx, 0], regions[idx, 1]).all():
+            ang = regions[idx, 0]
+        else:
+            ang = Uniform(regions[idx, 0], regions[idx, 1]).sample()
         radius = np.sqrt(2)
         self.cur_pos = (
             torch.stack([radius * torch.cos(ang), radius * torch.sin(ang)], dim=-1)

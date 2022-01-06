@@ -34,14 +34,14 @@ class ImitationLearningDataset(torch.utils.data.Dataset, ABC):
     """
 
     def __init__(
-        self, load_path, transform_dem_dataset_fn: Callable[[Dict, Dict], Dict] = None
+        self, load_path, transform_dem_dataset_fn: Callable[[Dict], Dict] = None
     ):
         """
-        :param transform_dem_dataset_fn: Takes as input the output trajectory
-        and the original data trajectory and outputs the modified trajectory.
+        :param transform_dem_dataset_fn: Takes as input the original dataset
+        and outputs the modified dataset.
         """
         if transform_dem_dataset_fn is None:
-            transform_dem_dataset_fn = lambda x, y: x
+            transform_dem_dataset_fn = lambda x: x
         self._transform_dem_dataset_fn = transform_dem_dataset_fn
 
     def viz(self, args):

@@ -1,12 +1,13 @@
 import functools
 import os.path as osp
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import gym
 import numpy as np
 import rlf.rl.utils as rutils
 import torch
 from rlf.algos.base_net_algo import BaseNetAlgo
+from rlf.args import str2bool
 from rlf.il.d4rl_dataset import D4rlDataset
 from rlf.il.transition_dataset import TransitionDataset
 from rlf.rl import utils
@@ -51,7 +52,12 @@ class BaseILAlgo(BaseNetAlgo):
         # By default do not transform the dataset at all.
         self._transform_dem_dataset_fn = None
 
-    def set_transform_dem_dataset_fn(self, transform_dem_dataset_fn):
+    def set_transform_dem_dataset_fn(
+        self, transform_dem_dataset_fn: Callable[[Dict], Dict]
+    ):
+        """
+        Sets a callback to modify the expert dataset. Is useful for custom subsampling, trimming the dataset, and more.
+        """
         self._transform_dem_dataset_fn = transform_dem_dataset_fn
 
     def _load_expert_data(self, policy, args):
@@ -251,7 +257,15 @@ class BaseILAlgo(BaseNetAlgo):
             default=1.0,
             help="The fraction of trajectories to use",
         )
-        parser.add_argument("--traj-viz", action="store_true", default=False)
+        parser.add_argument(
+            "--traj-viz",
+            type=str2bool,
+            default=True,
+            help="""
+                Visualize the expert dataset statistics and save visualization
+                to file.
+                """,
+        )
         parser.add_argument("--exp-gen-num-trans", type=int, default=None)
 
         # Unless you have some weird dataset situation, you probably want to

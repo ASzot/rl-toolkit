@@ -19,7 +19,7 @@ class TransitionDataset(ImitationLearningDataset):
         else:
             trajs = self._load_pt(load_path)
 
-        trajs = self._transform_dem_dataset_fn(trajs, trajs)
+        trajs = self._transform_dem_dataset_fn(trajs)
         trajs = convert_to_tensors(trajs)
 
         # Convert all to floats
@@ -32,6 +32,25 @@ class TransitionDataset(ImitationLearningDataset):
         self.state_mean = torch.mean(self.trajs["obs"], dim=0)
         self.state_std = torch.std(self.trajs["obs"], dim=0)
         self._compute_action_stats()
+
+    def viz(self, args):
+        import seaborn as sns
+
+        traj_lens = []
+        cur_len = 0
+        for done in self.trajs["done"]:
+            if done:
+                traj_lens.append(cur_len)
+                cur_len = 0
+            else:
+                cur_len += 1
+        p = sns.distplot(traj_lens)
+        p.set_title(
+            f"{len(traj_lens)} trajs, {len(self.trajs['obs'])} transitions, taking {args.traj_frac}, val {args.traj_val_ratio}"
+        )
+        p.set_xlabel("Trajectory Lengths")
+        save_path = rutils.plt_save(rutils.get_save_dir(args), "traj_len_dist.png")
+        print(f"Saved expert data visualization to {save_path}")
 
     def _load_npz(self, load_path):
         x = np.load(load_path)

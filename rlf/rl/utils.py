@@ -95,6 +95,7 @@ def plt_save(*path_parts):
         os.makedirs(save_dir)
     plt.savefig(save_name)
     plt.clf()
+    return save_name
 
 
 def save_model(model, save_name, args):
