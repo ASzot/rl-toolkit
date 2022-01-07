@@ -90,6 +90,8 @@ class BaseILAlgo(BaseNetAlgo):
         # Always keep track of the non-shuffled, non-split version of the
         # dataset.
         self.expert_dataset = self.orig_dataset
+        if args.traj_viz:
+            self.expert_dataset.viz(args)
         if args.traj_frac != 1.0:
             if (args.traj_frac * len(self.expert_dataset)) < 1:
                 raise ValueError(
@@ -101,9 +103,6 @@ class BaseILAlgo(BaseNetAlgo):
             self.expert_dataset = self.expert_dataset.compute_split(
                 args.traj_frac, args.seed
             )
-
-        if args.traj_viz:
-            self.expert_dataset.viz(args)
 
         if args.traj_val_ratio != 0.0:
             N = len(self.expert_dataset)
