@@ -45,6 +45,7 @@ def plot_table(
     def clean_text(s):
         return s.replace("%", "\\%").replace("_", " ")
 
+    # Add the column title row.
     row_str = [""]
     for col_k in col_order:
         row_str.append("\\textbf{%s}" % clean_text(renames.get(col_k, col_k)))
@@ -76,13 +77,17 @@ def plot_table(
                 else:
                     if col_k == sel_col:
                         row_str.append(
-                            "$ \\mathbf{ "
-                            + (f"%.{n_decimals}f \pm %.{n_decimals}f" % (val, std))
-                            + " }$"
+                            "\\textbf{ "
+                            + (
+                                f"%.{n_decimals}f {{\\scriptsize $\pm$ %.{n_decimals}f }}"
+                                % (val, std)
+                            )
+                            + " }"
                         )
                     else:
                         row_str.append(
-                            f"$ %.{n_decimals}f \pm %.{n_decimals}f $" % (val, std)
+                            f" %.{n_decimals}f {{\\scriptsize $\pm$ %.{n_decimals}f }} "
+                            % (val, std)
                         )
 
         all_s.append(col_sep.join(row_str))
@@ -91,8 +96,16 @@ def plot_table(
     if auto_wrap:
         ret_s += "\\resizebox{\\columnwidth}{!}{\n"
     ret_s += "\\begin{tabular}{%s}\n" % ("c" * (len(col_order) + 1))
+    # Line above the table.
+    ret_s += "\\toprule\n"
 
-    ret_s += row_sep.join(all_s)
+    # Separate the column headers from the rest of the table by a line.
+    ret_s += all_s[0] + row_sep
+    ret_s += "\\midrule\n"
+
+    ret_s += row_sep.join(all_s[1:]) + row_sep
+    # Line below the table.
+    ret_s += "\\bottomrule"
 
     ret_s += "\n\\end{tabular}\n"
     if auto_wrap:

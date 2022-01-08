@@ -41,6 +41,7 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
         is_eval,
         num_train_regions,
         should_clip,
+        clamp_vel=None,
     ):
         self._is_fast_env = fast_env
         self._max_num_steps = max_num_steps
@@ -166,6 +167,8 @@ class BatchedTorchPointMassEnvSingleSpawn(BatchedTorchPointMassEnvSpawnRange):
         ).view(-1, 1, 2)
         self.cur_vel = torch.zeros(self._batch_size, 2)
         self.cur_pos = all_start[self._pm_start_idx].repeat(self._batch_size, 1)
+
+        self.start_pos = self.cur_pos.clone()
         return self._get_obs()
 
 
