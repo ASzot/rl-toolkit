@@ -168,11 +168,12 @@ class GoalTrajSaver(TrajSaver):
 
         """
         self.assert_saved = assert_saved
+        self._look_for_key = look_for_subkey
         super().__init__(save_dir, is_stochastic_policy)
 
     def should_save_traj(self, traj):
         last_info = traj[-1][-1]
-        succ_key = [x for x in last_info.keys() if "success" in x]
+        succ_key = [x for x in last_info.keys() if self._look_for_key in x]
         if len(succ_key) != 1:
             raise ValueError(f"Cannot find success key: {succ_key}")
         ret = last_info[succ_key[0]] == 1.0

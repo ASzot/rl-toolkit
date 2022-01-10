@@ -27,7 +27,7 @@ class GeneralRunSettings(RunSettings):
 
 
 def test_save_load_train():
-    TEST_ENV = "Pendulum-v0"
+    TEST_ENV = "Pendulum-v1"
     EXPERT_NUM_ENV_SAMPLES = 400
     EXPERT_NUM_STEPS = 50
     EXPERT_NUM_PROCS = 2
@@ -50,7 +50,7 @@ def test_save_load_train():
     )
     run_result = run_policy(run_settings)
 
-    expected_trajs = f"./data/traj/{TEST_ENV}/{run_result.prefix}/trajs.pt"
+    expected_trajs = f"./data/traj/{TEST_ENV}/{run_result.prefix}/trajs_stochastic.pt"
 
     # Run GAIL
     run_settings = GeneralRunSettings(

@@ -483,7 +483,7 @@ def agg_ep_log_stats(env_infos, alg_info):
         if k.startswith("alg_add_"):
             all_log_stats[k].append(alg_info[k])
 
-    for inf in env_infos:
+    for i, inf in enumerate(env_infos):
         if "episode" in inf:
             # Only log at the end of the episode
             for k in inf:
