@@ -134,6 +134,7 @@ class MultiGoalPointMassInterface(PointMassInterface):
             type=float,
             default=0.10,
         )
+        parser.set_defaults(pm_ep_horizon=50)
 
 
 register_env_interface("^MultiGoalRltPointMass", MultiGoalPointMassInterface)

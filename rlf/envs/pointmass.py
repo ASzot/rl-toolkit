@@ -38,6 +38,8 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
     ):
         self._batch_size = args.num_processes
         self._is_eval = set_eval or args.pm_force_eval_start_dist
+        if args.pm_force_train_start_dist:
+            self._is_eval = False
         self.args = args
 
         self.pos_dim = 2
@@ -184,6 +186,17 @@ class PointMassInterface(EnvInterface):
             "--pm-force-eval-start-dist",
             type=str2bool,
             default=False,
+            help="""
+            If true, using the EVAL start state dist even during TRAINING.
+            """,
+        )
+        parser.add_argument(
+            "--pm-force-train-start-dist",
+            type=str2bool,
+            default=False,
+            help="""
+            If true, using the TRAINING start state dist even during EVAL.
+            """,
         )
         parser.add_argument(
             "--pm-clip",
@@ -220,7 +233,7 @@ class PointMassInterface(EnvInterface):
         parser.add_argument(
             "--pm-dt",
             type=float,
-            default=1 / 10.0,
+            default=0.05,
             help="The time step. The higher, the larger of a step",
         )
         parser.add_argument(
