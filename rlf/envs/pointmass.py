@@ -31,11 +31,7 @@ class PointMassEnvSpawnRange(gym.Env):
 
 
 class BatchedTorchPointMassEnvSpawnRange(VecEnv):
-    def __init__(
-        self,
-        args,
-        set_eval,
-    ):
+    def __init__(self, args, set_eval, obs_space=None):
         self._batch_size = args.num_processes
         self._is_eval = set_eval or args.pm_force_eval_start_dist
         if args.pm_force_train_start_dist:
@@ -48,10 +44,12 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
         self._ep_step = 0
 
         self._ep_rewards = []
+        if obs_space is None:
+            obs_space = spaces.Box(low=-1.0, high=1.0, shape=(2,))
 
         super().__init__(
             self._batch_size,
-            spaces.Box(low=-1.0, high=1.0, shape=(2,)),
+            obs_space,
             spaces.Box(low=-1.0, high=1.0, shape=(2,)),
         )
 
@@ -62,9 +60,9 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
         pass
 
     def forward(self, cur_pos, cur_vel, action):
-        new_vel = cur_vel + action
-        new_vel = torch.clip(new_vel, -VEL_LIMIT, VEL_LIMIT)
-        new_pos = cur_pos + (new_vel * self.args.pm_dt)
+        action = torch.clamp(action, -1.0, 1.0)
+        new_vel = cur_vel
+        new_pos = cur_pos + (action * self.args.pm_dt)
 
         if self.args.pm_clip:
             new_pos = torch.clamp(new_pos, -POS_LIMIT, POS_LIMIT)
@@ -233,7 +231,7 @@ class PointMassInterface(EnvInterface):
         parser.add_argument(
             "--pm-dt",
             type=float,
-            default=0.05,
+            default=0.1,
             help="The time step. The higher, the larger of a step",
         )
         parser.add_argument(

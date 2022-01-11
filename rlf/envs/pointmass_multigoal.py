@@ -24,30 +24,32 @@ class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSingleSpawn):
         args,
         set_eval,
     ):
-        super().__init__(args, set_eval)
+        super().__init__(
+            args,
+            set_eval,
+            obs_space=spaces.Box(low=-2.0, high=2.0, shape=(3,)),
+        )
 
     def _reset_idx(self, idx):
         self.cur_pos[idx] = self._sample_start(1)[0]
         self.cur_vel[idx] = torch.zeros(2)
         self._ep_step[idx] = 0
         self._goal[idx] = torch.tensor([0.0, 0.0])
-        self._finished_stage_1[idx] = False
+        self._finished_stage_1[idx] = 0.0
         self._ep_rewards[idx] = []
 
     def reset(self):
-        ret = super().reset()
-
+        self._finished_stage_1 = torch.zeros(self._batch_size)
+        super().reset()
         self._ep_step = [0 for _ in range(self._batch_size)]
         self._goal = torch.tensor([[0.0, 0.0]]).repeat(self._batch_size, 1)
-        self._finished_stage_1 = torch.tensor([False for _ in range(self._batch_size)])
         self._ep_rewards = {}
 
         for i in range(self._batch_size):
             self._reset_idx(i)
-        return ret
+        return self._get_obs()
 
     def step(self, action):
-        action = torch.clamp(action, -1.0, 1.0)
         self.cur_pos, self.cur_vel = self.forward(self.cur_pos, self.cur_vel, action)
 
         dist_to_cur_goal = torch.linalg.norm(
@@ -75,7 +77,7 @@ class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSingleSpawn):
             all_info[i]["ep_succ_stage2"] = 0.0
             all_info[i]["ep_success"] = 0.0
             if at_goal[i]:
-                if self._finished_stage_1[i]:
+                if self._finished_stage_1[i] == 1.0:
                     # Finished stage 2.
                     reward[i] += STAGE_2_BONUS
                     all_info[i]["ep_succ_stage2"] = 1.0
@@ -86,9 +88,9 @@ class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSingleSpawn):
                     reward[i] += STAGE_1_BONUS
 
                 self._goal[i] = self.start_pos[i]
-                self._finished_stage_1[i] = True
+                self._finished_stage_1[i] = 1.0
 
-            stage_1_done = float(self._finished_stage_1[i])
+            stage_1_done = self._finished_stage_1[i].item()
             all_info[i]["ep_succ_stage1"] = stage_1_done
 
             # The final distance to the goal is the distance from the agent to
@@ -111,6 +113,9 @@ class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSingleSpawn):
             self._ep_rewards[i].append(reward[i].item())
 
         return (self._get_obs(), reward, all_is_done, all_info)
+
+    def _get_obs(self):
+        return torch.cat([self.cur_pos, self._finished_stage_1.view(-1, 1)], dim=-1)
 
 
 class MultiGoalPointMassInterface(PointMassInterface):
