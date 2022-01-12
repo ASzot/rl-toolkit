@@ -1,7 +1,27 @@
+from collections import namedtuple
+from typing import List, NamedTuple
+
 import numpy as np
 import rlf.rl.utils as rutils
 import torch
 from rlf.il.il_dataset import ImitationLearningDataset, convert_to_tensors
+
+
+class DatasetTransition(NamedTuple):
+    index: int
+    obs: torch.Tensor
+    done: torch.Tensor
+    action: torch.Tensor
+    next_obs: torch.Tensor
+
+    def to(self, d):
+        return DatasetTransition(
+            self.index,
+            self.obs.to(d),
+            self.done.to(d),
+            self.action.to(d),
+            self.next_obs.to(d),
+        )
 
 
 class TransitionDataset(ImitationLearningDataset):
@@ -10,7 +30,12 @@ class TransitionDataset(ImitationLearningDataset):
     format.
     """
 
-    def __init__(self, load_path, transform_dem_dataset_fn, override_data=None):
+    def __init__(
+        self,
+        load_path,
+        transform_dem_dataset_fn,
+        override_data=None,
+    ):
         super().__init__(load_path, transform_dem_dataset_fn)
         if override_data is not None:
             trajs = override_data
@@ -110,11 +135,12 @@ class TransitionDataset(ImitationLearningDataset):
             "actions": self.trajs["actions"][i],
         }
 
-    def _group_into_trajs(self):
+    def _group_into_trajs(self) -> List[DatasetTransition]:
         idxs = range(self.trajs["obs"].shape[0])
 
         trajs = []
         cur_traj = []
+        Transition = namedtuple("Transition", "index obs done actions next_obs")
 
         for i, obs, done, actions, next_obs in zip(
             idxs,
@@ -123,7 +149,7 @@ class TransitionDataset(ImitationLearningDataset):
             self.trajs["actions"],
             self.trajs["next_obs"],
         ):
-            cur_traj.append((i, obs, done, actions, next_obs))
+            cur_traj.append(DatasetTransition(i, obs, done, actions, next_obs))
             if done.item():
                 trajs.append(cur_traj)
                 cur_traj = []
@@ -141,6 +167,6 @@ class TransitionDataset(ImitationLearningDataset):
         rng.shuffle(trajs)
         trajs = trajs[:use_count]
 
-        idxs = [step[0] for traj in trajs for step in traj]
+        idxs = [step.index for traj in trajs for step in traj]
 
         return torch.utils.data.Subset(self, idxs)

@@ -44,6 +44,9 @@ class ImitationLearningDataset(torch.utils.data.Dataset, ABC):
             transform_dem_dataset_fn = lambda x: x
         self._transform_dem_dataset_fn = transform_dem_dataset_fn
 
+    def get_add_data_loader_kwargs(self):
+        return {}
+
     def viz(self, args):
         pass
 

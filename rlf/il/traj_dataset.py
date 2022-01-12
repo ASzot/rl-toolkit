@@ -4,9 +4,10 @@ import numpy as np
 import rlf.rl.utils as rutils
 import torch
 from rlf.il.il_dataset import ImitationLearningDataset, convert_to_tensors
+from rlf.il.transition_dataset import TransitionDataset
 
 
-class TrajDataset(ImitationLearningDataset):
+class TrajDataset(TransitionDataset):
     """
     See `rlf/il/il_dataset.py` for notes about the demonstration dataset
     format.
@@ -15,178 +16,60 @@ class TrajDataset(ImitationLearningDataset):
     def __init__(
         self,
         load_path,
-        transform_dem_dataset_fn=None,
-        subsample_factor=1,
+        transform_dem_dataset_fn,
         override_data=None,
     ):
-        super().__init__(load_path, transform_dem_dataset_fn)
-        self.subsample_factor = subsample_factor
-        if override_data is None:
-            trajs = torch.load(load_path)
-        else:
-            trajs = override_data
+        super().__init__(load_path, transform_dem_dataset_fn, override_data)
+        self.trajs = self._group_into_trajs()
 
-        rutils.pstart_sep()
-        self._setup(trajs)
-
-        trajs = self._generate_trajectories(trajs)
-
-        assert len(trajs) != 0, "No trajectories found to load!"
-
-        self.n_trajs = len(trajs)
-        print("Collected %i trajectories" % len(trajs))
-
-        self.data = self._gen_data(trajs)
-
-        def get_data_len(x):
-            if isinstance(x, dict):
-                return len(x["observation"])
-            else:
-                return len(x)
-
-        self.traj_lens = [get_data_len(traj[0]) for traj in trajs]
-        print(
-            f"Traj dataset length distribution {np.mean(self.traj_lens)}, {np.std(self.traj_lens)}"
-        )
-        self.trajs = trajs
-        self.holdout_idxs = []
-
-        rutils.pend_sep()
-
-    def get_num_trajs(self):
-        return self.n_trajs
-
-    def compute_split(self, traj_frac, rnd_seed):
-        traj_count = int(len(self.trajs) * traj_frac)
-        all_idxs = np.arange(0, len(self.trajs))
-
-        rng = np.random.default_rng(rnd_seed)
-        rng.shuffle(all_idxs)
-        self.keep_idxs = all_idxs[:traj_count]
-        self.holdout_idxs = all_idxs[traj_count:]
-        self.n_trajs = traj_count
-
-        self.data = self._gen_data([self.trajs[i] for i in self.keep_idxs])
-        return self
-
-    def _setup(self, trajs):
+    def get_add_data_loader_kwargs(self):
         """
-        Initialization subclasses need to perform. Cannot perform
-        initialization in __init__ as traj is not avaliable.
+        When batching multiple trajectories, flattening the horizon dimension together.
         """
-        pass
+
+        def coallate(batch):
+            return {
+                k: torch.cat([batch[i][k] for i in range(len(batch))], dim=0)
+                for k in batch[0].keys()
+            }
+
+        return {"collate_fn": coallate}
 
     def viz(self, args):
         import seaborn as sns
 
-        sns.distplot(self.traj_lens)
+        traj_lens = [len(t) for t in self.trajs]
+        p = sns.distplot(traj_lens)
+        p.set_title(f"{len(traj_lens)} trajs")
+        p.set_xlabel("Trajectory Lengths")
         save_path = rutils.plt_save(rutils.get_save_dir(args), "traj_len_dist.png")
         print(f"Saved expert data visualization to {save_path}")
 
-    def get_expert_stats(self, device):
-        # Compute statistics across the trajectories.
+    def compute_split(self, traj_frac, rnd_seed):
+        use_count = int(len(self.trajs) * traj_frac)
+        idxs = np.arange(len(self.trajs))
 
-        all_actions = torch.cat([t[1] for t in self.data])
-        self.action_mean = torch.mean(all_actions, dim=0)
-        self.action_std = torch.std(all_actions, dim=0)
+        rng = np.random.default_rng(rnd_seed)
+        rng.shuffle(idxs)
+        idxs = idxs[:use_count]
 
-        is_tensor_dict = not isinstance(self.data[0][0], torch.Tensor)
-        if is_tensor_dict:
-            all_obs = defaultdict(list)
-            self.state_mean = {}
-            self.state_std = {}
-            for t in self.data:
-                for k, v in t[0].items():
-                    all_obs[k].append(v)
-            for k in all_obs:
-                all_obs[k] = torch.cat(all_obs[k], dim=0)
-                self.state_mean[k] = torch.mean(all_obs[k], dim=0).to(device)
-                self.state_std[k] = torch.std(all_obs[k], dim=0).to(device)
-            return {
-                "state": (self.state_mean, self.state_std),
-                "action": (self.action_mean.to(device), self.action_std.to(device)),
-            }
+        return torch.utils.data.Subset(self, idxs)
 
-        else:
-            all_obs = torch.cat([t[0] for t in self.data])
-            self.state_mean = torch.mean(all_obs, dim=0)
-            self.state_std = torch.std(all_obs, dim=0)
-
-            return {
-                "state": (self.state_mean.to(device), self.state_std.to(device)),
-                "action": (self.action_mean.to(device), self.action_std.to(device)),
-            }
+    def to(self, device):
+        for i, traj in enumerate(self.trajs):
+            self.trajs[i] = [t.to(device) for t in traj]
+        return self
 
     def __getitem__(self, i):
-        return self.data[i]
-
-    def _gen_data(self, trajs):
-        """
-        Can define in inhereted class to perform a custom transformation over
-        the trajectories.
-        """
-        return trajs
-
-    def should_terminate_traj(self, j, obs, next_obs, done, actions):
-        return done[j]
-
-    def _generate_trajectories(self, trajs):
-        is_tensor_dict = not isinstance(trajs["obs"], torch.Tensor)
-        if not is_tensor_dict:
-            trajs = convert_to_tensors(trajs)
-
-        # Get by trajectory instead of transition
-        if is_tensor_dict:
-            for name in ["obs", "next_obs"]:
-                for k in trajs[name]:
-                    trajs[name][k] = trajs["obs"][k].float()
-            obs = rutils.transpose_dict_arr(trajs["obs"])
-            next_obs = rutils.transpose_dict_arr(trajs["next_obs"])
-        else:
-            obs = trajs["obs"].float()
-            next_obs = trajs["next_obs"].float()
-
-        done = trajs["done"].float()
-        actions = trajs["actions"].float()
-
-        ret_trajs = []
-
-        num_samples = done.shape[0]
-        print("Collecting trajectories")
-        start_j = 0
-        j = 0
-        while j < num_samples:
-            if self.should_terminate_traj(j, obs, next_obs, done, actions):
-                obs_seq = obs[start_j : j + 1]
-                final_obs = next_obs[j]
-
-                combined_obs = [*obs_seq, final_obs]
-                # combined_obs = torch.cat([obs_seq, final_obs.view(1, *obs_dim)])
-
-                ret_trajs.append((combined_obs, actions[start_j : j + 1]))
-                # Move to where this episode ends
-                while j < num_samples and not done[j]:
-                    j += 1
-                start_j = j + 1
-
-            if j < num_samples and done[j]:
-                start_j = j + 1
-
-            j += 1
-
-        for i in range(len(ret_trajs)):
-            states, actions = ret_trajs[i]
-            if is_tensor_dict:
-                states = rutils.transpose_arr_dict(states)
-            else:
-                states = torch.stack(states, dim=0)
-            if self.subsample_factor != 1:
-                states = states[:: self.subsample_factor]
-
-            ret_trajs[i] = (states, actions)
-
-        ret_trajs = self._transform_dem_dataset_fn(ret_trajs, trajs)
-        return ret_trajs
+        return {
+            "state": torch.stack([t.obs for t in self.trajs[i]]),
+            "next_state": torch.stack([t.next_obs for t in self.trajs[i]]),
+            "done": torch.stack([t.done for t in self.trajs[i]]),
+            "actions": torch.stack([t.action for t in self.trajs[i]]),
+        }
 
     def __len__(self):
-        return len(self.data)
+        return len(self.trajs)
+
+    def get_num_trajs(self):
+        return len(self.trajs)

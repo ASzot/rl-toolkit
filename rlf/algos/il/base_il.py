@@ -119,6 +119,7 @@ class BaseILAlgo(BaseNetAlgo):
                 batch_size=val_traj_batch_size,
                 shuffle=True,
                 drop_last=True,
+                **self.orig_dataset.get_add_data_loader_kwargs()
             )
         else:
             train_dataset = self.expert_dataset
@@ -129,6 +130,7 @@ class BaseILAlgo(BaseNetAlgo):
             batch_size=args.traj_batch_size,
             shuffle=True,
             drop_last=True,
+            **self.orig_dataset.get_add_data_loader_kwargs()
         )
         if len(self.expert_train_loader) == 0:
             raise ValueError(
