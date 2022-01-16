@@ -52,7 +52,9 @@ class GailDiscrim(BaseIRLAlgo):
             return base_net
         else:
             return LambdaLayer(
-                base_net, lambda x: x[:, -3:], (self.args.cost_take_dim,)
+                base_net,
+                lambda x: x[..., -self.args.cost_take_dim :],
+                (self.args.cost_take_dim,),
             )
 
     def _create_discrim(self):
