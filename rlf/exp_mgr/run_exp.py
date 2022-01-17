@@ -464,8 +464,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
 
     cd = as_list(cd, len(cmds))
 
-    if sess_id == -1:
-
+    if sess_id == -1 and sess_name is None:
         if args.st is not None:
             for cmd_idx, cmd in enumerate(cmds):
                 run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds))
@@ -559,9 +558,9 @@ def generate_slurm_batch_file(
     if args.speed:
         cpu_options = "#SBATCH --overcommit\n"
         cpu_options += "#SBATCH --cpu-freq=performance\n"
-        cpu_options += (
-            "#SBATCH -c $(((${SLURM_CPUS_PER_TASK} * ${SLURM_TASKS_PER_NODE})))"
-        )
+        # cpu_options += (
+        #    "#SBATCH -c $(((${SLURM_CPUS_PER_TASK} * ${SLURM_TASKS_PER_NODE})))"
+        # )
 
     if has_python:
         run_cmd = python_path + "/" + cmd

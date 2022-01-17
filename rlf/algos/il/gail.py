@@ -48,7 +48,7 @@ class GailDiscrim(BaseIRLAlgo):
 
     def _get_base_net_fn(self, ob_shape) -> BaseNet:
         base_net = self.policy.get_base_net_fn(ob_shape)
-        if self.args.cost_take_dim is None:
+        if self.args.cost_take_dim == -1:
             return base_net
         else:
             return LambdaLayer(
@@ -309,7 +309,7 @@ class GailDiscrim(BaseIRLAlgo):
         parser.add_argument("--use-spectral-norm", type=str2bool, default=False)
         parser.add_argument("--gail-reward-norm", type=str2bool, default=False)
         parser.add_argument("--gail-state-norm", type=str2bool, default=True)
-        parser.add_argument("--cost-take-dim", type=int, default=None)
+        parser.add_argument("--cost-take-dim", type=int, default=-1)
         parser.add_argument(
             "--gail-disc-hidden-dim",
             type=int,
