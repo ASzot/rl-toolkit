@@ -30,7 +30,7 @@ Requires Python 3.7 or higher. With conda:
 - Clone the repo
 - `conda create -n rlf python=3.7`
 - `source activate rlf`
-- `pip install -r requirements.txt`. 
+- `pip install -r requirements.txt`
 - `pip install -e .`
 
 If you want to install MuJoCo as well: `mujoco-py==2.0.2.5` 

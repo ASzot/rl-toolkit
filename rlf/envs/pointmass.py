@@ -231,7 +231,7 @@ class PointMassInterface(EnvInterface):
         parser.add_argument(
             "--pm-dt",
             type=float,
-            default=0.1,
+            default=0.2,
             help="The time step. The higher, the larger of a step",
         )
         parser.add_argument(

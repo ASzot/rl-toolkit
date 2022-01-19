@@ -16,9 +16,14 @@ class AlgorithmSettings:
         A raw observation is before any preprocessing or normalization
         is applied. This raw observation is returned in the info
         dictionary of the environment.
-    - mod_render_frames_fn: (frame, last_obs, last_reward, **kwargs ->
-      updated_frame) Render algorithm information on the render output. Must
-      specify `--render-metric` for this to be called.
+    - mod_render_frames_fn:  Render algorithm information on the render output. Must
+      specify `--render-metric` for this to be called. Must have following
+      signature since certain kwargs are passed in:
+      ```
+        def mod_render_frames(
+            self, frame, env_cur_obs, env_cur_action, env_cur_reward, env_next_obs, **kwargs
+        )
+      ```
     :property on_traj_finished: Called whenever a trajectory is finished in the
         evaluation, None means nothing is called. Takes as input a list of state,
         next_state, action tuples. Returns any metrics for the environment, you
