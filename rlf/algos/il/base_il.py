@@ -1,5 +1,6 @@
 import functools
 import os.path as osp
+from argparse import Namespace
 from typing import Any, Callable, Dict, Optional
 
 import gym
@@ -9,6 +10,7 @@ import torch
 from rlf.algos.base_net_algo import BaseNetAlgo
 from rlf.args import str2bool
 from rlf.il.d4rl_dataset import D4rlDataset
+from rlf.il.il_dataset import ImitationLearningDataset
 from rlf.il.transition_dataset import TransitionDataset
 from rlf.rl import utils
 
@@ -51,6 +53,15 @@ class BaseILAlgo(BaseNetAlgo):
         self._holdout_idxs = None
         # By default do not transform the dataset at all.
         self._transform_dem_dataset_fn = None
+        self._vis_dataset_fn = None
+
+    def set_vis_dataset_fn(
+        self, vis_dataset_fn: Callable[[ImitationLearningDataset, Namespace], None]
+    ):
+        """
+        A callback after the dataset has been created
+        """
+        self._vis_dataset_fn = vis_dataset_fn
 
     def set_transform_dem_dataset_fn(
         self, transform_dem_dataset_fn: Callable[[Dict], Dict]
@@ -72,6 +83,8 @@ class BaseILAlgo(BaseNetAlgo):
             load_path = None
 
         self.orig_dataset = self._get_traj_dataset(load_path, args)
+        if self._vis_dataset_fn:
+            self._vis_dataset_fn(self.orig_dataset, args)
         self.orig_dataset = self.orig_dataset.to(args.device)
         num_trajs = self._create_train_loader(args)
 
@@ -119,7 +132,7 @@ class BaseILAlgo(BaseNetAlgo):
                 batch_size=val_traj_batch_size,
                 shuffle=True,
                 drop_last=True,
-                **self.orig_dataset.get_add_data_loader_kwargs()
+                **self.orig_dataset.get_add_data_loader_kwargs(),
             )
         else:
             train_dataset = self.expert_dataset
@@ -130,7 +143,7 @@ class BaseILAlgo(BaseNetAlgo):
             batch_size=args.traj_batch_size,
             shuffle=True,
             drop_last=True,
-            **self.orig_dataset.get_add_data_loader_kwargs()
+            **self.orig_dataset.get_add_data_loader_kwargs(),
         )
         if len(self.expert_train_loader) == 0:
             raise ValueError(
@@ -229,7 +242,7 @@ class BaseILAlgo(BaseNetAlgo):
 
         return D4rlDataset(args.env_name, traj_load_path).convert_to_override_data()
 
-    def _get_traj_dataset(self, traj_load_path, args):
+    def _get_traj_dataset(self, traj_load_path, args) -> ImitationLearningDataset:
         return TransitionDataset(
             traj_load_path,
             self._transform_dem_dataset_fn,

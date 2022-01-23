@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import yaml
-from rlf.exp_mgr.plotter import MARKER_ORDER, high_res_save, uncert_plot
+from rlf.exp_mgr.plotter import MARKER_ORDER, uncert_plot
+from rlf.exp_mgr.viz_utils import high_res_save
 from rlf.exp_mgr.wb_data_mgr import get_report_data
 from rlf.rl.utils import human_format_int
 

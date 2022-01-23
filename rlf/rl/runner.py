@@ -54,6 +54,9 @@ class Runner:
         init_storage=False,
         num_steps=None,
     ):
+        """
+        :param init_storage: If true, will set the first observation in the storage to the environment reset and clear out the environment masks.
+        """
         if init_storage:
             storage.init_storage(self.envs.reset())
 

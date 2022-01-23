@@ -20,7 +20,7 @@ class TrajDataset(TransitionDataset):
         override_data=None,
     ):
         super().__init__(load_path, transform_dem_dataset_fn, override_data)
-        self.trajs = self._group_into_trajs()
+        self.trajs = self.group_into_trajs()
 
     def get_add_data_loader_kwargs(self):
         """

@@ -50,6 +50,13 @@ class DistActorCritic(ActorCritic):
             get_dist_fn = putils.get_def_dist
         self.get_dist_fn = get_dist_fn
 
+    def get_actor_params(self):
+        return (
+            list(self.base_net.parameters())
+            + list(self.actor.parameters())
+            + list(self.dist.parameters())
+        )
+
     def init(self, obs_space, action_space, args):
         super().init(obs_space, action_space, args)
         self.actor = self.get_actor_fn(
@@ -94,6 +101,3 @@ class DistActorCritic(ActorCritic):
             "log_prob": action_log_probs,
             "ent": dist_entropy,
         }
-
-    def get_actor_params(self):
-        return super().get_actor_params() + list(self.dist.parameters())

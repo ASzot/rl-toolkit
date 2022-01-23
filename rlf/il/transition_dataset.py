@@ -24,6 +24,31 @@ class DatasetTransition(NamedTuple):
         )
 
 
+class DatasetTrajectory:
+    def __init__(self):
+        self._dataset_transitions = []
+
+    def append(self, t: DatasetTransition):
+        self._dataset_transitions.append(t)
+
+    def __getitem__(self, key):
+        return self._dataset_transitions[key]
+
+    def __iter__(self):
+        return iter(self._dataset_transitions)
+
+    def __next__(self):
+        return next(self._dataset_transitions)
+
+    def __len__(self):
+        return len(self._dataset_transitions)
+
+    def obs_to_tensor(self) -> torch.Tensor:
+        obs = torch.stack([t.obs for t in self], dim=0)
+        last_t = self[-1].next_obs
+        return torch.cat([obs, last_t.view(1, -1)], dim=0)
+
+
 class TransitionDataset(ImitationLearningDataset):
     """
     See `rlf/il/il_dataset.py` for notes about the demonstration dataset
@@ -135,11 +160,11 @@ class TransitionDataset(ImitationLearningDataset):
             "actions": self.trajs["actions"][i],
         }
 
-    def _group_into_trajs(self) -> List[DatasetTransition]:
+    def group_into_trajs(self) -> List[DatasetTrajectory]:
         idxs = range(self.trajs["obs"].shape[0])
 
         trajs = []
-        cur_traj = []
+        cur_traj = DatasetTrajectory()
         Transition = namedtuple("Transition", "index obs done actions next_obs")
 
         for i, obs, done, actions, next_obs in zip(
@@ -152,14 +177,14 @@ class TransitionDataset(ImitationLearningDataset):
             cur_traj.append(DatasetTransition(i, obs, done, actions, next_obs))
             if done.item():
                 trajs.append(cur_traj)
-                cur_traj = []
+                cur_traj = DatasetTrajectory()
         if len(cur_traj) != 0:
             raise ValueError("Trajectory from dataset does not end in termination")
         return trajs
 
     def compute_split(self, traj_frac, rnd_seed):
         # Need to split by trajectories, not transitions
-        trajs = self._group_into_trajs()
+        trajs = self.group_into_trajs()
 
         use_count = int(len(trajs) * traj_frac)
 

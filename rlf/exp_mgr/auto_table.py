@@ -1,8 +1,48 @@
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 import pandas as pd
+from rlf.exp_mgr.wb_query import query
 
 MISSING_VALUE = 0.2444
+
+
+def get_df_for_table_txt(
+    table_txt: str, lookup_k: str
+) -> Tuple[pd.DataFrame, List[str], List[str]]:
+    """
+    Extracts a dataframe to use for `plot_table` automatically from text copied
+    from excel. You want to include the row and column names in the text.
+    Example:
+    ```
+            mirl train	mirl eval	airl train	airl eval
+    100	5TK1	UKGZ	YIGE	GN31
+    50	14MT	C0JW	KUOP	OVS2
+    ```
+    If you are getting eval metrics, `lookup_k` should likely be 'final_train_success'.
+    """
+    data = []
+    row_headers = []
+    for line in table_txt.split("\n"):
+        if line.strip() == "":
+            continue
+        line_parts = line.split("\t")
+        row_ident = line_parts[0].strip()
+        if row_ident == "":
+            # These are the column headers.
+            col_headers = line_parts[1:]
+        else:
+            assert len(line_parts[1:]) == len(col_headers)
+            row_headers.append(row_ident)
+            for group, col in zip(line_parts[1:], col_headers):
+                r = query([lookup_k], {"group": group}, use_cached=True)
+                if r is None or len(r) == 0:
+                    r = [{lookup_k: MISSING_VALUE}]
+
+                for d in r:
+                    data.append(
+                        {"method": row_ident, "type": col, lookup_k: d[lookup_k]}
+                    )
+    return pd.DataFrame(data), col_headers, row_headers
 
 
 def plot_table(
@@ -22,10 +62,27 @@ def plot_table(
     write_to=None,
 ):
     """
-    :param df: The index of the data frame does not matter only the row values and column names.
-    :param col_key: A string from the set of columns.
-    :param row_key: A string from the set of columns (but this is used to form the rows of the table).
-    :param renames: Only used for display name conversions. Does not affect functionality.
+        :param df: The index of the data frame does not matter, only the row values and column names matter.
+        :param col_key: A string from the set of columns.
+        :param row_key: A string from the set of columns (but this is used to form the rows of the table).
+        :param renames: Only used for display name conversions. Does not affect functionality.
+        Example: the data fame might look like
+            ```
+       democount        type  final_train_success
+    0     100  mirl train               0.9800
+    1     100  mirl train               0.9900
+    3     100   mirl eval               1.0000
+    4     100   mirl eval               1.0000
+    12     50  mirl train               0.9700
+    13     50  mirl train               1.0000
+    15     50   mirl eval               1.0000
+    16     50   mirl eval               0.7200
+            ```
+            `col_key='type', row_key='demcount',
+            cell_key='final_train_success'` plots the # of demos as rows and
+            the type as columns with the final_train_success values as the cell
+            values. Duplicate row and columns are automatically grouped
+            together.
     """
     df = df.replace("missing", missing_fill_value)
     df = df.replace("error", error_fill_value)

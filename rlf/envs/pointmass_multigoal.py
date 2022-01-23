@@ -5,7 +5,7 @@ from gym import spaces
 from rlf import EnvInterface, register_env_interface
 from rlf.args import str2bool
 from rlf.baselines.vec_env.vec_env import VecEnv
-from rlf.envs.pointmass import (BatchedTorchPointMassEnvSingleSpawn,
+from rlf.envs.pointmass import (BatchedTorchPointMassEnvSpawnRange,
                                 PointMassInterface)
 from torch.distributions import Uniform
 
@@ -13,7 +13,7 @@ STAGE_1_BONUS = 10.0
 STAGE_2_BONUS = 20.0
 
 
-class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSingleSpawn):
+class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSpawnRange):
     """
     Point mass task where the agent should first navigate to 1 goal and then
     navigate back to the starting position.
@@ -31,7 +31,7 @@ class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSingleSpawn):
         )
 
     def _reset_idx(self, idx):
-        self.cur_pos[idx] = self._sample_start(1)[0]
+        self.cur_pos[idx] = self._sample_start(1, torch.zeros(2))[0]
         self.cur_vel[idx] = torch.zeros(2)
         self._ep_step[idx] = 0
         self._goal[idx] = torch.tensor([0.0, 0.0])
@@ -43,6 +43,7 @@ class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSingleSpawn):
         super().reset()
         self._ep_step = [0 for _ in range(self._batch_size)]
         self._goal = torch.tensor([[0.0, 0.0]]).repeat(self._batch_size, 1)
+        self._stage2_goal = torch.tensor([[-1.0, -1.0]]).repeat(self._batch_size, 1)
         self._ep_rewards = {}
 
         for i in range(self._batch_size):
@@ -62,7 +63,7 @@ class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSingleSpawn):
         all_info = [{} for i in range(self._batch_size)]
 
         # Distance between the stage 1 goal and stage 2.
-        max_stage_2_dist = torch.linalg.norm(self._goal - self.start_pos, dim=-1)
+        max_stage_2_dist = torch.linalg.norm(self._goal - self._stage2_goal, dim=-1)
 
         at_goal = (
             torch.linalg.norm(self.cur_pos - self._goal, dim=-1)
@@ -79,15 +80,16 @@ class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSingleSpawn):
             if at_goal[i]:
                 if self._finished_stage_1[i] == 1.0:
                     # Finished stage 2.
-                    reward[i] += STAGE_2_BONUS
+                    reward[i] += self.args.stage2_bonus
                     all_info[i]["ep_succ_stage2"] = 1.0
                     all_info[i]["ep_success"] = 1.0
-                    all_is_done[i] = True
+                    if self.args.early_termination:
+                        all_is_done[i] = True
                 else:
                     # Finished stage 1
-                    reward[i] += STAGE_1_BONUS
+                    reward[i] += self.args.stage1_bonus
 
-                self._goal[i] = self.start_pos[i]
+                self._goal[i] = self._stage2_goal[i]
                 self._finished_stage_1[i] = 1.0
 
             stage_1_done = self._finished_stage_1[i].item()
@@ -138,6 +140,15 @@ class MultiGoalPointMassInterface(PointMassInterface):
             "--pm-success-dist",
             type=float,
             default=0.10,
+        )
+        parser.add_argument("--stage1-bonus", type=float, default=10.0)
+        parser.add_argument("--stage2-bonus", type=float, default=20.0)
+        parser.add_argument(
+            "--early-termination",
+            type=str2bool,
+            default=True,
+            help="""
+            """,
         )
         parser.set_defaults(pm_ep_horizon=50)
 

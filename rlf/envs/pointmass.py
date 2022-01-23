@@ -33,9 +33,6 @@ class PointMassEnvSpawnRange(gym.Env):
 class BatchedTorchPointMassEnvSpawnRange(VecEnv):
     def __init__(self, args, set_eval, obs_space=None):
         self._batch_size = args.num_processes
-        self._is_eval = set_eval or args.pm_force_eval_start_dist
-        if args.pm_force_train_start_dist:
-            self._is_eval = False
         self.args = args
 
         self.pos_dim = 2
@@ -46,6 +43,20 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
         self._ep_rewards = []
         if obs_space is None:
             obs_space = spaces.Box(low=-1.0, high=1.0, shape=(2,))
+
+        self._is_eval = set_eval or args.pm_force_eval_start_dist
+        if args.pm_force_train_start_dist:
+            self._is_eval = False
+
+        if self._is_eval:
+            regions = BatchedTorchPointMassEnvSpawnRange.get_regions(
+                0.0, self.args.pm_start_state_noise
+            )
+        else:
+            regions = BatchedTorchPointMassEnvSpawnRange.get_regions(
+                np.pi / 4, self.args.pm_start_state_noise
+            )
+        self._start_distributions = Uniform(regions[:, 0], regions[:, 1])
 
         super().__init__(
             self._batch_size,
@@ -105,30 +116,25 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
 
         return torch.tensor([[center - spread, center + spread] for center in centers])
 
-    def _sample_start(self, batch_size):
+    def _sample_start(self, batch_size, offset_start):
         if self._is_eval:
             idx = torch.randint(0, 4, (batch_size,))
-            regions = BatchedTorchPointMassEnvSpawnRange.get_regions(
-                0.0, self.args.pm_start_state_noise
-            )
         else:
-            idx = torch.randint(0, self.args.pm_num_train_regions, (batch_size,))
-            regions = BatchedTorchPointMassEnvSpawnRange.get_regions(
-                np.pi / 4, self.args.pm_start_state_noise
-            )
+            if self.args.pm_start_idx == -1:
+                idx = torch.randint(0, self.args.pm_num_train_regions, (batch_size,))
+            else:
+                idx = torch.tensor([self.args.pm_start_idx]).repeat(batch_size)
+        samples = self._start_distributions.sample(idx.shape)
+        ang = samples.gather(1, idx.view(-1, 1)).view(-1)
 
-        if torch.isclose(regions[idx, 0], regions[idx, 1]).all():
-            ang = regions[idx, 0]
-        else:
-            ang = Uniform(regions[idx, 0], regions[idx, 1]).sample()
         radius = np.sqrt(2)
         return (
             torch.stack([radius * torch.cos(ang), radius * torch.sin(ang)], dim=-1)
-            + self._goal
+            + offset_start
         )
 
     def reset(self):
-        self.cur_pos = self._sample_start(self._batch_size)
+        self.cur_pos = self._sample_start(self._batch_size, self._goal)
         self.cur_vel = torch.zeros(self._batch_size, 2)
         self._ep_step = 0
         self._ep_rewards = []
@@ -137,25 +143,6 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
 
     def _get_obs(self):
         return self.cur_pos.clone()
-
-
-class BatchedTorchPointMassEnvSingleSpawn(BatchedTorchPointMassEnvSpawnRange):
-    def reset(self):
-        super().reset()
-        # Points must move clockwise starting from quadrant 1.
-        all_start = torch.tensor(
-            [
-                [1.0, 1.0],
-                [-1.0, 1.0],
-                [-1.0, -1.0],
-                [1.0, -1.0],
-            ]
-        ).view(-1, 1, 2)
-        self.cur_vel = torch.zeros(self._batch_size, 2)
-        self.cur_pos = all_start[self.args.pm_start_idx].repeat(self._batch_size, 1)
-
-        self.start_pos = self.cur_pos.clone()
-        return self._get_obs()
 
 
 class PointMassInterface(EnvInterface):
@@ -173,10 +160,7 @@ class PointMassInterface(EnvInterface):
         alg_env_settings,
         args,
     ):
-        if args.pm_start_idx >= 0:
-            return BatchedTorchPointMassEnvSingleSpawn(args, set_eval)
-        else:
-            return BatchedTorchPointMassEnvSpawnRange(args, set_eval)
+        return BatchedTorchPointMassEnvSpawnRange(args, set_eval)
 
     def get_add_args(self, parser):
         super().get_add_args(parser)

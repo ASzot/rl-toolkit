@@ -14,7 +14,7 @@ from matplotlib.lines import Line2D
 from pandas.api.types import is_numeric_dtype
 from rlf.exp_mgr import config_mgr
 from rlf.exp_mgr.auto_plot import get_data
-from rlf.exp_mgr.plotter import high_res_save
+from rlf.exp_mgr.viz_utils import high_res_save
 from rlf.exp_mgr.wb_data_mgr import get_report_data
 from rlf.rl.utils import CacheHelper, human_format_int
 

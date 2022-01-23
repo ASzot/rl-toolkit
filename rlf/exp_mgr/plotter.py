@@ -221,20 +221,6 @@ def uncert_plot(
         ax.set_title(title, fontsize=title_font_size)
 
 
-def high_res_save(save_path: str, is_high_quality=True):
-    """
-    You need to include the extension in the path.
-    :param is_high_quality: If true will save with higher DPI.
-    """
-    file_format = save_path.split(".")[-1]
-    if is_high_quality:
-        dpi = 1000
-    else:
-        dpi = 100
-    plt.savefig(save_path, format=file_format, dpi=dpi, bbox_inches="tight")
-    print(f"Saved figure to {save_path}")
-
-
 def gen_fake_data(x_scale, data_key, n_runs=5):
     def create_sigmoid():
         noise = np.random.normal(0, 0.01, 100)

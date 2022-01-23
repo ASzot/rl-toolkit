@@ -193,7 +193,7 @@ def plot_traj_data(
     return np.mean(per_state_mse)
 
 
-def high_res_save(save_path, is_high_quality=True):
+def high_res_save(save_path, is_high_quality=True, should_clear=False):
     if is_high_quality:
         dpi = 1000
     else:
@@ -202,6 +202,11 @@ def high_res_save(save_path, is_high_quality=True):
     file_format = save_path.split(".")[-1]
     plt.savefig(save_path, format=file_format, dpi=dpi, bbox_inches="tight")
     print(f"Saved figure to {save_path}")
+    if should_clear:
+        # Both are needed to truly clear out the figures and prevent memory
+        # leaks.
+        plt.clf()
+        plt.close()
 
 
 def nice_scatter(
@@ -217,7 +222,7 @@ def nice_scatter(
     x_lim: Optional[Tuple[float, float]],
     y_lim: Optional[Tuple[float, float]],
     name_opacities: Dict[str, float] = {},
-    fig_size=(4,4),
+    fig_size=(4, 4),
 ):
     """
     :param data_points: key is the label, value is the list of X,Y points.

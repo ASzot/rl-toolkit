@@ -39,8 +39,10 @@ def get_env_attr(env, attr_name, max_calls=10):
 
 
 def get_save_dir(args) -> str:
-    """Directory for saving images, videos or any random debug info."""
-    return osp.join(args.vid_dir, args.env_name, args.prefix)
+    """Directory for saving images, videos or any random debug info. Creates it if it doesn't exist"""
+    r = osp.join(args.vid_dir, args.env_name, args.prefix)
+    os.makedirs(r, exist_ok=True)
+    return r
 
 
 def plot_line(
