@@ -6,7 +6,6 @@ Argument list
     config.
 * `--skip-add` Skips adding the command line arguments from `change_cmds` from
     config.
-    
 
 ### SLURM Helper
 The SLURM helper is only activated when you are running `--sess-id X` and
@@ -28,7 +27,17 @@ The settings that need to go into `config.yaml` are:
 - `wb_proj_name`
 
 ## Plotting 
-To plot, use `auto_plot.py`. This will automatically fetch and plot runs from
+
+### Plotting Utilies
+* `auto_bar.py` data frame to bar plots
+* `auto_table.py` data frame to table
+* `auto_plot` *yaml file to line plot*, not data frame to line plot as expected.
+* `plotter` data frame to line plot
+* `wb_data_mgr` general W&B data fetching functionality. Especially to get data from reports.
+* `wb_query.py` lookup data from W&B from particular fields, for example by group name.
+
+### Plotting from Reports
+To plot lines from W&B report name fields, use `auto_plot.py`. This will automatically fetch and plot runs from
 reports on W&B. It has support for plotting horizontal lines, specifying the
 color, axes, and which key to plot. **The report on W&B has to follow [this
 naming convention from point

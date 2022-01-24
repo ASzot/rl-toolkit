@@ -12,6 +12,12 @@ from rlf.exp_mgr import config_mgr
 from rlf.rl.utils import CacheHelper
 
 
+def extract_query_key(k):
+    if k.startswith("ALL_"):
+        return k.split("ALL_")[1]
+    return k
+
+
 def query(
     select_fields: List[str],
     filter_fields: Dict[str, str],
@@ -22,7 +28,9 @@ def query(
     reduce_op: Optional[Callable[[List], float]] = None,
 ):
     """
-    :param select_fields: The list of data to retrieve.
+    :param select_fields: The list of data to retrieve. If a field starts with
+        "ALL_", then all the entries for this name from W&B are fetched. This gets
+        the ENTIRE history.
     :param filter_fields: Key is the filter type (like group or tag) and value
         is the filter value (like the name of the group or tag to match)
     :param reduce_op: `np.mean` would take the average of the results.
@@ -112,7 +120,16 @@ def query(
             elif f.startswith("config."):
                 v = run.config[f.split("config.")[0]]
             else:
-                v = run.summary[f]
+                if f.startswith("ALL_"):
+                    fetch_field = extract_query_key(f)
+                    df = run.history(samples=15000)
+                    if fetch_field not in df.columns:
+                        raise ValueError(
+                            f"Could not find {fetch_field} in {df.columns} for query {filter_fields}"
+                        )
+                    v = df[["_step", fetch_field]]
+                else:
+                    v = run.summary[f]
             dat[f] = v
         ret_data.append(dat)
         if limit is not None and len(ret_data) >= limit:

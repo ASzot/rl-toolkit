@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import yaml
-from rlf.exp_mgr.plotter import MARKER_ORDER, uncert_plot
+from rlf.exp_mgr.plotter import MARKER_ORDER, plot_legend, uncert_plot
 from rlf.exp_mgr.viz_utils import high_res_save
 from rlf.exp_mgr.wb_data_mgr import get_report_data
 from rlf.rl.utils import human_format_int
@@ -28,75 +28,26 @@ def get_arg_parser():
     return parser
 
 
-def export_legend(ax, line_width, filename="legend.pdf"):
-    fig2 = plt.figure()
-    ax2 = fig2.add_subplot(111)
-    ax2.axis("off")
-    legend = ax2.legend(
-        *ax.get_legend_handles_labels(),
-        frameon=False,
-        loc="lower center",
-        ncol=10,
-        handlelength=2,
-    )
-    for line in legend.get_lines():
-        line.set_linewidth(line_width)
-    fig = legend.figure
-    fig.canvas.draw()
-    bbox = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    fig.savefig(filename, dpi="figure", bbox_inches=bbox)
-
-
-def plot_legend(plot_cfg_path):
+def plot_legend_from_file(plot_cfg_path):
     with open(plot_cfg_path) as f:
         plot_settings = yaml.load(f)
-        colors = sns.color_palette()
-        group_colors = {
-            name: colors[idx] for name, idx in plot_settings["colors"].items()
-        }
-
         for section_name, section in plot_settings["plot_sections"].items():
-            fig, ax = plt.subplots(figsize=(5, 4))
-            names = section.split(",")
-            darkness = plot_settings["marker_darkness"]
-            for name in names:
-                add_kwargs = {}
-                if name in plot_settings.get("linestyles", {}):
-                    linestyle = plot_settings["linestyles"][name]
-                    if isinstance(linestyle, list):
-                        add_kwargs["linestyle"] = linestyle[0]
-                        add_kwargs["dashes"] = linestyle[1]
-                    else:
-                        add_kwargs["linestyle"] = linestyle
-
-                disp_name = plot_settings["name_map"][name]
-                midx = plot_settings["colors"][name] % len(MARKER_ORDER)
-                marker = MARKER_ORDER[midx]
-                if marker == "x":
-                    marker_width = 2.0
-                else:
-                    marker_width = plot_settings["marker_width"]
-
-                marker_alpha = plot_settings.get("alphas", {}).get(name, 1.0)
-                use_color = (*group_colors[name], marker_alpha)
-                ax.plot(
-                    [0],
-                    [1],
-                    marker=marker,
-                    label=disp_name,
-                    color=use_color,
-                    markersize=plot_settings["marker_size"],
-                    markeredgewidth=marker_width,
-                    # markeredgecolor=(darkness, darkness, darkness, 1),
-                    markeredgecolor=use_color,
-                    **add_kwargs,
-                )
-            export_legend(
-                ax,
-                plot_settings["line_width"],
+            save_path = (
                 osp.join(plot_settings["save_loc"], section_name + "_legend.pdf"),
             )
-            plt.clf()
+            names = section.split(",")
+            plot_legend(
+                names,
+                save_path,
+                plot_settings["colors"],
+                plot_settings["name_map"],
+                plot_settings.get("linestyles", {}),
+                plot_settings["marker_darkness"],
+                plot_settings["marker_width"],
+                plot_settings["marker_size"],
+                plot_settings["line_width"],
+                plot_settings.get("alphas", {}),
+            )
 
 
 def get_tb_data(
@@ -281,11 +232,6 @@ def plot_from_file(plot_cfg_path):
     with open(plot_cfg_path) as f:
         plot_settings = yaml.load(f)
 
-        colors = sns.color_palette()
-        group_colors = {
-            name: colors[idx] for name, idx in plot_settings["colors"].items()
-        }
-
         def get_setting(local, k, local_override=True, defval=None):
             if local_override:
                 if k in local:
@@ -465,7 +411,7 @@ def plot_from_file(plot_cfg_path):
                 xtick_fn=human_format_int,
                 legend=plot_section["legend"],
                 title=title,
-                group_colors=group_colors,
+                group_colors=plot_settings["colors"],
                 method_idxs=plot_settings["colors"],
                 tight=True,
                 legend_font_size=use_legend_font_size,
@@ -492,6 +438,6 @@ if __name__ == "__main__":
     parser = get_arg_parser()
     args = parser.parse_args()
     if args.legend:
-        plot_legend(args.plot_cfg)
+        plot_legend_from_file(args.plot_cfg)
     else:
         plot_from_file(args.plot_cfg)

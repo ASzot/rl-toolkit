@@ -1,5 +1,7 @@
 import pathlib
+from typing import Dict, List, Optional, Tuple, Union
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -63,16 +65,16 @@ def make_steps_match(plot_df, group_key, x_name):
 
 def uncert_plot(
     plot_df,
-    ax,
-    x_name,
-    y_name,
-    avg_key,
-    group_key,
-    smooth_factor,
-    y_bounds=None,
-    y_disp_bounds=None,
-    x_disp_bounds=None,
-    group_colors=None,
+    ax: Optional[matplotlib.axes.Axes],
+    x_name: str,
+    y_name: str,
+    avg_key: str,
+    group_key: str,
+    smooth_factor: Union[Dict[str, float], float],
+    y_bounds: Optional[Tuple[float, float]] = None,
+    y_disp_bounds: Optional[Tuple[float, float]] = None,
+    x_disp_bounds: Optional[Tuple[float, float]] = None,
+    group_colors: Optional[Dict[str, int]] = None,
     xtick_fn=None,
     ytick_fn=None,
     legend=False,
@@ -82,27 +84,43 @@ def uncert_plot(
     title_font_size=18,
     legend_font_size="x-large",
     method_idxs={},
-    num_marker_points={},
+    num_marker_points: Dict[str, int] = {},
     line_styles={},
     tight=False,
     nlegend_cols=1,
     fetch_std=False,
+    ax_dims: Tuple[int, int] = (5, 4),
 ):
     """
-    - num_marker_points dict: Key maps method name to the number of markers drawn on the line, NOT the
+    :param smooth_factor: Can specify a different smooth factor per method if desired.
+    :param y_bounds: What the data plot values are clipped to.
+    :param y_disp_bounds: What the plotting is stopped at.
+    :param ax: If not specified, one is automatically created, with the specified dimensions under `ax_dims`
+    :param group_colors: If not specified defaults to `method_idxs`.
+    :param num_marker_points: Key maps method name to the number of markers drawn on the line, NOT the
       number of points that are plotted! By default this is 8.
     """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=ax_dims)
+
     plot_df = plot_df.copy()
     if tight:
         plt.tight_layout(pad=2.2)
     if group_colors is None:
-        methods = plot_df[group_key].unique()
-        colors = sns.color_palette()
-        group_colors = {method: color for method, color in zip(methods, colors)}
+        group_colors = method_idxs
+
+    colors = sns.color_palette()
+    group_colors = {k: colors[i] for k, i in group_colors.items()}
 
     avg_y_df = plot_df.groupby([group_key, x_name]).mean()
     std_y_df = plot_df.groupby([group_key, x_name]).std()
-    method_runs = plot_df.groupby("method")["run"].unique()
+
+    if y_name in plot_df.columns and y_name not in avg_y_df.columns:
+        raise ValueError(
+            f"Desired column {y_name} lost in the grouping. Make sure it is a numeric type"
+        )
+
+    method_runs = plot_df.groupby(group_key)[avg_key].unique()
     if fetch_std:
         y_std = y_name + "_std"
         new_df = []
@@ -240,3 +258,89 @@ def gen_fake_data(x_scale, data_key, n_runs=5):
             df = pd.concat([df, sub_df])
     df["method"] = "fake"
     return df
+
+
+def export_legend(ax, line_width, filename):
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot(111)
+    ax2.axis("off")
+    legend = ax2.legend(
+        *ax.get_legend_handles_labels(),
+        frameon=False,
+        loc="lower center",
+        ncol=10,
+        handlelength=2,
+    )
+    for line in legend.get_lines():
+        line.set_linewidth(line_width)
+    fig = legend.figure
+    fig.canvas.draw()
+    bbox = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    fig.savefig(filename, dpi="figure", bbox_inches=bbox)
+    print("Saved legend to ", filename)
+
+
+def plot_legend(
+    names: List[str],
+    save_path: str,
+    plot_colors: Dict[str, int],
+    name_map: Optional[Dict[str, str]] = None,
+    linestyles: Optional[List[str]] = None,
+    darkness: float = 0.1,
+    marker_width: float = 0.0,
+    marker_size: float = 0.0,
+    line_width: float = 3.0,
+    alphas: Optional[Dict[str, float]] = None,
+):
+    """
+    :param names: The list of names to appear on the legend.
+    :param plot_colors: Maps into the colors of the palette.
+    :param name_map: Rename map
+    """
+    if name_map is None:
+        name_map = {}
+    if linestyles is None:
+        linestyles = []
+    if alphas is None:
+        alphas = {}
+
+    colors = sns.color_palette()
+    group_colors = {name: colors[idx] for name, idx in plot_colors.items()}
+
+    fig, ax = plt.subplots(figsize=(5, 4))
+    for name in names:
+        add_kwargs = {}
+        if name in linestyles:
+            linestyle = linestyles[name]
+            if isinstance(linestyle, list):
+                add_kwargs["linestyle"] = linestyle[0]
+                add_kwargs["dashes"] = linestyle[1]
+            else:
+                add_kwargs["linestyle"] = linestyle
+
+        disp_name = name_map[name]
+        midx = plot_colors[name] % len(MARKER_ORDER)
+        marker = MARKER_ORDER[midx]
+        if marker == "x":
+            marker_width = 2.0
+
+        marker_alpha = alphas.get(name, 1.0)
+        use_color = (*group_colors[name], marker_alpha)
+        ax.plot(
+            [0],
+            [1],
+            marker=marker,
+            label=disp_name,
+            color=use_color,
+            markersize=marker_size,
+            markeredgewidth=marker_width,
+            # markeredgecolor=(darkness, darkness, darkness, 1),
+            markeredgecolor=use_color,
+            **add_kwargs,
+        )
+    export_legend(
+        ax,
+        line_width,
+        save_path,
+    )
+    plt.clf()
