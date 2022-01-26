@@ -45,6 +45,10 @@ def get_df_for_table_txt(
     return pd.DataFrame(data), col_headers, row_headers
 
 
+def def_make_col_header(n_cols):
+    return "c" * n_cols
+
+
 def plot_table(
     df: pd.DataFrame,
     col_key: str,
@@ -57,32 +61,40 @@ def plot_table(
     n_decimals=2,
     missing_fill_value=MISSING_VALUE,
     error_fill_value=0.3444,
-    auto_wrap=False,
     get_row_highlight: Optional[Callable[[str, pd.DataFrame], Optional[str]]] = None,
+    make_col_header: Callable[[int], str] = def_make_col_header,
+    x_label: str = "",
+    y_label: str = "",
+    skip_toprule: bool = False,
     write_to=None,
 ):
     """
-        :param df: The index of the data frame does not matter, only the row values and column names matter.
-        :param col_key: A string from the set of columns.
-        :param row_key: A string from the set of columns (but this is used to form the rows of the table).
-        :param renames: Only used for display name conversions. Does not affect functionality.
+    :param df: The index of the data frame does not matter, only the row values and column names matter.
+    :param col_key: A string from the set of columns.
+    :param row_key: A string from the set of columns (but this is used to form the rows of the table).
+    :param renames: Only used for display name conversions. Does not affect functionality.
         Example: the data fame might look like
-            ```
-       democount        type  final_train_success
-    0     100  mirl train               0.9800
-    1     100  mirl train               0.9900
-    3     100   mirl eval               1.0000
-    4     100   mirl eval               1.0000
-    12     50  mirl train               0.9700
-    13     50  mirl train               1.0000
-    15     50   mirl eval               1.0000
-    16     50   mirl eval               0.7200
-            ```
-            `col_key='type', row_key='demcount',
-            cell_key='final_train_success'` plots the # of demos as rows and
-            the type as columns with the final_train_success values as the cell
-            values. Duplicate row and columns are automatically grouped
-            together.
+        ```
+           democount        type  final_train_success
+        0     100  mirl train               0.9800
+        1     100  mirl train               0.9900
+        3     100   mirl eval               1.0000
+        4     100   mirl eval               1.0000
+        12     50  mirl train               0.9700
+        13     50  mirl train               1.0000
+        15     50   mirl eval               1.0000
+        16     50   mirl eval               0.7200
+        ```
+        `col_key='type', row_key='demcount',
+        cell_key='final_train_success'` plots the # of demos as rows and
+        the type as columns with the final_train_success values as the cell
+        values. Duplicate row and columns are automatically grouped
+        together.
+    :param make_col_header: Returns the string at the top of the table like
+        "ccccc". Put "c|ccccc" to insert a vertical line in between the first
+        and other columns.
+    :param x_label: Renders another row of text on the top that spans all the columns.
+    ;param y_label: Renders a side column with vertically rotated text that spawns all the rows.
     """
     df = df.replace("missing", missing_fill_value)
     df = df.replace("error", error_fill_value)
@@ -149,24 +161,55 @@ def plot_table(
 
         all_s.append(col_sep.join(row_str))
 
+    n_columns = len(col_order) + 1
+    col_header_s = make_col_header(n_columns)
+    if y_label != "":
+        col_header_s = "c" + col_header_s
+        start_of_line = " & "
+        toprule = ""
+
+        midrule = "\\cmidrule{2-%s}\n" % (n_columns + 1)
+        botrule = midrule
+        row_lines = [start_of_line + x for x in all_s[1:]]
+        row_lines[0] = (
+            "\\multirow{4}{1em}{\\rotatebox{90}{%s}}" % y_label
+        ) + row_lines[0]
+    else:
+        row_lines = all_s[1:]
+        start_of_line = ""
+        toprule = "\\toprule\n"
+        midrule = "\\midrule\n"
+        botrule = "\\bottomrule"
+
+    if skip_toprule:
+        toprule = ""
+
+    if x_label != "":
+        toprule += ("& \multicolumn{%i}{c}{%s}" % (n_columns, x_label)) + row_sep
+
     ret_s = ""
-    if auto_wrap:
-        ret_s += "\\resizebox{\\columnwidth}{!}{\n"
-    ret_s += "\\begin{tabular}{%s}\n" % ("c" * (len(col_order) + 1))
+    ret_s += "\\begin{tabular}{%s}\n" % col_header_s
     # Line above the table.
-    ret_s += "\\toprule\n"
+    ret_s += toprule
 
     # Separate the column headers from the rest of the table by a line.
-    ret_s += all_s[0] + row_sep
-    ret_s += "\\midrule\n"
+    ret_s += start_of_line + all_s[0] + row_sep
+    ret_s += midrule
 
-    ret_s += row_sep.join(all_s[1:]) + row_sep
+    all_row_s = ""
+    for i, row_line in enumerate(row_lines):
+        all_row_s += row_line
+        is_last_row = i == (len(row_lines) - 1)
+        if "hline" not in row_line:
+            all_row_s += row_sep
+        else:
+            all_row_s += "\n"
+
+    ret_s += all_row_s
     # Line below the table.
-    ret_s += "\\bottomrule"
+    ret_s += botrule
 
     ret_s += "\n\\end{tabular}\n"
-    if auto_wrap:
-        ret_s += "}\n"
 
     if write_to is not None:
         with open(write_to, "w") as f:
