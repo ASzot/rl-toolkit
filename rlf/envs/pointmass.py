@@ -30,6 +30,14 @@ class PointMassEnvSpawnRange(gym.Env):
         raise NotImplementedError(ERROR_MSG)
 
 
+class SingleSampler:
+    def __init__(self, point):
+        self.point = point
+
+    def sample(self, shape):
+        return self.point.unsqueeze(0).repeat(shape[0], 1)
+
+
 class BatchedTorchPointMassEnvSpawnRange(VecEnv):
     def __init__(self, args, set_eval, obs_space=None):
         self._batch_size = args.num_processes
@@ -56,7 +64,11 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
             regions = BatchedTorchPointMassEnvSpawnRange.get_regions(
                 np.pi / 4, self.args.pm_start_state_noise
             )
-        self._start_distributions = Uniform(regions[:, 0], regions[:, 1])
+
+        if self.args.pm_start_state_noise != 0:
+            self._start_distributions = Uniform(regions[:, 0], regions[:, 1])
+        else:
+            self._start_distributions = SingleSampler(regions[:, 0])
 
         super().__init__(
             self._batch_size,
