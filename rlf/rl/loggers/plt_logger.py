@@ -8,10 +8,10 @@ from rlf.rl.loggers.base_logger import BaseLogger
 class PltLogger(BaseLogger):
     def __init__(
         self,
-        save_keys: Optional[List[str]],
-        x_name: str,
-        y_names: Optional[List[str]],
-        titles: Optional[List[str]],
+        save_keys: Optional[List[str]] = None,
+        x_name: str = "step",
+        y_names: Optional[List[str]] = None,
+        titles: Optional[List[str]] = None,
     ):
         """
         :param save_keys: If None, everything is plotted.

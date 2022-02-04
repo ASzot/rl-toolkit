@@ -79,7 +79,7 @@ def plot_line(
         plt.plot(x_vals, plot_vals)
     else:
         plt.errorbar(x_vals, plot_vals, err)
-    plt.grid(b=True, which="major", color="lightgray", linestyle="--")
+    plt.grid(visible=True, which="major", color="lightgray", linestyle="--")
     plt_save(save_path)
 
     kwargs = {}

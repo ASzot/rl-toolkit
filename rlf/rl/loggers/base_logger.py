@@ -7,9 +7,10 @@ import string
 import sys
 import time
 from collections import defaultdict, deque
-from typing import Any, Callable
+from typing import Any, Callable, Dict, List
 
 import numpy as np
+import rlf.rl.utils as rutils
 import torch
 from rlf.exp_mgr import config_mgr
 from six.moves import shlex_quote
@@ -79,45 +80,10 @@ class BaseLogger(object):
         with open(osp.join(log_dir, "args.txt"), "w") as f:
             f.write(args_lines)
 
-    def backup(self, args, global_step):
-        log_dir = osp.join(args.log_dir, args.env_name, args.prefix)
-        model_dir = osp.join(args.save_dir, args.env_name, args.prefix)
-        vid_dir = osp.join(args.vid_dir, args.env_name, args.prefix)
-
-        log_base_dir = log_dir.rsplit("/", 1)[0]
-        model_base_dir = model_dir.rsplit("/", 1)[0]
-        vid_base_dir = vid_dir.rsplit("/", 1)[0]
-        proj_name = config_mgr.get_prop("proj_name")
-        sync_host = config_mgr.get_prop("sync_host")
-        sync_user = config_mgr.get_prop("sync_user")
-        sync_port = config_mgr.get_prop("sync_port")
-        cmds = [
-            "ssh -i ~/.ssh/id_open_rsa/id -p {} {}@{} 'mkdir -p ~/{}_backup/{}'".format(
-                sync_port, sync_user, sync_host, proj_name, log_dir
-            ),
-            "ssh -i ~/.ssh/id_open_rsa/id -p {} {}@{} 'mkdir -p ~/{}_backup/{}'".format(
-                sync_port, sync_user, sync_host, proj_name, model_dir
-            ),
-            "ssh -i ~/.ssh/id_open_rsa/id -p {} {}@{} 'mkdir -p ~/{}_backup/{}'".format(
-                sync_port, sync_user, sync_host, proj_name, vid_dir
-            ),
-            'rsync -avuzhr -e "ssh -i ~/.ssh/id_open_rsa/id -p {}" {} {}@{}:~/{}_backup/{}'.format(
-                sync_port, log_dir, sync_user, sync_host, proj_name, log_base_dir
-            ),
-            'rsync -avuzhr -e "ssh -i ~/.ssh/id_open_rsa/id -p {}" {} {}@{}:~/{}_backup/{}'.format(
-                sync_port, model_dir, sync_user, sync_host, proj_name, model_base_dir
-            ),
-            'rsync -avuzhr -e "ssh -i ~/.ssh/id_open_rsa/id -p {}" {} {}@{}:~/{}_backup/{}'.format(
-                sync_port, vid_dir, sync_user, sync_host, proj_name, vid_base_dir
-            ),
-        ]
-        os.system("\n".join(cmds))
-        print("\n" + "*" * 50)
-        print("*" * 5 + " backup at global step {}".format(global_step))
-        print("*" * 50 + "\n")
-        print("")
-
-    def collect_step_info(self, step_log_info):
+    def collect_step_info(
+        self, step_log_info: List[Dict[str, Any]], alg_info: Dict[str, Any] = {}
+    ):
+        step_log_info = rutils.agg_ep_log_stats(step_log_info, alg_info)
         for k in step_log_info:
             self._step_log_info[k].extend(step_log_info[k])
 
@@ -207,7 +173,12 @@ class BaseLogger(object):
         pass
 
     def interval_log(
-        self, num_updates, total_num_steps, episode_count, updater_log_vals, args
+        self,
+        num_updates,
+        total_num_steps,
+        episode_count,
+        updater_log_vals,
+        log_env_stats,
     ):
         """
         Printed FPS is all inclusive of updates, evaluations, logging and everything.
@@ -239,7 +210,7 @@ class BaseLogger(object):
             print(
                 f"Updates {num_updates}, Steps {total_num_steps}, Episodes {episode_count}, FPS {fps}"
             )
-            if args.num_steps != 0:
+            if log_env_stats:
                 print(
                     f"Over the last {num_eps} episodes:\n"
                     f"mean/median reward {np.mean(rewards):.2f}/{np.median(rewards)}\n"

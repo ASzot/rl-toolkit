@@ -86,10 +86,8 @@ class Runner:
 
             reward += ac_info.add_reward
 
-            step_log_vals = utils.agg_ep_log_stats(infos, ac_info.extra)
-
             self.episode_count += sum([int(d) for d in done])
-            self.log.collect_step_info(step_log_vals)
+            self.log.collect_step_info(infos, ac_info.extra)
 
             storage.insert(obs, next_obs, reward, done, infos, ac_info)
         return self.storage
@@ -173,7 +171,7 @@ class Runner:
             total_num_steps,
             self.episode_count,
             updater_log_vals,
-            self.args,
+            self.args.num_steps != 0,
         )
 
     def save(self, update_iter: int, force_save: bool = False) -> None:
@@ -189,8 +187,6 @@ class Runner:
             self.updater.save(self.checkpointer)
 
             self.checkpointer.flush(num_updates=update_iter)
-            if self.args.sync:
-                self.log.backup(self.args, update_iter + 1)
 
     def eval(self, update_iter, num_eval=None, force_eval=False):
         if (

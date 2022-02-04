@@ -39,6 +39,8 @@ class TrajDataset(TransitionDataset):
         import seaborn as sns
 
         traj_lens = [len(t) for t in self.trajs]
+        if len(traj_lens) == 0 or np.var(traj_lens) == 0:
+            return
         p = sns.distplot(traj_lens)
         p.set_title(f"{len(traj_lens)} trajs")
         p.set_xlabel("Trajectory Lengths")

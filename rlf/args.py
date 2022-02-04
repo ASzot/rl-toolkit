@@ -1,8 +1,29 @@
 import argparse
+from dataclasses import dataclass, fields
 
 
 def str2bool(v):
     return v.lower() == "true"
+
+
+def data_class_to_args(prefix: str, parser: argparse.ArgumentParser, dc_type):
+    tmp = dc_type()
+    for f in fields(tmp):
+        field_name = f"--{prefix}-{f.name.replace('_', '-')}"
+        if f.type == bool:
+            use_type = str2bool
+        else:
+            use_type = f.type
+
+        parser.add_argument(field_name, type=use_type, default=f.default)
+
+
+def parse_data_class_from_args(prefix: str, args: argparse.Namespace, dc_type):
+    set_dict = {}
+    tmp = dc_type()
+    for f in fields(tmp):
+        set_dict[f.name] = getattr(args, f"{prefix}_{f.name}")
+    return dc_type(**set_dict)
 
 
 def get_default_parser():
@@ -58,13 +79,6 @@ def add_args(parser):
         "--log-dir",
         default="./data/log",
         help="directory to save agent logs (default: /tmp/gym)",
-    )
-
-    parser.add_argument(
-        "--sync",
-        action="store_true",
-        default=False,
-        help="Whether to sync with properties specified in config",
     )
 
     parser.add_argument(

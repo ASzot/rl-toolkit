@@ -1,5 +1,6 @@
 from collections import namedtuple
-from typing import List, NamedTuple
+from dataclasses import dataclass
+from typing import List
 
 import numpy as np
 import rlf.rl.utils as rutils
@@ -7,7 +8,8 @@ import torch
 from rlf.il.il_dataset import ImitationLearningDataset, convert_to_tensors
 
 
-class DatasetTransition(NamedTuple):
+@dataclass(frozen=True)
+class DatasetTransition:
     index: int
     obs: torch.Tensor
     done: torch.Tensor
@@ -94,6 +96,8 @@ class TransitionDataset(ImitationLearningDataset):
                 cur_len = 0
             else:
                 cur_len += 1
+        if len(traj_lens) == 0 or np.var(traj_lens) == 0:
+            return
         p = sns.distplot(traj_lens)
         p.set_title(
             f"{len(traj_lens)} trajs, {len(self.trajs['obs'])} transitions, taking {args.traj_frac}, val {args.traj_val_ratio}"

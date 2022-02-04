@@ -5,15 +5,14 @@ from gym import spaces
 from rlf import EnvInterface, register_env_interface
 from rlf.args import str2bool
 from rlf.baselines.vec_env.vec_env import VecEnv
-from rlf.envs.pointmass import (BatchedTorchPointMassEnvSpawnRange,
-                                PointMassInterface)
+from rlf.envs.pointmass import PointMassEnv, PointMassInterface
 from torch.distributions import Uniform
 
 STAGE_1_BONUS = 10.0
 STAGE_2_BONUS = 20.0
 
 
-class MultiGoalBatchedTorchPointMassEnv(BatchedTorchPointMassEnvSpawnRange):
+class MultiGoalBatchedTorchPointMassEnv(PointMassEnv):
     """
     Point mass task where the agent should first navigate to 1 goal and then
     navigate back to the starting position.

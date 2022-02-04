@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import os
 import os.path as osp
 import random
@@ -10,6 +11,7 @@ import time
 import uuid
 
 import libtmux
+import numpy as np
 from rlf.args import str2bool
 from rlf.exp_mgr import config_mgr
 from rlf.exp_mgr.wb_data_mgr import get_run_params
@@ -74,6 +76,9 @@ def get_arg_parser():
     # MULTIPROC OPTIONS
     parser.add_argument("--mp-offset", type=int, default=0)
     parser.add_argument("--pt-proc", type=int, default=-1)
+
+    # HABITAT ARGUMENTS
+    parser.add_argument("--hab", action="store_true")
 
     # SLURM OPTIONS
     parser.add_argument("--comment", type=str, default=None)
@@ -147,9 +152,13 @@ def add_on_args(spec_args):
 
 def get_cmds(cmd_path, spec_args, args):
     try:
-        open_cmd = osp.join(cmd_path + ".cmd")
-        with open(open_cmd) as f:
-            cmds = f.readlines()
+
+        if ".py" in cmd_path:
+            cmds = [f"python {cmd_path}"]
+        else:
+            open_cmd = osp.join(cmd_path + ".cmd")
+            with open(open_cmd) as f:
+                cmds = f.readlines()
     except:
         base_cmd = cmd_path.split("/")[-1]
         if len(base_cmd) == 8:
@@ -254,7 +263,7 @@ def add_changes_to_cmd(cmd, args):
     new_dirs = []
     cmd_args = cmd.split(" ")
     if not args.skip_add:
-        for k, v in config_mgr.get_prop("change_cmds").items():
+        for k, v in config_mgr.get_prop("change_cmds", {}).items():
             if k in cmd_args:
                 continue
             new_dirs.append(k + " " + osp.join(base_data_dir, v))
@@ -393,7 +402,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
             print("-" * 20)
             print("Assigning group ID", group_id)
             print("-" * 20)
-    cmds = [add_tag_and_group_to_cmd(cmd, group_id, args) for cmd in cmds]
+    if not args.hab:
+        cmds = [add_tag_and_group_to_cmd(cmd, group_id, args) for cmd in cmds]
     cmds = [c for cmd in cmds for c in sub_wb_query(cmd, args)]
 
     if args.proj_dat is not None:
@@ -459,7 +469,25 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         print("IN DEBUG MODE")
         cmds = [cmds[args.debug]]
 
+    def add_hab_info(cmd):
+        d = datetime.datetime.today()
+        date_id = "%i%i" % (d.month, d.day)
+        chars = [x for x in string.ascii_uppercase + string.digits]
+        rnd_id = np.random.RandomState().choice(chars, 6)
+        rnd_id = "".join(rnd_id)
+        run_id = f"{date_id}-{rnd_id}"
+        base_dir = config_mgr.get_prop("base_data_dir")
+        vid_dir = osp.join(base_dir, "vids", run_id)
+        ckpt_dir = osp.join(base_dir, "checkpoints", run_id)
+        # Write the log files to the current directory so it is a bit faster.
+        log_file = osp.join("data/logs", run_id + ".log")
+
+        cmd += f" WB.ENTITY {config_mgr.get_prop('wb_entity')} WB.RUN_NAME {run_id} WB.PROJECT_NAME {config_mgr.get_prop('proj_name')} CHECKPOINT_FOLDER {ckpt_dir} VIDEO_DIR {vid_dir} LOG_FILE {log_file}"
+        return cmd
+
     cmds = [add_changes_to_cmd(cmd, args) for cmd in cmds]
+    if args.hab:
+        cmds = [add_hab_info(cmd) for cmd in cmds]
     DELIM = " ; "
 
     cd = as_list(cd, len(cmds))

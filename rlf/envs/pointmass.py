@@ -1,9 +1,11 @@
+from dataclasses import dataclass
+
 import gym
 import numpy as np
 import torch
 from gym import spaces
 from rlf import EnvInterface, register_env_interface
-from rlf.args import str2bool
+from rlf.args import data_class_to_args, parse_data_class_from_args
 from rlf.baselines.vec_env.vec_env import VecEnv
 from torch.distributions import Uniform
 
@@ -14,20 +16,18 @@ ERROR_MSG = (
 )
 
 
-class PointMassEnvSpawnRange(gym.Env):
-    """
-    You have to use the batched version, this is just a dummy class for the gym registration.
-    """
-
-    def __init__(self):
-        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(2,))
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,))
-
-    def step(self, action):
-        raise NotImplementedError(ERROR_MSG)
-
-    def reset(self):
-        raise NotImplementedError(ERROR_MSG)
+@dataclass(frozen=True)
+class PointMassParams:
+    force_eval_start_dist: bool = False
+    force_train_start_dist: bool = True
+    clip_bounds: bool = True
+    ep_horizon: int = 5
+    num_train_regions: int = 4
+    start_state_noise: float = np.pi / 20
+    dt: float = 0.2
+    reward_dist_pen: float = 1 / 10.0
+    start_idx: int = -1
+    radius: float = np.sqrt(2)
 
 
 class SingleSampler:
@@ -38,13 +38,22 @@ class SingleSampler:
         return self.point.unsqueeze(0).repeat(shape[0], 1)
 
 
-class BatchedTorchPointMassEnvSpawnRange(VecEnv):
-    def __init__(self, args, set_eval, obs_space=None):
-        self._batch_size = args.num_processes
-        self.args = args
+class PointMassEnv(VecEnv):
+    def __init__(
+        self,
+        batch_size,
+        params,
+        device=None,
+        set_eval=False,
+        obs_space=None,
+        ac_space=None,
+    ):
+        if device is None:
+            device = torch.device("cpu")
+        self._batch_size = batch_size
+        self._params = params
 
-        self.pos_dim = 2
-        self._device = args.device
+        self._device = device
         self._goal = torch.tensor([0.0, 0.0]).to(self._device)
         self._ep_step = 0
 
@@ -52,20 +61,21 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
         if obs_space is None:
             obs_space = spaces.Box(low=-1.0, high=1.0, shape=(2,))
 
-        self._is_eval = set_eval or args.pm_force_eval_start_dist
-        if args.pm_force_train_start_dist:
+        if ac_space is None:
+            ac_space = spaces.Box(low=-1.0, high=1.0, shape=(2,))
+
+        self._is_eval = set_eval or self._params.force_eval_start_dist
+        if self._params.force_train_start_dist:
             self._is_eval = False
 
         if self._is_eval:
-            regions = BatchedTorchPointMassEnvSpawnRange.get_regions(
-                0.0, self.args.pm_start_state_noise
-            )
+            regions = PointMassEnv.get_regions(0.0, self._params.start_state_noise)
         else:
-            regions = BatchedTorchPointMassEnvSpawnRange.get_regions(
-                np.pi / 4, self.args.pm_start_state_noise
+            regions = PointMassEnv.get_regions(
+                np.pi / 4, self._params.start_state_noise
             )
 
-        if self.args.pm_start_state_noise != 0:
+        if self._params.start_state_noise != 0:
             self._start_distributions = Uniform(regions[:, 0], regions[:, 1])
         else:
             self._start_distributions = SingleSampler(regions[:, 0])
@@ -73,7 +83,7 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
         super().__init__(
             self._batch_size,
             obs_space,
-            spaces.Box(low=-1.0, high=1.0, shape=(2,)),
+            ac_space,
         )
 
     def step_async(self, actions):
@@ -82,25 +92,24 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
     def step_wait(self):
         pass
 
-    def forward(self, cur_pos, cur_vel, action):
+    def forward(self, cur_pos, action):
         action = torch.clamp(action, -1.0, 1.0)
-        new_vel = cur_vel
-        new_pos = cur_pos + (action * self.args.pm_dt)
+        new_pos = cur_pos + (action * self._params.dt)
 
-        if self.args.pm_clip:
+        if self._params.clip_bounds:
             new_pos = torch.clamp(new_pos, -POS_LIMIT, POS_LIMIT)
-        return new_pos, new_vel
+        return new_pos
 
     def step(self, action):
-        self.cur_pos, self.cur_vel = self.forward(self.cur_pos, self.cur_vel, action)
+        self.cur_pos = self.forward(self.cur_pos, action)
         self._ep_step += 1
 
-        is_done = self._ep_step >= self.args.pm_ep_horizon
+        is_done = self._ep_step >= self._params.ep_horizon
         dist_to_goal = torch.linalg.norm(
             self._goal - self.cur_pos, dim=-1, keepdims=True
         )
 
-        reward = -self.args.pm_reward_dist_pen * dist_to_goal
+        reward = -self._params.reward_dist_pen * dist_to_goal
         self._ep_rewards.append(reward)
 
         all_is_done = [is_done for _ in range(self._batch_size)]
@@ -128,26 +137,33 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
 
         return torch.tensor([[center - spread, center + spread] for center in centers])
 
-    def _sample_start(self, batch_size, offset_start):
+    def _get_dist_idx(self, batch_size):
         if self._is_eval:
-            idx = torch.randint(0, 4, (batch_size,))
+            return torch.randint(0, 4, (batch_size,))
         else:
-            if self.args.pm_start_idx == -1:
-                idx = torch.randint(0, self.args.pm_num_train_regions, (batch_size,))
+            if self._params.start_idx == -1:
+                return torch.randint(0, self._params.num_train_regions, (batch_size,))
             else:
-                idx = torch.tensor([self.args.pm_start_idx]).repeat(batch_size)
+                return torch.tensor([self._params.start_idx]).repeat(batch_size)
+
+    def _sample_start(self, batch_size, offset_start):
+        idx = self._get_dist_idx(batch_size)
         samples = self._start_distributions.sample(idx.shape)
         ang = samples.gather(1, idx.view(-1, 1)).view(-1)
 
-        radius = np.sqrt(2)
         return (
-            torch.stack([radius * torch.cos(ang), radius * torch.sin(ang)], dim=-1)
+            torch.stack(
+                [
+                    self._params.radius * torch.cos(ang),
+                    self._params.radius * torch.sin(ang),
+                ],
+                dim=-1,
+            )
             + offset_start
         )
 
     def reset(self):
         self.cur_pos = self._sample_start(self._batch_size, self._goal)
-        self.cur_vel = torch.zeros(self._batch_size, 2)
         self._ep_step = 0
         self._ep_rewards = []
 
@@ -155,6 +171,53 @@ class BatchedTorchPointMassEnvSpawnRange(VecEnv):
 
     def _get_obs(self):
         return self.cur_pos.clone()
+
+
+@dataclass(frozen=True)
+class LinearPointMassParams(PointMassParams):
+    dt: float = 0.2
+    radius: float = 1.0
+
+
+class LinearPointMassEnv(PointMassEnv):
+    def __init__(
+        self,
+        batch_size,
+        params: LinearPointMassParams = None,
+        device=None,
+        set_eval=False,
+        obs_space=None,
+    ):
+        if params is None:
+            params = LinearPointMassParams()
+        if not isinstance(params, LinearPointMassParams):
+            raise ValueError("Not correct params")
+        super().__init__(
+            batch_size,
+            params,
+            device,
+            set_eval,
+            obs_space,
+            ac_space=spaces.Box(low=-1.0, high=1.0, shape=(1,)),
+        )
+
+    def forward(self, cur_pos, action):
+        # action = torch.clamp(action, -1.0, 1.0)
+        # Change [-1,1] to [-np.pi, 0]
+        # action = -np.pi * ((action + 1.0) / 2.0)
+        desired_dir = (action + np.pi) % (2 * np.pi)
+
+        delta_pos = torch.cat([torch.cos(desired_dir), torch.sin(desired_dir)], dim=-1)
+        new_pos = cur_pos + (delta_pos * self._params.dt)
+
+        if self._params.clip_bounds:
+            new_pos = torch.clamp(new_pos, -POS_LIMIT, POS_LIMIT)
+        return new_pos
+
+    def _get_obs(self):
+        theta = torch.atan2(self.cur_pos[:, 1], self.cur_pos[:, 0])
+        r = torch.linalg.norm(self.cur_pos, dim=-1)
+        return torch.stack([theta, r], dim=-1)
 
 
 class PointMassInterface(EnvInterface):
@@ -172,82 +235,12 @@ class PointMassInterface(EnvInterface):
         alg_env_settings,
         args,
     ):
-        return BatchedTorchPointMassEnvSpawnRange(args, set_eval)
+        params = parse_data_class_from_args("pm", args, PointMassParams)
+        return PointMassEnv(args.num_processes, params, args.device, set_eval)
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
-        parser.add_argument(
-            "--pm-force-eval-start-dist",
-            type=str2bool,
-            default=False,
-            help="""
-            If true, using the EVAL start state dist even during TRAINING.
-            """,
-        )
-        parser.add_argument(
-            "--pm-force-train-start-dist",
-            type=str2bool,
-            default=False,
-            help="""
-            If true, using the TRAINING start state dist even during EVAL.
-            """,
-        )
-        parser.add_argument(
-            "--pm-clip",
-            type=str2bool,
-            default=True,
-            help="""
-                If true, clips the agent to a region
-                """,
-        )
-        parser.add_argument(
-            "--pm-ep-horizon",
-            type=int,
-            default=5,
-            help="""
-                Controls how long each episode is.
-                """,
-        )
-        parser.add_argument(
-            "--pm-num-train-regions",
-            type=int,
-            default=4,
-            help="""
-                Controls how many regions to sample from during TRAINING.
-                """,
-        )
-        parser.add_argument(
-            "--pm-start-state-noise",
-            type=float,
-            default=np.pi / 20,
-            help="""
-                Sets the amount of starting state noise.
-                """,
-        )
-        parser.add_argument(
-            "--pm-dt",
-            type=float,
-            default=0.2,
-            help="The time step. The higher, the larger of a step",
-        )
-        parser.add_argument(
-            "--pm-reward-dist-pen",
-            type=float,
-            default=1 / 10.0,
-            help="""
-            The scaling factor on the distance to goal penalty
-            """,
-        )
-
-        parser.add_argument(
-            "--pm-start-idx",
-            type=int,
-            default=-1,
-            help="""
-                If non-negative. This will select one of a pre-set number of
-                locations for the starting position.
-                """,
-        )
+        data_class_to_args("pm", parser, PointMassParams)
 
 
 register_env_interface("^RltPointMass", PointMassInterface)
