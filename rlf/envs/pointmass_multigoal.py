@@ -1,18 +1,29 @@
+from dataclasses import dataclass
+
 import gym
 import numpy as np
 import torch
 from gym import spaces
 from rlf import EnvInterface, register_env_interface
-from rlf.args import str2bool
+from rlf.args import data_class_to_args, parse_data_class_from_args, str2bool
 from rlf.baselines.vec_env.vec_env import VecEnv
-from rlf.envs.pointmass import PointMassEnv, PointMassInterface
+from rlf.envs.pointmass import (PointMassEnv, PointMassInterface,
+                                PointMassParams)
 from torch.distributions import Uniform
 
-STAGE_1_BONUS = 10.0
-STAGE_2_BONUS = 20.0
+
+@dataclass(frozen=True)
+class PointMassMultiGoalParams(PointMassParams):
+    success_dist: float = 0.10
+    stage1_bonus: float = 10.0
+    stage2_bonus: float = 20.0
+    early_termination: bool = True
+
+    ep_horizon: int = 50
+    dt: float = 0.01
 
 
-class MultiGoalBatchedTorchPointMassEnv(PointMassEnv):
+class PointMassMultiGoalEnv(PointMassEnv):
     """
     Point mass task where the agent should first navigate to 1 goal and then
     navigate back to the starting position.
@@ -20,18 +31,24 @@ class MultiGoalBatchedTorchPointMassEnv(PointMassEnv):
 
     def __init__(
         self,
-        args,
-        set_eval,
+        batch_size,
+        params,
+        device=None,
+        set_eval=False,
+        obs_space=None,
+        ac_space=None,
     ):
         super().__init__(
-            args,
+            batch_size,
+            params,
+            device,
             set_eval,
             obs_space=spaces.Box(low=-2.0, high=2.0, shape=(3,)),
+            ac_space=ac_space,
         )
 
     def _reset_idx(self, idx):
         self.cur_pos[idx] = self._sample_start(1, torch.zeros(2))[0]
-        self.cur_vel[idx] = torch.zeros(2)
         self._ep_step[idx] = 0
         self._goal[idx] = torch.tensor([0.0, 0.0])
         self._finished_stage_1[idx] = 0.0
@@ -50,7 +67,7 @@ class MultiGoalBatchedTorchPointMassEnv(PointMassEnv):
         return self._get_obs()
 
     def step(self, action):
-        self.cur_pos, self.cur_vel = self.forward(self.cur_pos, self.cur_vel, action)
+        self.cur_pos = self.forward(self.cur_pos, action)
 
         dist_to_cur_goal = torch.linalg.norm(
             self._goal - self.cur_pos, dim=-1, keepdims=True
@@ -66,12 +83,12 @@ class MultiGoalBatchedTorchPointMassEnv(PointMassEnv):
 
         at_goal = (
             torch.linalg.norm(self.cur_pos - self._goal, dim=-1)
-            < self.args.pm_success_dist
+            < self._params.success_dist
         )
         final_obs = self._get_obs()
         for i in range(self._batch_size):
             self._ep_step[i] += 1
-            if self._ep_step[i] >= self.args.pm_ep_horizon:
+            if self._ep_step[i] >= self._params.ep_horizon:
                 all_is_done[i] = True
 
             all_info[i]["ep_succ_stage2"] = 0.0
@@ -79,14 +96,14 @@ class MultiGoalBatchedTorchPointMassEnv(PointMassEnv):
             if at_goal[i]:
                 if self._finished_stage_1[i] == 1.0:
                     # Finished stage 2.
-                    reward[i] += self.args.stage2_bonus
+                    reward[i] += self._params.stage2_bonus
                     all_info[i]["ep_succ_stage2"] = 1.0
                     all_info[i]["ep_success"] = 1.0
-                    if self.args.early_termination:
+                    if self._params.early_termination:
                         all_is_done[i] = True
                 else:
                     # Finished stage 1
-                    reward[i] += self.args.stage1_bonus
+                    reward[i] += self._params.stage1_bonus
 
                 self._goal[i] = self._stage2_goal[i]
                 self._finished_stage_1[i] = 1.0
@@ -131,25 +148,11 @@ class MultiGoalPointMassInterface(PointMassInterface):
         alg_env_settings,
         args,
     ):
-        return MultiGoalBatchedTorchPointMassEnv(args, set_eval)
+        params = parse_data_class_from_args("pm", args, PointMassMultiGoalParams)
+        return PointMassMultiGoalEnv(args.num_processes, params, args.device, set_eval)
 
     def get_add_args(self, parser):
-        super().get_add_args(parser)
-        parser.add_argument(
-            "--pm-success-dist",
-            type=float,
-            default=0.10,
-        )
-        parser.add_argument("--stage1-bonus", type=float, default=10.0)
-        parser.add_argument("--stage2-bonus", type=float, default=20.0)
-        parser.add_argument(
-            "--early-termination",
-            type=str2bool,
-            default=True,
-            help="""
-            """,
-        )
-        parser.set_defaults(pm_ep_horizon=50)
+        data_class_to_args("pm", parser, PointMassMultiGoalParams)
 
 
 register_env_interface("^MultiGoalRltPointMass", MultiGoalPointMassInterface)

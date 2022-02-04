@@ -6,11 +6,22 @@ import torch
 from rlf.args import data_class_to_args, parse_data_class_from_args
 from rlf.envs.pointmass import (LinearPointMassEnv, LinearPointMassParams,
                                 PointMassEnv, PointMassParams)
+from rlf.envs.pointmass_multigoal import (PointMassMultiGoalEnv,
+                                          PointMassMultiGoalParams)
 
 
 def test_pointmass():
-    params = PointMassParams(start_state_noise=0.0, start_idx=0, radius=1)
     batch_size = 2
+    pm_mg_env = PointMassMultiGoalEnv(
+        batch_size=batch_size, params=PointMassMultiGoalParams()
+    )
+    pm_mg_env.reset()
+    for _ in range(100):
+        rnd_ac = torch.tensor(pm_mg_env.action_space.sample())
+        rnd_ac = rnd_ac.view(1, -1).repeat(batch_size, 1)
+        pm_mg_env.step(rnd_ac)
+
+    params = PointMassParams(start_state_noise=0.0, start_idx=0, radius=1)
 
     env = PointMassEnv(batch_size=batch_size, params=params)
     env.reset()
