@@ -8,19 +8,19 @@ Run using
 python examples/train.py --alg ALGORITHM_NAME --env-name Pendulum-v1
 ```
 Supported algorithms (to replace `ALGORITHM_NAME` in the above command) 
-* Imitation learning (You must also specify the `--traj-load-path` argument for these commands to load the demonstrations. See [How to specify demonstrations for imitation learning?]() for more information.
-    * Generative Adversarial Imitation Learning (GAIL): `gail_ppo`
-    * Generative Adversarial Imitation Learning from Observations (GAIfO): `gaifo_ppo`
-    * Behavioral Cloning (BC): `bc`
-    * Behavioral Cloning from Observations (BCO): `bco`
-    * Soft-Q Imitation Learning (SQIL): `sqil`
+* Imitation learning (You must also specify the `--traj-load-path` argument for these commands to load the demonstrations. See [How to specify demonstrations for imitation learning?](https://github.com/ASzot/rl-toolkit#how-to-specify-demonstrations-for-imitation-learning) for more information.
+    * Generative Adversarial Imitation Learning (GAIL): `--alg gail_ppo`
+    * Generative Adversarial Imitation Learning from Observations (GAIfO): `--alg gaifo_ppo`
+    * Behavioral Cloning (BC): `--alg bc`
+    * Behavioral Cloning from Observations (BCO): `--alg bco`
+    * Soft-Q Imitation Learning (SQIL): `--alg sqil`
 * Reinforcement learning
-    * Proximal Policy Optimization (PPO): `ppo`
-    * Soft Actor Critic (SAC): `sac`
-    * Deep Deterministic Policy Gradients (DDPG): `ddpg`
-    * Random Policy: `rnd`
+    * Proximal Policy Optimization (PPO): `--alg ppo`
+    * Soft Actor Critic (SAC): `--alg sac`
+    * Deep Deterministic Policy Gradients (DDPG): `--alg ddpg`
+    * Random Policy: `--alg rnd`
 
-To see the list of all possible command line arguments add `-v`. For example: `python examples/train.py --alg sac --env-name Pendulum-v1 --cuda False -v`. Command line arguments are added by the algorithm or policy. See example [here](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/algos/il/gail.py#L301) and [here](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/args.py#L50).  See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks).
+To see the list of all possible command line arguments add `-v`. For example: `python examples/train.py --alg sac --env-name Pendulum-v1 --cuda False -v`. Command line arguments are added by the algorithm or policy. See examples [here](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/algos/il/gail.py#L301) and [here](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/args.py#L50).  See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks).
 
 ## How to use new environments?
 * Specify the name of your algorithm using `--env-name`.
@@ -28,7 +28,7 @@ To see the list of all possible command line arguments add `-v`. For example: `p
 * See [this page](https://github.com/ASzot/rl-toolkit/tree/master/rlf/envs#readme) for information about more configurable environment creation.
 
 ## How to specify demonstrations for imitation learning?
-See [this comment](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/il/il_dataset.py#L26) for the demonstration dataset specification.
+See [this comment](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/il/il_dataset.py#L26) for the demonstration dataset specification. Then load in the demonstration dataset via the `--traj-load-path` argument.
 
 
 ## Installation
@@ -39,8 +39,6 @@ Requires Python 3.7 or higher. With conda:
 - `source activate rlf`
 - `pip install -r requirements.txt`
 - `pip install -e .`
-
-If you want to install MuJoCo as well: `mujoco-py==2.0.2.5` 
 
 
 # Benchmarks
