@@ -8,7 +8,7 @@ Run using
 python examples/train.py --alg ALGORITHM_NAME --env-name Pendulum-v1
 ```
 Supported algorithms (to replace `ALGORITHM_NAME` in the above command) 
-* Imitation learning (You must also specify the `--traj-load-path` argument for these commands to load the demonstrations. See [How to specify demonstrations for imitation learning?](https://github.com/ASzot/rl-toolkit#how-to-specify-demonstrations-for-imitation-learning) for more information.
+* Imitation learning (You must also specify the `--traj-load-path` argument for these commands to load the demonstrations. See ["how to specify demonstrations for imitation learning?"](https://github.com/ASzot/rl-toolkit#how-to-specify-demonstrations-for-imitation-learning) for more information.
     * Generative Adversarial Imitation Learning (GAIL): `--alg gail_ppo`
     * Generative Adversarial Imitation Learning from Observations (GAIfO): `--alg gaifo_ppo`
     * Behavioral Cloning (BC): `--alg bc`
