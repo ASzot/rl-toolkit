@@ -15,7 +15,7 @@ class SqilTransitionStorage(TransitionStorage):
             )
         self.il_algo = il_algo
         self.expert_batch_iter = None
-        super().__init__(obs_space, action_space, capacity, args)
+        super().__init__(obs_space, action_space.shape, capacity, args)
 
     def get_next_expert_batch(self):
         batch = None

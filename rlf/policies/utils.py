@@ -66,10 +66,10 @@ def get_def_critic(obs_shape, input_shape, action_space, hidden_dim):
     else:
         return def_get_hidden_net(input_shape, hidden_dim)
 
-def get_def_ac_critic(obs_shape, input_shape, action_space, hidden_size=(64, 64)):
+def get_def_ac_critic(obs_shape, input_shape, action_space, hidden_size=64):
     assert len(input_shape) == 1
     ac_dim = rutils.get_ac_dim(action_space)
-    return TwoLayerMlpWithAction(input_shape[0], hidden_size, ac_dim)
+    return TwoLayerMlpWithAction(input_shape[0], (hidden_size, hidden_size), ac_dim)
 
 
 def get_def_actor(obs_shape, input_shape, hidden_size, **kwargs):

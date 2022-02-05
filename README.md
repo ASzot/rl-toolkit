@@ -1,28 +1,35 @@
-# RL Toolkit (RLT)
+# Reinforcement Learning Toolkit
 
-Codebase I use to to implement RL algorithms.
+Code base I use to help with reinforcement learning (RL) research projects.
 
-## Algorithms
-- On policy:
-  - REINFORCE
-  - Actor Critic (A2C)
-  - Proximal Policy Optimization (PPO)
-- Off policy:
-  - Deep Q-Networks (DQN)
-  - Deep Deterministic Policy Gradients (DDPG)
-  - Soft Actor Critic (SAC) 
-  - Hindsight Experience Replay (HER)
-- Imitation learning:
-  - Behavioral Cloning (BC)
-  - Generative Adversarial Imitation Learning (GAIL)
-  - Adversarial Inverse Reinforcement Learning (AIRL)
-- Imitation learning from observation: 
-  - Generative Adversarial Imitation from Observation (GAIfO)
-  - Behavioral Cloning from Observations (BCO)
-- Hierarchical RL: 
-  - Option Critic
+## Running
+Run using
+```
+python examples/train.py --alg ALGORITHM_NAME --env-name Pendulum-v1
+```
+Supported algorithms (to replace `ALGORITHM_NAME` in the above command) 
+* Imitation learning (You must also specify the `--traj-load-path` argument for these commands to load the demonstrations. See [How to specify demonstrations for imitation learning?]() for more information.
+    * Generative Adversarial Imitation Learning (GAIL): `gail_ppo`
+    * Generative Adversarial Imitation Learning from Observations (GAIfO): `gaifo_ppo`
+    * Behavioral Cloning (BC): `bc`
+    * Behavioral Cloning from Observations (BCO): `bco`
+    * Soft-Q Imitation Learning (SQIL): `sqil`
+* Reinforcement learning
+    * Proximal Policy Optimization (PPO): `ppo`
+    * Soft Actor Critic (SAC): `sac`
+    * Deep Deterministic Policy Gradients (DDPG): `ddpg`
+    * Random Policy: `rnd`
 
-See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks)
+To see the list of all possible command line arguments add `-v`. For example: `python examples/train.py --alg sac --env-name Pendulum-v1 --cuda False -v`. Command line arguments are added by the algorithm or policy. See example [here](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/algos/il/gail.py#L301) and [here](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/args.py#L50).  See learning curves for these algorithms [below](https://github.com/ASzot/rl-toolkit#benchmarks).
+
+## How to use new environments?
+* Specify the name of your algorithm using `--env-name`.
+* If they are registered through `gym.envs.registration` it will work automatically through `gym.make`.
+* See [this page](https://github.com/ASzot/rl-toolkit/tree/master/rlf/envs#readme) for information about more configurable environment creation.
+
+## How to specify demonstrations for imitation learning?
+See [this comment](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/il/il_dataset.py#L26) for the demonstration dataset specification.
+
 
 ## Installation
 Requires Python 3.7 or higher. With conda: 
@@ -35,30 +42,6 @@ Requires Python 3.7 or higher. With conda:
 
 If you want to install MuJoCo as well: `mujoco-py==2.0.2.5` 
 
-## More Topics
-* `rlf/exp_mgr/README.md` for how to use the automatic job creation and scaling script along with all the plotting utilities.
-* `rlf/envs/README.md` for integrating custom environments that take as input command line arguments. 
-* `rlf/test/README.md` for details about the unit tests. 
-
-## Benchmarks
-* IL Benchmark: `python -m rlf.benchmarks.il`
-
-## Experiment Runner
-Easily run templated commands. Start by defining a `.cmd` file. 
-- Send to new tmux pane. 
-- Easily run and manage long complicated commands. 
-- Add additional arguments to specified command. 
-- Specify which GPU to use via a flag. 
-- Choose to log to W&B. 
-
-## Ray
-Install with `pip install ray` and `pip install "ray[tune]"`. To run a job with
-Ray specify `--ray` and specify your hyperparam search for Ray tune using
-Python syntax in the command line argument with `--ray-config "{'lr':
-tune.uniform(0.01, 0.001)}"`. You can specify additional settings such as
-`--ray-cpus`, `--ray-gpus`, `--ray-nsamples`. `--ray-debug` runs Ray in serial
-mode. When using Ray you cannot reference global variables from anywhere in
-your RunSettings.
 
 # Benchmarks
 ### Hopper-v3

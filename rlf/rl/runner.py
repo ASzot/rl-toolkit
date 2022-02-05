@@ -205,6 +205,7 @@ class Runner:
         if self.train_eval_envs is not None:
             self.train_eval_envs.close()
         self.envs.close()
+        del self.envs
 
     def resume(self):
         self.updater.load_resume(self.checkpointer)

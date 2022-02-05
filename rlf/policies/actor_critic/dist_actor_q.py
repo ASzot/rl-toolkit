@@ -4,6 +4,7 @@ The license is at `rlf/algos/off_policy/denis_yarats_LICENSE.md`
 """
 from typing import Callable, List, Optional, Tuple
 
+import numpy as np
 import rlf.policies.utils as putils
 import rlf.rl.utils as rutils
 import torch
@@ -86,7 +87,7 @@ class DistActorQ(BaseNetPolicy):
 
         if not step_info.is_eval and cur_step < self.args.n_rnd_steps:
             action = torch.tensor(
-                [self.action_space.sample() for _ in range(n_procs)]
+                np.array([self.action_space.sample() for _ in range(n_procs)])
             ).to(self.args.device)
             return create_simple_action_data(action, hxs)
 

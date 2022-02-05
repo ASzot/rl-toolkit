@@ -9,6 +9,7 @@ import torch
 import torch.nn.functional as F
 from rlf.algos.il.base_il import BaseILAlgo
 from rlf.args import str2bool
+from rlf.rl.loggers import LoggerChoices
 from rlf.storage.base_storage import BaseStorage
 from tqdm import tqdm
 
@@ -88,7 +89,7 @@ class BehavioralCloning(BaseILAlgo):
                 action_loss,
                 f"action_loss_{update_iter}.png",
                 self.args.vid_dir,
-                not self.args.no_wb,
+                self.args.log_type == LoggerChoices.WANDB,
                 self.get_completed_update_steps(self.update_i),
             )
         self.num_epochs = 0

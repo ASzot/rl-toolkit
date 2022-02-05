@@ -1,6 +1,8 @@
 import argparse
 from dataclasses import dataclass, fields
 
+from rlf.rl.loggers.get_logger import LoggerChoices
+
 
 def str2bool(v):
     return v.lower() == "true"
@@ -70,9 +72,10 @@ def add_args(parser):
     # RUN CONFIG
     #############################
     parser.add_argument(
-        "--env-log-dir",
-        default="/tmp/gym",
-        help="directory to save agent logs (default: /tmp/gym)",
+        "--log-type",
+        help=f"How to log results. Options are: {[x.value for x in list(LoggerChoices)]}",
+        choices=[x.value for x in list(LoggerChoices)],
+        default=LoggerChoices.NONE.value,
     )
 
     parser.add_argument(
@@ -108,7 +111,7 @@ def add_args(parser):
 
     parser.add_argument(
         "--env-name",
-        help="environment to train on (default: PongNoFrameskip-v4)",
+        help="Environment name to train on ",
         required=True,
     )
 

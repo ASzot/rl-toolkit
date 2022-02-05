@@ -27,5 +27,3 @@ register_env_interface("YourEnvName-v0", NewEnvInterface)
 # Added Envs
 List of supported environments:
 * `RltPointMassEnvSpawnRange-v0`:
-    * Requires `--normalize-env False`
-    * If not running multiple processes, requires `--force-multi-proc True`

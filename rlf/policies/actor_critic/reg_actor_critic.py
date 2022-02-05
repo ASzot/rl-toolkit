@@ -84,14 +84,14 @@ class RegActorCritic(ActorCritic):
         if (self.action_space.high != -1.0 * self.action_space.low).any():
             raise ValueError("Asynmetric action space bounds currently not supported")
 
-    def forward(self, state, add_state, hxs, masks):
-        base_features, _ = self._apply_base_net(state, add_state, hxs, masks)
-        actor_features, _ = self.actor_net(base_features, hxs, masks)
+    def forward(self, state, other_state, hxs=None, mask=None):
+        base_features, _ = self._apply_base_net(state, other_state, hxs, mask)
+        actor_features, _ = self.actor_net(base_features, hxs, mask)
         return self.actor_head(actor_features) * self.action_space.high[0]
 
-    def get_value(self, state, action, add_state, hxs, masks):
-        base_features, hxs = self._apply_base_net(state, add_state, hxs, masks)
-        critic_features, hxs = self.critic(base_features, action, hxs, masks)
+    def get_value(self, state, action, other_state, hxs=None, mask=None):
+        base_features, hxs = self._apply_base_net(state, other_state, hxs, mask)
+        critic_features, hxs = self.critic(base_features, action, hxs, mask)
         return self.critic_head(critic_features)
 
     def get_action(self, state, add_state, hxs, masks, step_info):
@@ -121,7 +121,7 @@ class RegActorCritic(ActorCritic):
                 )
             else:
                 action = torch.tensor(
-                    [self.action_space.sample() for _ in range(n_procs)]
+                    np.array([self.action_space.sample() for _ in range(n_procs)])
                 ).to(self.args.device)
 
         return create_simple_action_data(action, hxs)

@@ -13,6 +13,7 @@ from rlf.algos.base_algo import BaseAlgo
 from rlf.algos.il.bc import BehavioralCloning
 from rlf.policies.random_policy import RandomPolicy
 from rlf.rl.envs import make_vec_envs_easy
+from rlf.rl.loggers import LoggerChoices
 from rlf.rl.model import Flatten
 from rlf.storage.rollout_storage import RolloutStorage
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
@@ -269,7 +270,7 @@ class BehavioralCloningFromObs(BehavioralCloning):
                     infer_ac_losses,
                     f"ac_inv_loss_{self.update_i}.png",
                     self.args.vid_dir,
-                    not self.args.no_wb,
+                    self.args.log_type == LoggerChoices.WANDB,
                     self.get_completed_update_steps(self.update_i),
                 )
             if self.update_i == 0:

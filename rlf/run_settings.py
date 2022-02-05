@@ -16,7 +16,8 @@ from rlf.exp_mgr import config_mgr
 from rlf.il.traj_mgr import TrajSaver
 from rlf.rl.checkpointer import Checkpointer
 from rlf.rl.envs import make_vec_envs
-from rlf.rl.loggers.base_logger import BaseLogger
+from rlf.rl.loggers import BaseLogger
+from rlf.rl.loggers.get_logger import LoggerChoices, get_logger
 from rlf.rl.runner import Runner
 
 
@@ -88,8 +89,8 @@ class RunSettings(MasterClass):
     def get_add_args(self, parser):
         pass
 
-    def get_logger(self):
-        return BaseLogger()
+    def get_logger(self, args):
+        return get_logger(args.log_type)
 
     def get_add_ray_config(self, config):
         return config
@@ -166,13 +167,15 @@ class RunSettings(MasterClass):
             self.working_dir = add_args["cwd"]
 
         config_mgr.init(self.get_config_file())
+        args.log_type = LoggerChoices(args.log_type)
         if args.ray:
             # No logger when ray is tuning
             log = BaseLogger()
         else:
             if ray_create:
                 return None, None
-            log = self.get_logger()
+            log = self.get_logger(args)
+
         for k, v in vars(self.base_args).items():
             if k not in args:
                 setattr(args, k, v)
