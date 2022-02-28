@@ -74,6 +74,7 @@ def add_args(parser):
     parser.add_argument(
         "--log-type",
         help=f"How to log results. Options are: {[x.value for x in list(LoggerChoices)]}",
+        type=str,
         choices=[x.value for x in list(LoggerChoices)],
         default=LoggerChoices.NONE.value,
     )

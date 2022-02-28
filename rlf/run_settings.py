@@ -118,10 +118,19 @@ class RunSettings(MasterClass):
     def get_parser(self):
         return get_default_parser()
 
+    def add_argument_overrides(self, parser) -> None:
+        """
+        Modify the argument parser to override default arguments. Provides a
+        different set of arguments from `self.get_add_args` which are saved to
+        `self.base_args`.
+        """
+        pass
+
     def get_args(self, algo, policy):
         parser = self.get_parser()
         algo.get_add_args(parser)
         policy.get_add_args(parser)
+        self.add_argument_overrides(parser)
 
         if self._preset_args is None:
             args, rest = parser.parse_known_args()
