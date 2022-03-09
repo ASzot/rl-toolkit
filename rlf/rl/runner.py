@@ -196,9 +196,11 @@ class Runner:
             or force_eval
         ):
             total_num_steps = self.updater.get_completed_update_steps(update_iter + 1)
-            self.train_eval_envs = self._eval_policy(
+            eval_result, self.train_eval_envs = self._eval_policy(
                 self.policy, total_num_steps, self.args, num_eval=num_eval
             )
+            return eval_result
+        return None
 
     def close(self):
         self.log.close()

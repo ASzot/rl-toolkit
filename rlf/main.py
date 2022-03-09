@@ -13,7 +13,7 @@ class RunResult:
     eval_result: Dict = {}
 
 
-def run_policy(run_settings, runner=None):
+def run_policy(run_settings, runner=None) -> RunResult:
     if runner is None:
         runner = run_settings.create_runner()
     end_update = runner.updater.get_num_updates()
@@ -79,8 +79,10 @@ def run_policy(run_settings, runner=None):
         if args.save_interval > 0:
             runner.save(j + 1, force_save=True)
         if args.eval_interval > 0:
-            runner.eval(j + 1, num_eval=args.final_num_eval, force_eval=True)
+            eval_result = runner.eval(
+                j + 1, num_eval=args.final_num_eval, force_eval=True
+            )
 
         runner.close()
         # WB prefix of the run so we can later fetch the data.
-        return RunResult(args.prefix)
+        return RunResult(args.prefix, eval_result=eval_result)

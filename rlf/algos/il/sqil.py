@@ -15,7 +15,8 @@ class SqilTransitionStorage(TransitionStorage):
             )
         self.il_algo = il_algo
         self.expert_batch_iter = None
-        super().__init__(obs_space, action_space.shape, capacity, args)
+        buffer_device = torch.device("cuda:0" if args.trans_buffer_cuda else "cpu")
+        super().__init__(obs_space, action_space.shape, capacity, buffer_device, args)
 
     def get_next_expert_batch(self):
         batch = None

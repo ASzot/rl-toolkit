@@ -7,6 +7,7 @@ import random
 from collections import defaultdict
 from typing import Optional
 
+import gym.spaces as spaces
 import numpy as np
 import rlf.rl.utils as rutils
 import torch
@@ -14,9 +15,7 @@ from rlf.storage.base_storage import BaseStorage
 
 
 class TransitionStorage(BaseStorage):
-    """Buffer to store environment transitions."""
-
-    def __init__(self, obs_space, action_shape, capacity, args):
+    def __init__(self, obs_space, action_shape, capacity, storage_device, args):
         super().__init__()
 
         self.capacity = capacity
@@ -25,25 +24,27 @@ class TransitionStorage(BaseStorage):
         self.obs_space = obs_space
         self.action_shape = action_shape
 
-        # the proprioceptive obs is stored as float32, pixels obs as uint8
-        self.ob_keys = rutils.get_ob_shapes(obs_space)
+        if isinstance(obs_space, spaces.Dict):
+            self.ob_keys = {k: space.shape for k, space in obs_space.spaces.items()}
+        else:
+            self.ob_keys = {self.args.policy_ob_key: obs_space.shape}
+
         self.obses = {}
         self.next_obses = {}
         for k, obs_shape in self.ob_keys.items():
-            obs_dtype = np.float32 if len(obs_shape) == 1 else np.uint8
-            ob = np.empty((capacity, *obs_shape), dtype=obs_dtype)
-            next_ob = np.empty((capacity, *obs_shape), dtype=obs_dtype)
-            if k is None:
-                self.obses = ob
-                self.next_obses = next_ob
-            else:
-                self.obses[k] = ob
-                self.next_obses[k] = next_ob
+            obs_dtype = torch.float32 if len(obs_shape) == 1 else torch.uint8
 
-        self.actions = np.empty((capacity, *action_shape), dtype=np.float32)
-        self.rewards = np.empty((capacity, 1), dtype=np.float32)
-        self.masks = np.empty((capacity, 1), dtype=np.float32)
-        self.masks_no_max = np.empty((capacity, 1), dtype=np.float32)
+            self.obses[k] = torch.zeros(
+                capacity, *obs_shape, dtype=obs_dtype, device=storage_device
+            )
+            self.next_obses[k] = torch.zeros(
+                capacity, *obs_shape, dtype=obs_dtype, device=storage_device
+            )
+
+        self.actions = torch.zeros(capacity, *action_shape, device=storage_device)
+        self.rewards = torch.zeros(capacity, 1, device=storage_device)
+        self.masks = torch.zeros(capacity, 1, device=storage_device)
+        self.masks_no_max = torch.zeros(capacity, 1, device=storage_device)
 
         self.idx = 0
         self.last_save = 0
@@ -51,40 +52,13 @@ class TransitionStorage(BaseStorage):
 
         self._modify_reward_fn = None
 
-    def copy_storage(self) -> BaseStorage:
-        new_storage = TransitionStorage(
-            self.obs_space, self.action_shape, self.capacity, self.args
-        )
-        new_storage.actions = np.copy(self.actions)
-        new_storage.obses = rutils.obs_op(self.obses, lambda x: np.copy(x))
-        new_storage.next_obses = rutils.obs_op(self.next_obses, lambda x: np.copy(x))
-        new_storage.rewards = np.copy(self.rewards)
-        new_storage.masks = np.copy(self.masks)
-        new_storage.masks_no_max = np.copy(self.masks_no_max)
-        new_storage.idx = self.idx
-        new_storage.last_save = self.last_save
-        new_storage.full = self.full
-        new_storage._modify_reward_fn = self._modify_reward_fn
-        return new_storage
-
-    def save_storage(self, save_path):
-        with open(save_path, "wb") as f:
-            pickle.dump(self, f)
-        print("Saved storage to ", save_path)
-
-    @staticmethod
-    def load_from_file(load_path):
-        print("Loading storage from ", load_path)
-        with open(load_path, "rb") as f:
-            return pickle.load(f)
-
     def get_generator(
         self,
         from_recent: bool,
         num_samples: Optional[int],
         mini_batch_size: int,
         n_mini_batches: int = -1,
-        **kwargs
+        **kwargs,
     ):
         """To do the same thing as the on policy rollout storage, this does not
         return the next state.
@@ -119,9 +93,13 @@ class TransitionStorage(BaseStorage):
 
             obses, other_obses = self._dict_sel(self.obses, idxs)
             next_obses, other_next_obses = self._dict_sel(self.next_obses, idxs)
-            actions = torch.as_tensor(self.actions[idxs], device=self.device)
-            rewards = torch.as_tensor(self.rewards[idxs], device=self.device)
-            masks = torch.as_tensor(self.masks[idxs], device=self.device)
+            actions = self.actions[idxs]
+            rewards = self.rewards[idxs]
+            masks = self.masks[idxs]
+
+            if len(obses) == 1:
+                obses = next(iter(obses.values()))
+                next_obses = next(iter(next_obses.values()))
 
             yield {
                 "state": obses,
@@ -141,16 +119,20 @@ class TransitionStorage(BaseStorage):
             0, self.capacity if self.full else self.idx, size=batch_size
         )
 
-        actions = torch.as_tensor(self.actions[idxs], device=self.device)
         obses, other_obses = self._dict_sel(self.obses, idxs)
-        next_obses, other_next_obses = self._dict_sel(self.next_obses, idxs)
+        next_obses, other_next_obses = self._dict_sel(self.obses, idxs)
 
-        rewards = torch.as_tensor(self.rewards[idxs], device=self.device)
-        masks = torch.as_tensor(self.masks[idxs], device=self.device)
-        masks_no_max = torch.as_tensor(self.masks_no_max[idxs], device=self.device)
+        actions = self.actions[idxs].to(self.device)
+        rewards = self.rewards[idxs].to(self.device)
+        masks = self.masks[idxs].to(self.device)
+        masks_no_max = self.masks_no_max[idxs].to(self.device)
 
         if self._modify_reward_fn is not None:
             rewards = self._modify_reward_fn(obses, actions, next_obses, masks)
+
+        if len(obses) == 1:
+            obses = next(iter(obses.values()))
+            next_obses = next(iter(next_obses.values()))
 
         return (
             obses,
@@ -166,7 +148,7 @@ class TransitionStorage(BaseStorage):
         hxs = {}
         self.last_seen = {
             "obs": obs,
-            "masks": torch.zeros(batch_size, 1),
+            "masks": torch.zeros(batch_size, 1).to(self.device),
             "hxs": hxs,
         }
 
@@ -180,16 +162,15 @@ class TransitionStorage(BaseStorage):
     def get_masks(self, step):
         return self.last_seen["masks"]
 
-    def _dict_sel(self, obs, idx):
+    def _dict_sel(self, obs, idx: torch.Tensor):
         obs_batch = None
         other_obs_batch = {}
         for k, ob_shape in self.ob_keys.items():
-            if k is None:
-                obs_batch = torch.as_tensor(obs[idx], device=self.device).float()
-            elif k == self.args.policy_ob_key:
-                obs_batch = torch.as_tensor(obs[k][idx], device=self.device)
+            use_obs = obs[k][idx].to(self.device)
+            if k == self.args.policy_ob_key:
+                obs_batch = use_obs
             else:
-                other_obs_batch[k] = torch.as_tensor(obs[k][idx], device=self.device)
+                other_obs_batch[k] = use_obs
         return obs_batch, other_obs_batch
 
     def insert(self, obs, next_obs, reward, done, infos, ac_info):
@@ -202,17 +183,23 @@ class TransitionStorage(BaseStorage):
 
         use_next_obs = {}
         use_obs = {}
+
+        if not isinstance(obs, dict):
+            obs = {self.args.policy_ob_key: obs}
+            next_obs = {self.args.policy_ob_key: next_obs}
+
+        storage_device = self.actions.device
+
         for k in self.ob_keys:
-            if k is None:
-                if isinstance(obs, torch.Tensor):
-                    use_obs = obs.cpu().numpy()
-                if isinstance(next_obs, torch.Tensor):
-                    use_next_obs = next_obs.cpu().numpy()
+            if isinstance(obs[k], torch.Tensor):
+                use_obs[k] = obs[k].to(storage_device)
+                use_next_obs[k] = next_obs[k].to(storage_device)
+            elif isinstance(obs[k], np.ndarray):
+                use_obs[k] = torch.tensor(obs[k]).to(storage_device)
+                use_next_obs[k] = torch.tensor(next_obs[k]).to(storage_device)
             else:
-                if isinstance(obs[k], torch.Tensor):
-                    use_obs[k] = obs[k].cpu().numpy()
-                if isinstance(next_obs[k], torch.Tensor):
-                    use_next_obs[k] = next_obs[k].cpu().numpy()
+                raise ValueError(f"Unrecognized observation data format {type(obs[k])}")
+
         action = ac_info.take_action
 
         def copy_from_to(buffer_start, batch_start, how_many):
@@ -220,32 +207,28 @@ class TransitionStorage(BaseStorage):
             batch_slice = slice(batch_start, batch_start + how_many)
 
             for k, ob_shape in self.ob_keys.items():
-                if k is None:
-                    np.copyto(self.obses[buffer_slice], use_obs[batch_slice])
-                    np.copyto(self.next_obses[buffer_slice], use_next_obs[batch_slice])
-                else:
-                    np.copyto(self.obses[k][buffer_slice], use_obs[k][batch_slice])
-                    np.copyto(
-                        self.next_obses[k][buffer_slice], use_next_obs[k][batch_slice]
-                    )
+                self.obses[k][buffer_slice] = use_obs[k][batch_slice].clone().detach()
+                self.next_obses[k][buffer_slice] = (
+                    use_next_obs[k][batch_slice].clone().detach()
+                )
 
-            np.copyto(self.actions[buffer_slice], action[batch_slice])
-            np.copyto(self.rewards[buffer_slice], reward[batch_slice])
-            np.copyto(self.masks[buffer_slice], done[batch_slice])
-            np.copyto(self.masks_no_max[buffer_slice], bad_masks[batch_slice])
+            self.actions[buffer_slice] = action[batch_slice].clone().detach()
+            self.rewards[buffer_slice] = reward[batch_slice].clone().detach()
+            self.masks[buffer_slice] = masks[batch_slice].clone().detach()
+            self.masks_no_max[buffer_slice] = bad_masks[batch_slice].clone().detach()
 
-        _batch_start = 0
+        batch_start = 0
         obs_len = rutils.get_def_obs(use_obs).shape[0]
         buffer_end = self.idx + obs_len
         if buffer_end > self.capacity:
-            copy_from_to(self.idx, _batch_start, self.capacity - self.idx)
-            _batch_start = self.capacity - self.idx
+            copy_from_to(self.idx, batch_start, self.capacity - self.idx)
+            batch_start = self.capacity - self.idx
             self.idx = 0
             self.full = True
 
-        _how_many = obs_len - _batch_start
-        copy_from_to(self.idx, _batch_start, _how_many)
-        self.idx = (self.idx + _how_many) % self.capacity
+        how_many = obs_len - batch_start
+        copy_from_to(self.idx, batch_start, how_many)
+        self.idx = (self.idx + how_many) % self.capacity
         self.full = self.full or self.idx == 0
 
     def set_modify_reward_fn(self, modify_reward_fn):

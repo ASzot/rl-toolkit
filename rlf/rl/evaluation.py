@@ -67,7 +67,7 @@ def train_eval(
 
     vec_norm = get_vec_normalize(envs)
 
-    _, train_eval_envs = eval_print(
+    return eval_print(
         env_interface,
         args,
         alg_env_settings,
@@ -81,8 +81,6 @@ def train_eval(
         num_eval=num_eval,
         previous_env=envs,
     )
-
-    return train_eval_envs
 
 
 def full_eval(

@@ -13,9 +13,19 @@ import torch.optim as optim
 from rlf.algos.off_policy.actor_critic_updater import ActorCriticUpdater
 from rlf.algos.off_policy.off_policy_base import OffPolicy
 from rlf.args import str2bool
+from rlf.storage.simple_transition_storage import ReplayBuffer
 
 
 class SAC(OffPolicy):
+    def get_storage_buffer(self, policy, envs, args):
+        return ReplayBuffer(
+            policy.obs_space.shape,
+            policy.action_space.shape,
+            args.trans_buffer_size,
+            args.device,
+            args,
+        )
+
     def init(self, policy, args):
         # Need to set up the parameter before we set up the optimizers
         self.log_alpha = torch.tensor(np.log(args.init_temperature)).to(args.device)
@@ -46,24 +56,23 @@ class SAC(OffPolicy):
         )
         opts["actor_opt"] = (
             optim.Adam(
-                self.policy.get_actor_params(), lr=self.args.lr, eps=self.args.eps
+                self.policy.get_actor_params(), lr=self._arg("lr"), eps=self.args.eps
             ),
             self.policy.get_actor_params,
-            self.args.lr,
+            self._arg("lr"),
         )
         opts["critic_opt"] = (
             optim.Adam(
                 self.policy.get_critic_params(),
-                lr=self.args.critic_lr,
+                lr=self._arg("critic_lr"),
                 eps=self.args.eps,
             ),
             self.policy.get_critic_params,
-            self.args.critic_lr,
+            self._arg("critic_lr"),
         )
         return opts
 
     def update_critic(self, state, n_state, action, reward, not_done):
-
         dist = self.policy(n_state, None, None, None)
         # not_done = n_add_info["masks"]
         n_action = dist.rsample()
@@ -84,8 +93,6 @@ class SAC(OffPolicy):
         self._standard_step(critic_loss, "critic_opt")
         return {
             "critic_loss": critic_loss.item(),
-            "Q1": current_Q1.clone().detach().cpu().view(-1),
-            "Q2": current_Q2.clone().detach().cpu().view(-1),
         }
 
     @property
@@ -118,7 +125,7 @@ class SAC(OffPolicy):
             **log_vals,
             "actor_loss": actor_loss.item(),
             "actor_target_entropy": self.target_entropy,
-            "actor_entropy": -log_prob.detach().clone().mean(),
+            "actor_entropy": -log_prob.detach().mean().item(),
         }
 
     def update(self, storage):
@@ -128,32 +135,43 @@ class SAC(OffPolicy):
         if self.update_i <= self.args.n_rnd_steps:
             return {}
 
-        state, n_state, action, reward, add_info, n_add_info = self._sample_transitions(
-            storage
-        )
-        not_done = n_add_info["mask"]
+        final_log = defaultdict(list)
 
-        all_log = {}
+        for _ in range(self.args.sac_update_epochs):
+            all_log = {}
+            batch = self._sample_transitions(storage)
 
-        critic_log = self.update_critic(state, n_state, action, reward, not_done)
-        all_log.update(critic_log)
+            critic_log = self.update_critic(
+                batch["state"],
+                batch["next_state"],
+                batch["action"],
+                batch["reward"],
+                batch["mask"],
+            )
+            all_log.update(critic_log)
 
-        if self.update_i % self.args.actor_update_freq == 0:
-            actor_log = self.update_actor_and_alpha(state)
-            all_log.update(actor_log)
+            if self.update_i % self.args.actor_update_freq == 0:
+                actor_log = self.update_actor_and_alpha(batch["state"])
+                all_log.update(actor_log)
 
-        if self.update_i % self.args.critic_target_update_freq == 0:
-            autils.soft_update(self.policy.critic, self.target_critic, self.args.tau)
+            if self.update_i % self.args.critic_target_update_freq == 0:
+                autils.soft_update(
+                    self.policy.critic, self.target_critic, self.args.tau
+                )
 
-        return all_log
+            for k in all_log:
+                final_log[k].append(all_log[k])
+
+        return {k: np.mean(v, axis=0) for k, v in final_log.items()}
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
         parser.add_argument("--actor-update-freq", type=int, default=1)
         parser.add_argument("--critic-target-update-freq", type=int, default=2)
+        parser.add_argument("--sac-update-epochs", type=int, default=1)
 
-        parser.add_argument("--critic-lr", type=float, default=1e-4)
-        parser.add_argument("--alpha-lr", type=float, default=1e-4)
+        parser.add_argument(f"--{self.arg_prefix}critic-lr", type=float, default=1e-4)
+        parser.add_argument(f"--{self.arg_prefix}alpha-lr", type=float, default=1e-4)
 
         parser.add_argument("--init-temperature", type=float, default=0.1)
         parser.add_argument("--learnable-temp", type=str2bool, default=True)
