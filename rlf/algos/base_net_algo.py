@@ -2,6 +2,7 @@ from argparse import Namespace
 from typing import Any, Callable, Dict, Union
 
 import rlf.algos.utils as autils
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from rlf.algos.base_algo import BaseAlgo
@@ -12,7 +13,10 @@ class BaseNetAlgo(BaseAlgo):
     def __init__(self):
         super().__init__()
         self.arg_prefix = ""
-        self._override_standard_step_fn = None
+        # Takes as input the loss and the optimizer key.
+        self._override_standard_step_fn: Dict[
+            str, Callable[[torch.Tensor, str], None]
+        ] = {}
 
     def _arg(self, k):
         prefix_str = self.arg_prefix.replace("-", "_")
@@ -81,22 +85,24 @@ class BaseNetAlgo(BaseAlgo):
         if self._arg("max_grad_norm") > 0:
             nn.utils.clip_grad_norm_(params, self._arg("max_grad_norm"))
 
-    def override_standard_step(self, standard_step_fn: Callable):
+    def override_standard_step(
+        self, standard_step_fn: Callable, for_opt_key: str = "actor_opt"
+    ):
         """
         Used to implement custom logic in the optimizer step rather than
         calling the default optimizer. Useful if you want to use a dynamically
         computed optimizer such as that needed in meta-learning.
         :param standard_step_fn: A function of the same signature as `self._standard_step`.
         """
-        self._override_standard_step_fn = standard_step_fn
+        self._override_standard_step_fn[for_opt_key] = standard_step_fn
 
     def _standard_step(self, loss, optimizer_key="actor_opt"):
         """
         Helper function to compute gradients, clip gradients and then take
         optimization step.
         """
-        if self._override_standard_step_fn is not None:
-            return self._override_standard_step_fn(loss, optimizer_key)
+        if optimizer_key in self._override_standard_step_fn:
+            return self._override_standard_step_fn[optimizer_key](loss, optimizer_key)
 
         opt, get_params_fn, _ = self._optimizers[optimizer_key]
         opt.zero_grad()

@@ -105,7 +105,7 @@ def soft_update(model, model_target, tau):
     """
     Copy data from `model` to `model_target` with a decay specified by tau. A
     tau value closer to 0 means less of the model will be copied to the target
-    model.
+    model. A tau of 1 is the same as `hard_update`.
     """
     for param, target_param in zip(model.parameters(), model_target.parameters()):
         # target_param.detach()

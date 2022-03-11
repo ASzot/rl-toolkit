@@ -69,11 +69,9 @@ class PointMassEnv(VecEnv):
             self._is_eval = False
 
         if self._is_eval:
-            regions = PointMassEnv.get_regions(0.0, self._params.start_state_noise)
+            regions = self.get_regions(0.0, self._params.start_state_noise)
         else:
-            regions = PointMassEnv.get_regions(
-                np.pi / 4, self._params.start_state_noise
-            )
+            regions = self.get_regions(np.pi / 4, self._params.start_state_noise)
 
         if self._params.start_state_noise != 0:
             self._start_distributions = Uniform(regions[:, 0], regions[:, 1])
@@ -93,6 +91,7 @@ class PointMassEnv(VecEnv):
         pass
 
     def forward(self, cur_pos, action):
+        action = action.to(self._device)
         action = torch.clamp(action, -1.0, 1.0)
         new_pos = cur_pos + (action * self._params.dt)
 
@@ -129,13 +128,14 @@ class PointMassEnv(VecEnv):
 
         return (self._get_obs(), reward, all_is_done, all_info)
 
-    @staticmethod
-    def get_regions(offset, spread):
+    def get_regions(self, offset, spread):
         inc = np.pi / 2
 
         centers = [offset + i * inc for i in range(4)]
 
-        return torch.tensor([[center - spread, center + spread] for center in centers])
+        return torch.tensor(
+            [[center - spread, center + spread] for center in centers]
+        ).to(self._device)
 
     def _get_dist_idx(self, batch_size):
         if self._is_eval:
@@ -147,7 +147,7 @@ class PointMassEnv(VecEnv):
                 return torch.tensor([self._params.start_idx]).repeat(batch_size)
 
     def _sample_start(self, batch_size, offset_start):
-        idx = self._get_dist_idx(batch_size)
+        idx = self._get_dist_idx(batch_size).to(self._device)
         samples = self._start_distributions.sample(idx.shape)
         ang = samples.gather(1, idx.view(-1, 1)).view(-1)
 
@@ -158,7 +158,7 @@ class PointMassEnv(VecEnv):
                     self._params.radius * torch.sin(ang),
                 ],
                 dim=-1,
-            )
+            ).to(self._device)
             + offset_start
         )
 

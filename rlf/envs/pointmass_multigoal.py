@@ -48,18 +48,27 @@ class PointMassMultiGoalEnv(PointMassEnv):
         )
 
     def _reset_idx(self, idx):
-        self.cur_pos[idx] = self._sample_start(1, torch.zeros(2))[0]
+        self.cur_pos[idx] = self._sample_start(1, torch.zeros(2, device=self._device))[
+            0
+        ]
         self._ep_step[idx] = 0
         self._goal[idx] = torch.tensor([0.0, 0.0])
         self._finished_stage_1[idx] = 0.0
         self._ep_rewards[idx] = []
 
     def reset(self):
-        self._finished_stage_1 = torch.zeros(self._batch_size)
+        """
+        Only called once in multiprocessing code.
+        """
+        self._finished_stage_1 = torch.zeros(self._batch_size).to(self._device)
         super().reset()
         self._ep_step = [0 for _ in range(self._batch_size)]
-        self._goal = torch.tensor([[0.0, 0.0]]).repeat(self._batch_size, 1)
-        self._stage2_goal = torch.tensor([[-1.0, -1.0]]).repeat(self._batch_size, 1)
+        self._goal = (
+            torch.tensor([[0.0, 0.0]]).repeat(self._batch_size, 1).to(self._device)
+        )
+        self._stage2_goal = (
+            torch.tensor([[-1.0, -1.0]]).repeat(self._batch_size, 1).to(self._device)
+        )
         self._ep_rewards = {}
 
         for i in range(self._batch_size):

@@ -1,14 +1,17 @@
 import rlf.rl.utils as rutils
 import torch
 from rlf.algos.base_net_algo import BaseNetAlgo
+from rlf.args import str2bool
 from rlf.storage.transition_storage import TransitionStorage
 
 
 def create_storage_buff(obs_space, action_space, buff_size, args):
+    buffer_device = torch.device("cuda:0" if args.trans_buffer_cuda else "cpu")
     return TransitionStorage(
         obs_space,
         action_space.shape,
         buff_size,
+        buffer_device,
         args,
     )
 
@@ -24,7 +27,10 @@ class OffPolicy(BaseNetAlgo):
 
     def get_storage_buffer(self, policy, envs, args):
         return self.create_storage_buff_fn(
-            policy.obs_space, policy.action_space, args.trans_buffer_size, args
+            policy.obs_space,
+            policy.action_space,
+            args.trans_buffer_size,
+            args,
         )
 
     def _sample_transitions(self, storage):
@@ -45,6 +51,7 @@ class OffPolicy(BaseNetAlgo):
         #########################################
         # New args
         parser.add_argument("--trans-buffer-size", type=float, default=10000)
+        parser.add_argument("--trans-buffer-cuda", type=str2bool, default=False)
         parser.add_argument("--batch-size", type=int, default=128)
 
         #########################################
