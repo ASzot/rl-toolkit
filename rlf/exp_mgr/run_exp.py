@@ -280,7 +280,7 @@ def as_list(x, max_num):
     return x
 
 
-def get_cmd_run_str(cmd, args, cd, cmd_idx, num_cmds):
+def get_cmd_run_str(cmd, args, cd, cmd_idx, num_cmds, slurm_add):
     env_vars = " ".join(config_mgr.get_prop("add_env_vars", []))
     if len(env_vars) != 0:
         env_vars += " "
@@ -297,7 +297,10 @@ def get_cmd_run_str(cmd, args, cd, cmd_idx, num_cmds):
     else:
         # Make command into a SLURM command
         ident = str(uuid.uuid4())[:8]
+        if slurm_add[cmd_idx] is not None:
+            ident = slurm_add[cmd_idx] + ident
         log_file = osp.join(RUNS_DIR, ident) + ".log"
+
         if not args.slurm_no_batch:
             run_file, run_name = generate_slurm_batch_file(
                 log_file,
@@ -469,6 +472,8 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         print("IN DEBUG MODE")
         cmds = [cmds[args.debug]]
 
+    slurm_add = [None] * len(cmds)
+
     def add_hab_info(cmd):
         d = datetime.datetime.today()
         date_id = "%i%i" % (d.month, d.day)
@@ -483,11 +488,12 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         log_file = osp.join("data/logs", run_id + ".log")
 
         cmd += f" WB.ENTITY {config_mgr.get_prop('wb_entity')} WB.RUN_NAME {run_id} WB.PROJECT_NAME {config_mgr.get_prop('proj_name')} CHECKPOINT_FOLDER {ckpt_dir} VIDEO_DIR {vid_dir} LOG_FILE {log_file}"
-        return cmd
+        return cmd, run_id
 
     cmds = [add_changes_to_cmd(cmd, args) for cmd in cmds]
     if args.hab:
-        cmds = [add_hab_info(cmd) for cmd in cmds]
+        cmds, run_ids = list(zip(*[add_hab_info(cmd) for cmd in cmds]))
+        slurm_add = [f"{x}_" for x in run_ids]
     DELIM = " ; "
 
     cd = as_list(cd, len(cmds))
@@ -495,18 +501,18 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
     if sess_id == -1 and sess_name is None:
         if args.st is not None:
             for cmd_idx, cmd in enumerate(cmds):
-                run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds))
+                run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds), slurm_add)
                 log(f"Running {run_cmd}", args)
                 os.system(run_cmd)
         elif args.run_single:
-            cmds = [get_cmd_run_str(x, args, cd, 0, 1) for x in cmds]
+            cmds = [get_cmd_run_str(x, args, cd, 0, 1, slurm_add) for x in cmds]
             exec_cmd = DELIM.join(cmds)
 
             log(f"Running {exec_cmd}", args)
             os.system(exec_cmd)
 
         elif len(cmds) == 1:
-            exec_cmd = get_cmd_run_str(cmds[0], args, cd, 0, len(cmds))
+            exec_cmd = get_cmd_run_str(cmds[0], args, cd, 0, len(cmds), slurm_add)
             if cd[0] != "-1":
                 exec_cmd = "CUDA_VISIBLE_DEVICES=" + cd[0] + " " + exec_cmd
             log(f"Running {exec_cmd}", args)
@@ -524,7 +530,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
 
             log("running full command %s\n" % cmd, args)
 
-            run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds))
+            run_cmd = get_cmd_run_str(cmd, args, cd, cmd_idx, len(cmds), slurm_add)
 
             # Send the keys to run the command
             conda_env = config_mgr.get_prop("conda_env")
