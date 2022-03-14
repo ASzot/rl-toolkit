@@ -1,5 +1,5 @@
 import contextlib
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -148,7 +148,10 @@ class Runner:
 
     def _eval_policy(
         self, policy, total_num_steps, args, num_eval=None
-    ) -> Optional[VecEnvWrapper]:
+    ) -> Tuple[Optional[VecEnvWrapper], Dict[str, float]]:
+        """
+        Returns the environment and the evaluation result.
+        """
         if num_eval is None:
             num_eval = args.num_eval
         return train_eval(
@@ -188,7 +191,10 @@ class Runner:
 
             self.checkpointer.flush(num_updates=update_iter)
 
-    def eval(self, update_iter, num_eval=None, force_eval=False):
+    def eval(self, update_iter, num_eval=None, force_eval=False) -> Dict[str, float]:
+        """
+        Returns the evaluation result.
+        """
         if (
             (self.episode_count > 0)
             or (self.args.num_steps <= 1)
