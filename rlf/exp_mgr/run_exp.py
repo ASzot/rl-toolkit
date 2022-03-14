@@ -79,6 +79,7 @@ def get_arg_parser():
 
     # HABITAT ARGUMENTS
     parser.add_argument("--hab", action="store_true")
+    parser.add_argument("--hab-eval", action="store_true")
 
     # SLURM OPTIONS
     parser.add_argument("--comment", type=str, default=None)
@@ -490,9 +491,36 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         cmd += f" WB.ENTITY {config_mgr.get_prop('wb_entity')} WB.RUN_NAME {run_id} WB.PROJECT_NAME {config_mgr.get_prop('proj_name')} CHECKPOINT_FOLDER {ckpt_dir} VIDEO_DIR {vid_dir} LOG_FILE {log_file}"
         return cmd, run_id
 
+    def add_hab_eval_info(cmd, run_id):
+        base_dir = config_mgr.get_prop("base_data_dir")
+        eval_args = config_mgr.get_prop("eval_args")
+        vid_dir = osp.join(base_dir, "vids", run_id + "_eval")
+        ckpt_dir = osp.join(base_dir, "checkpoints", run_id + "_eval")
+        # Write the log files to the current directory so it is a bit faster.
+        log_file = osp.join("data/logs", run_id + "_eval.log")
+        eval_ckpt_dir = osp.join(base_dir, "checkpoints", run_id)
+
+        os.makedirs(eval_ckpt_dir, exist_ok=True)
+
+        new_cmd = (
+            cmd
+            + f" WB.ENTITY {config_mgr.get_prop('wb_entity')} WB.RUN_NAME eval_{run_id} WB.PROJECT_NAME {config_mgr.get_prop('proj_name')} CHECKPOINT_FOLDER {ckpt_dir} VIDEO_DIR {vid_dir} LOG_FILE {log_file} EVAL_CKPT_PATH_DIR {eval_ckpt_dir} {eval_args}"
+        )
+        new_cmd = new_cmd.replace("--run-type train", "--run-type eval")
+        return new_cmd
+
     cmds = [add_changes_to_cmd(cmd, args) for cmd in cmds]
     if args.hab:
-        cmds, run_ids = list(zip(*[add_hab_info(cmd) for cmd in cmds]))
+        new_cmds, run_ids = list(zip(*[add_hab_info(cmd) for cmd in cmds]))
+        if args.hab_eval:
+            new_cmds = list(new_cmds)
+            run_ids = list(run_ids)
+            new_cmds.extend(
+                [add_hab_eval_info(cmd, run_id) for cmd, run_id in zip(cmds, run_ids)]
+            )
+            run_ids.extend(["E_" + run_id for run_id in run_ids])
+        cmds = new_cmds
+
         slurm_add = [f"{x}_" for x in run_ids]
     DELIM = " ; "
 
