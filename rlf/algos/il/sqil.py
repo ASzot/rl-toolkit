@@ -2,11 +2,11 @@ import torch
 from rlf.algos.il.base_il import BaseILAlgo
 from rlf.algos.il.base_irl import BaseIRLAlgo
 from rlf.algos.off_policy.sac import SAC
-from rlf.storage.transition_storage import TransitionStorage
+from rlf.storage.transition_storage import ReplayBuffer
 
 
-class SqilTransitionStorage(TransitionStorage):
-    def __init__(self, obs_space, action_space, capacity, args, il_algo):
+class SqilTransitionStorage(ReplayBuffer):
+    def __init__(self, obs_shape, action_shape, capacity, device, args, il_algo):
         if args.traj_batch_size != args.batch_size:
             raise ValueError(
                 """
@@ -15,8 +15,7 @@ class SqilTransitionStorage(TransitionStorage):
             )
         self.il_algo = il_algo
         self.expert_batch_iter = None
-        buffer_device = torch.device("cuda:0" if args.trans_buffer_cuda else "cpu")
-        super().__init__(obs_space, action_space.shape, capacity, buffer_device, args)
+        super().__init__(obs_shape, action_shape, capacity, device, args)
 
     def get_next_expert_batch(self):
         batch = None
@@ -87,9 +86,10 @@ class SQIL(SAC):
 
     def get_storage_buffer(self, policy, envs, args):
         return SqilTransitionStorage(
-            policy.obs_space,
-            policy.action_space,
+            policy.obs_space.shape,
+            policy.action_space.shape,
             args.trans_buffer_size,
+            args.device,
             args,
             self.il_algo,
         )

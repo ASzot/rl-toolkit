@@ -5,7 +5,7 @@ Code base I use to help with reinforcement learning (RL) research projects.
 ## Running
 Run using
 ```
-python examples/train.py --alg ALGORITHM_NAME --env-name Pendulum-v1
+python -m rlf.examples.train --alg ALGORITHM_NAME --env-name Pendulum-v1
 ```
 Supported algorithms (to replace `ALGORITHM_NAME` in the above command) 
 * Imitation learning (You must also specify the `--traj-load-path` argument for these commands to load the demonstrations. See ["how to specify demonstrations for imitation learning?"](https://github.com/ASzot/rl-toolkit#how-to-specify-demonstrations-for-imitation-learning) for more information.

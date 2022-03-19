@@ -1,8 +1,9 @@
-from rlf.algos.base_net_algo import BaseNetAlgo
-from rlf.storage.transition_storage import TransitionStorage
-from rlf.storage.rollout_storage import RolloutStorage
-from rlf.storage.nested_storage import NestedStorage
 import rlf.algos.utils as autils
+from rlf.algos.base_net_algo import BaseNetAlgo
+from rlf.storage.nested_storage import NestedStorage
+from rlf.storage.rollout_storage import RolloutStorage
+from rlf.storage.transition_storage import ReplayBuffer
+
 
 class OptionCritic(BaseNetAlgo):
     def init(self, policy, args):
@@ -16,8 +17,13 @@ class OptionCritic(BaseNetAlgo):
                 }
         return NestedStorage(
                 {
-                    'replay_buffer': TransitionStorage(args.trans_buffer_size, args,
-                        hidden_states=dims),
+                    'replay_buffer': ReplayBuffer(
+                        policy.obs_space.shape,
+                        policy.action_space.shape,
+                        args.trans_buffer_size,
+                        args.device,
+                        args,
+                    )
                     'on_policy': RolloutStorage(args.num_steps,
                         args.num_processes, envs.observation_space,
                         envs.action_space, args, hidden_states=dims)

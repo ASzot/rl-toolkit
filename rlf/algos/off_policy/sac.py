@@ -13,19 +13,9 @@ import torch.optim as optim
 from rlf.algos.off_policy.actor_critic_updater import ActorCriticUpdater
 from rlf.algos.off_policy.off_policy_base import OffPolicy
 from rlf.args import str2bool
-from rlf.storage.simple_transition_storage import ReplayBuffer
 
 
 class SAC(OffPolicy):
-    def get_storage_buffer(self, policy, envs, args):
-        return ReplayBuffer(
-            policy.obs_space.shape,
-            policy.action_space.shape,
-            args.trans_buffer_size,
-            args.device,
-            args,
-        )
-
     def init(self, policy, args):
         # Need to set up the parameter before we set up the optimizers
         self.log_alpha = torch.tensor(np.log(args.init_temperature)).to(args.device)
@@ -135,6 +125,9 @@ class SAC(OffPolicy):
         if self.update_i <= self.args.n_rnd_steps:
             return {}
 
+        if self.update_i % self.args.sac_update_freq != 0:
+            return {}
+
         final_log = defaultdict(list)
 
         for _ in range(self.args.sac_update_epochs):
@@ -150,9 +143,8 @@ class SAC(OffPolicy):
             )
             all_log.update(critic_log)
 
-            if self.update_i % self.args.actor_update_freq == 0:
-                actor_log = self.update_actor_and_alpha(batch["state"])
-                all_log.update(actor_log)
+            actor_log = self.update_actor_and_alpha(batch["state"])
+            all_log.update(actor_log)
 
             if self.update_i % self.args.critic_target_update_freq == 0:
                 autils.soft_update(
@@ -166,7 +158,7 @@ class SAC(OffPolicy):
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
-        parser.add_argument("--actor-update-freq", type=int, default=1)
+        parser.add_argument("--sac-update-freq", type=int, default=1)
         parser.add_argument("--critic-target-update-freq", type=int, default=2)
         parser.add_argument("--sac-update-epochs", type=int, default=1)
 

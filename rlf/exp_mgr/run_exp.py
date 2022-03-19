@@ -679,7 +679,16 @@ def full_execute_command_file():
     args, rest = parser.parse_known_args()
     config_mgr.init(args.cfg)
 
-    cmd_path = osp.join(config_mgr.get_prop("cmds_loc"), args.cmd)
+    if "rlf." in args.cmd:
+        args.cmd = args.cmd[len("rlf.") :].replace(".", "/")
+        rlf_dir = osp.dirname(osp.dirname(osp.realpath(__file__)))
+        config_mgr.set_prop("cmds_loc", rlf_dir)
+
+        cmd_path = osp.join(config_mgr.get_prop("cmds_loc"), args.cmd)
+        print("Executing ", cmd_path)
+    else:
+        cmd_path = osp.join(config_mgr.get_prop("cmds_loc"), args.cmd)
+
     execute_command_file(
         cmd_path, rest, args.cd, args.sess_name, args.sess_id, args.seed, args
     )

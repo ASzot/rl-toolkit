@@ -82,6 +82,8 @@ def run_policy(run_settings, runner=None) -> RunResult:
             eval_result = runner.eval(
                 j + 1, num_eval=args.final_num_eval, force_eval=True
             )
+        else:
+            eval_result = None
 
         runner.close()
         # WB prefix of the run so we can later fetch the data.
