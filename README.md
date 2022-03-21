@@ -25,7 +25,7 @@ To see the list of all possible command line arguments add `-v`. For example: `p
 ## How to use new environments?
 * Specify the name of your algorithm using `--env-name`.
 * If they are registered through `gym.envs.registration` it will work automatically through `gym.make`.
-* See [this page](https://github.com/ASzot/rl-toolkit/tree/master/rlf/envs#readme) for information about more configurable environment creation.
+* See [this page](https://github.com/ASzot/rl-toolkit/tree/master/rlf/envs#readme) for information about specifying custom command line arguments for environments.
 
 ## How to specify demonstrations for imitation learning?
 See [this comment](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/il/il_dataset.py#L26) for the demonstration dataset specification. Then load in the demonstration dataset via the `--traj-load-path` argument.

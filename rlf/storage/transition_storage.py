@@ -72,12 +72,12 @@ class ReplayBuffer(BaseStorage):
             "masks": masks,
             "hxs": ac_info.hxs,
         }
-        np.copyto(self.obses[self.idx], obs[0])
-        np.copyto(self.actions[self.idx], action[0])
-        np.copyto(self.rewards[self.idx], reward[0])
-        np.copyto(self.next_obses[self.idx], next_obs[0])
-        np.copyto(self.not_dones[self.idx], masks[0])
-        np.copyto(self.not_dones_no_max[self.idx], bad_masks[0])
+        np.copyto(self.obses[self.idx], obs[0].cpu().numpy())
+        np.copyto(self.actions[self.idx], action[0].cpu().numpy())
+        np.copyto(self.rewards[self.idx], reward[0].cpu().numpy())
+        np.copyto(self.next_obses[self.idx], next_obs[0].cpu().numpy())
+        np.copyto(self.not_dones[self.idx], masks[0].cpu().numpy())
+        np.copyto(self.not_dones_no_max[self.idx], bad_masks[0].cpu().numpy())
 
         for i, inf in enumerate(infos):
             for k in self.get_extract_info_keys():
@@ -86,7 +86,7 @@ class ReplayBuffer(BaseStorage):
                         assign_val = inf[k].cpu().numpy()
                     else:
                         assign_val = inf[k]
-                    np.copyto(self.add_data[k][self.idx], assign_val)
+                    np.copyto(self.add_data[k][self.idx], assign_val.cpu().numpy())
 
         self.idx = (self.idx + 1) % self.capacity
         self.full = self.full or self.idx == 0

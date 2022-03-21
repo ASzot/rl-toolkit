@@ -78,7 +78,7 @@ class GailDiscrim(BaseIRLAlgo):
         super().init(policy, args)
         self.action_space = self.policy.action_space
 
-        self.discrim_net: nn.Module = self._create_discrim()
+        self.discrim_net = self._create_discrim()
 
         if self.args.use_spectral_norm:
             for name, module in self.discrim_net.named_modules():
@@ -305,7 +305,7 @@ class GailDiscrim(BaseIRLAlgo):
 
         #########################################
         # New args
-        parser.add_argument("--action-input", type=str2bool, default=False)
+        parser.add_argument("--action-input", type=str2bool, default=True)
         parser.add_argument("--use-spectral-norm", type=str2bool, default=False)
         parser.add_argument("--gail-reward-norm", type=str2bool, default=False)
         parser.add_argument("--gail-state-norm", type=str2bool, default=True)
