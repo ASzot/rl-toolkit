@@ -485,10 +485,15 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         base_dir = config_mgr.get_prop("base_data_dir")
         vid_dir = osp.join(base_dir, "vids", run_id)
         ckpt_dir = osp.join(base_dir, "checkpoints", run_id)
+        tb_dir = osp.join(base_dir, "tb", run_id)
         # Write the log files to the current directory so it is a bit faster.
         log_file = osp.join("data/logs", run_id + ".log")
 
-        cmd += f" WB.ENTITY {config_mgr.get_prop('wb_entity')} WB.RUN_NAME {run_id} WB.PROJECT_NAME {config_mgr.get_prop('proj_name')} CHECKPOINT_FOLDER {ckpt_dir} VIDEO_DIR {vid_dir} LOG_FILE {log_file}"
+        os.makedirs(vid_dir, exist_ok=True)
+        os.makedirs(ckpt_dir, exist_ok=True)
+        os.makedirs(tb_dir, exist_ok=True)
+
+        cmd += f" WB.ENTITY {config_mgr.get_prop('wb_entity')} WB.RUN_NAME {run_id} WB.PROJECT_NAME {config_mgr.get_prop('proj_name')} CHECKPOINT_FOLDER {ckpt_dir} VIDEO_DIR {vid_dir} LOG_FILE {log_file} TENSORBOARD_DIR {tb_dir}"
         return cmd, run_id
 
     def add_hab_eval_info(cmd, run_id):
