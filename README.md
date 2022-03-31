@@ -5,7 +5,7 @@ Code base I use to help with reinforcement learning (RL) research projects.
 ## Running
 Run using
 ```
-python examples/train.py --alg ALGORITHM_NAME --env-name Pendulum-v1
+python -m rlf.examples.train --alg ALGORITHM_NAME --env-name Pendulum-v1
 ```
 Supported algorithms (to replace `ALGORITHM_NAME` in the above command) 
 * Imitation learning (You must also specify the `--traj-load-path` argument for these commands to load the demonstrations. See ["how to specify demonstrations for imitation learning?"](https://github.com/ASzot/rl-toolkit#how-to-specify-demonstrations-for-imitation-learning) for more information.
@@ -25,7 +25,7 @@ To see the list of all possible command line arguments add `-v`. For example: `p
 ## How to use new environments?
 * Specify the name of your algorithm using `--env-name`.
 * If they are registered through `gym.envs.registration` it will work automatically through `gym.make`.
-* See [this page](https://github.com/ASzot/rl-toolkit/tree/master/rlf/envs#readme) for information about more configurable environment creation.
+* See [this page](https://github.com/ASzot/rl-toolkit/tree/master/rlf/envs#readme) for information about specifying custom command line arguments for environments.
 
 ## How to specify demonstrations for imitation learning?
 See [this comment](https://github.com/ASzot/rl-toolkit/blob/1edcb1ed12abbf2c8691a1bf8bba56294d1f4c31/rlf/il/il_dataset.py#L26) for the demonstration dataset specification. Then load in the demonstration dataset via the `--traj-load-path` argument.

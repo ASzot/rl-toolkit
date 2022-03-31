@@ -1,6 +1,6 @@
 # Env Interfaces
 
-How to setup a new environment interface.
+How to setup a new environment interface that registers custom command line arguments and special initialization logic (such as wrappers or passing arguments to the environment object).
 ```
 from rlf.envs.env_interface import EnvInterface, register_env_interface
 
@@ -25,5 +25,6 @@ register_env_interface("YourEnvName-v0", NewEnvInterface)
 ```
 
 # Added Envs
-List of supported environments:
-* `RltPointMassEnvSpawnRange-v0`:
+List of custom included environments:
+* `RltPointMass-v0`:
+* `MultiGoalRltPointMass-v0`:

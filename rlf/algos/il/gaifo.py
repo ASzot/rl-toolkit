@@ -12,7 +12,7 @@ from rlf.algos.nested_algo import NestedAlgo
 from rlf.algos.on_policy.ppo import PPO
 from rlf.il.transition_dataset import TransitionDataset
 from rlf.rl.model import ConcatLayer
-from rlf.storage import RolloutStorage, TransitionStorage
+from rlf.storage import ReplayBuffer, RolloutStorage
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 
@@ -124,7 +124,7 @@ class GaifoDiscrim(GailDiscrim):
                 "next_state": obs[1:].view(-1, *ob_shape),
                 "mask": storage.masks[:-1].view(-1, 1),
             }
-        elif isinstance(storage, TransitionStorage):
+        elif isinstance(storage, ReplayBuffer):
             raise NotImplementedError("GAIfO+SAC not yet implemented")
         else:
             raise ValueError(f"Unrecognized storage {storage}")

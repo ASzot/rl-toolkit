@@ -2,16 +2,15 @@ import rlf.rl.utils as rutils
 import torch
 from rlf.algos.base_net_algo import BaseNetAlgo
 from rlf.args import str2bool
-from rlf.storage.transition_storage import TransitionStorage
+from rlf.storage.transition_storage import ReplayBuffer
 
 
 def create_storage_buff(obs_space, action_space, buff_size, args):
-    buffer_device = torch.device("cuda:0" if args.trans_buffer_cuda else "cpu")
-    return TransitionStorage(
-        obs_space,
+    return ReplayBuffer(
+        obs_space.shape,
         action_space.shape,
-        buff_size,
-        buffer_device,
+        args.trans_buffer_size,
+        args.device,
         args,
     )
 
