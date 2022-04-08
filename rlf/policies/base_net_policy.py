@@ -87,6 +87,11 @@ class BaseNetPolicy(nn.Module, BasePolicy):
                 """,
         )
         parser.add_argument(
+            "--policy-hidden-depth",
+            default=2,
+            type=int,
+        )
+        parser.add_argument(
             "--load-policy",
             type=str2bool,
             default=True,

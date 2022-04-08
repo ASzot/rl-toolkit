@@ -75,56 +75,6 @@ class DiagGaussian(nn.Module):
         return FixedNormal(action_mean, action_logstd.exp())
 
 
-class DistWrapper(torch.distributions.distribution.Distribution):
-    def __init__(self, disc, cont):
-        super().__init__()
-        self.disc = disc
-        self.cont = cont
-        self.args = args
-        self.cont_entropy_coef = args.cont_entropy_coef
-
-    def mode(self):
-        cont_sample = self.cont.mode().float()
-        return torch.cat([self.disc.mode().float(), cont_sample], dim=-1)
-
-    def sample(self):
-        cont_sample = self.cont.sample().float()
-        return torch.cat([self.disc.sample().float(), cont_sample], dim=-1)
-
-    def log_probs(self, x):
-        cont_prob = self.cont.log_probs(x[:, 1:]).float()
-
-        log_probs = torch.cat(
-            [self.disc.log_probs(x[:, :1]).float(), cont_prob], dim=-1
-        )
-        return log_probs.sum(-1).unsqueeze(-1)
-
-    def __str__(self):
-        return "Cont: %s, Disc: %s" % (self.cont, self.disc)
-
-    def entropy(self):
-        disc_ent = self.disc.entropy().float()
-        cont_ent = self.cont.entropy().float()
-        if len(disc_ent.shape) == 1:
-            disc_ent = disc_ent.unsqueeze(-1)
-            cont_ent = cont_ent.unsqueeze(-1)
-        entropy = torch.cat([disc_ent, self.cont_entropy_coef * cont_ent], dim=-1)
-        return entropy.sum(-1).unsqueeze(-1)
-
-
-class MixedDist(nn.Module):
-    def __init__(self, disc, cont):
-        super().__init__()
-        self.cont = cont
-        self.disc = disc
-        self.args = args
-
-    def forward(self, x):
-        cont_out = self.cont(x)
-        disc_out = self.disc(x)
-        return DistWrapper(disc_out, cont_out, args=self.args)
-
-
 class TanhTransform(pyd.transforms.Transform):
     """
     Code from https://github.com/denisyarats/pytorch_sac.
