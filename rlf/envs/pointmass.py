@@ -28,6 +28,7 @@ class PointMassParams:
     reward_dist_pen: float = 1 / 10.0
     start_idx: int = -1
     radius: float = np.sqrt(2)
+    eval_offset: float = 0.0
 
 
 class SingleSampler:
@@ -69,7 +70,9 @@ class PointMassEnv(VecEnv):
             self._is_eval = False
 
         if self._is_eval:
-            regions = self.get_regions(0.0, self._params.start_state_noise)
+            regions = self.get_regions(
+                self._params.eval_offset, self._params.start_state_noise
+            )
         else:
             regions = self.get_regions(np.pi / 4, self._params.start_state_noise)
 
