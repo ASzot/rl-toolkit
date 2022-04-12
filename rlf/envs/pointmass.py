@@ -107,18 +107,18 @@ class PointMassEnv(VecEnv):
         self._ep_step += 1
 
         is_done = self._ep_step >= self._params.ep_horizon
+        reward = self._get_reward()
+        self._ep_rewards.append(reward)
+
+        all_is_done = [is_done for _ in range(self._batch_size)]
         dist_to_goal = torch.linalg.norm(
             self._goal - self.cur_pos, dim=-1, keepdims=True
         )
 
-        reward = -self._params.reward_dist_pen * dist_to_goal
-        self._ep_rewards.append(reward)
-
-        all_is_done = [is_done for _ in range(self._batch_size)]
-
         all_info = [
             {"ep_dist_to_goal": dist_to_goal[i].item()} for i in range(self._batch_size)
         ]
+        all_info = self._add_to_info(all_info)
 
         if is_done:
             final_obs = self._get_obs()
@@ -130,6 +130,16 @@ class PointMassEnv(VecEnv):
             self.reset()
 
         return (self._get_obs(), reward, all_is_done, all_info)
+
+    def _add_to_info(self, all_info):
+        return all_info
+
+    def _get_reward(self):
+        dist_to_goal = torch.linalg.norm(
+            self._goal - self.cur_pos, dim=-1, keepdims=True
+        )
+
+        return -self._params.reward_dist_pen * dist_to_goal
 
     def get_regions(self, offset, spread):
         inc = np.pi / 2
