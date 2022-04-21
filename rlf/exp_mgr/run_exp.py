@@ -451,7 +451,7 @@ def execute_command_file(cmd_path, add_args_str, cd, sess_name, sess_id, seed, a
         cmds = [transform_prefix(cmd, common_id) for cmd in cmds]
 
     if args.pt_proc != -1:
-        pt_dist_str = f"MULTI_PROC_OFFSET={args.mp_offset} python -u -m torch.distributed.launch --use_env --nproc_per_node {args.pt_proc} "
+        pt_dist_str = f"torchrun --nproc_per_node {args.pt_proc} "
 
         def make_dist_cmd(x):
             parts = x.split(" ")
@@ -598,14 +598,18 @@ def generate_slurm_batch_file(
 ):
     ignore_nodes_s = ",".join(config_mgr.get_prop("slurm_ignore_nodes", []))
     if len(ignore_nodes_s) != 0:
-        ignore_nodes_s = "#SBATCH -x " + ignore_nodes_s
+        ignore_nodes_s = "#SBATCH --exclude=" + ignore_nodes_s
 
-    add_options = [ignore_nodes_s]
+    only_nodes_s = ",".join(config_mgr.get_prop("slurm_only_nodes", []))
+    if len(only_nodes_s) != 0:
+        only_nodes_s = "#SBATCH --nodelist=" + only_nodes_s
+
+    add_options = [ignore_nodes_s, only_nodes_s]
     if args.time is not None:
         add_options.append(f"#SBATCH --time={args.time}")
     if args.comment is not None:
         add_options.append(f'#SBATCH --comment="{args.comment}"')
-    add_options = "\n".join(add_options)
+    add_options = "\n".join([x for x in add_options if x != ""])
 
     pre_python_txt = ""
     python_parts = cmd.split("python")

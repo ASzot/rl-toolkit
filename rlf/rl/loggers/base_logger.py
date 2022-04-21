@@ -81,11 +81,14 @@ class BaseLogger(object):
             f.write(args_lines)
 
     def collect_step_info(
-        self, step_log_info: List[Dict[str, Any]], alg_info: Dict[str, Any] = {}
+        self,
+        step_log_info: List[Dict[str, Any]],
+        alg_info: Dict[str, Any] = {},
+        keys_prefix: str = "",
     ):
         step_log_info = rutils.agg_ep_log_stats(step_log_info, alg_info)
         for k in step_log_info:
-            self._step_log_info[k].extend(step_log_info[k])
+            self._step_log_info[keys_prefix + k].extend(step_log_info[k])
 
     def _get_env_id(self, args):
         upper_case = [c for c in args.env_name if c.isupper()]
