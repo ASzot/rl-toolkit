@@ -25,6 +25,7 @@ class ReplayBuffer(BaseStorage):
         self.rewards = np.empty((capacity, 1), dtype=np.float32)
         self.not_dones = np.empty((capacity, 1), dtype=np.float32)
         self.not_dones_no_max = np.empty((capacity, 1), dtype=np.float32)
+        self._use_bad_mask = args.use_proper_time_limits
 
         self.add_data = {}
 
@@ -64,20 +65,19 @@ class ReplayBuffer(BaseStorage):
     def __len__(self):
         return self.capacity if self.full else self.idx
 
-    def insert(self, obs, next_obs, reward, done, infos, ac_info):
-        action = ac_info.take_action
-        masks, bad_masks = self.compute_masks(done, infos)
-        self.last_seen = {
-            "obs": next_obs,
-            "masks": masks,
-            "hxs": ac_info.hxs,
-        }
-        np.copyto(self.obses[self.idx], obs[0].cpu().numpy())
-        np.copyto(self.actions[self.idx], action[0].cpu().numpy())
-        np.copyto(self.rewards[self.idx], reward[0].cpu().numpy())
-        np.copyto(self.next_obses[self.idx], next_obs[0].cpu().numpy())
-        np.copyto(self.not_dones[self.idx], masks[0].cpu().numpy())
-        np.copyto(self.not_dones_no_max[self.idx], bad_masks[0].cpu().numpy())
+    def _insert_range(self, obs, next_obs, reward, masks, bad_masks, infos, action):
+        insert_len = len(obs)
+        np.copyto(self.obses[self.idx : self.idx + insert_len], obs.cpu().numpy())
+        np.copyto(self.actions[self.idx : self.idx + insert_len], action.cpu().numpy())
+        np.copyto(self.rewards[self.idx : self.idx + insert_len], reward.cpu().numpy())
+        np.copyto(
+            self.next_obses[self.idx : self.idx + insert_len], next_obs.cpu().numpy()
+        )
+        np.copyto(self.not_dones[self.idx : self.idx + insert_len], masks.cpu().numpy())
+        np.copyto(
+            self.not_dones_no_max[self.idx : self.idx + insert_len],
+            bad_masks.cpu().numpy(),
+        )
 
         for i, inf in enumerate(infos):
             for k in self.get_extract_info_keys():
@@ -86,10 +86,51 @@ class ReplayBuffer(BaseStorage):
                         assign_val = inf[k].cpu().numpy()
                     else:
                         assign_val = inf[k]
-                    np.copyto(self.add_data[k][self.idx], assign_val.cpu().numpy())
+                    np.copyto(
+                        self.add_data[k][self.idx : self.idx + insert_len],
+                        assign_val,
+                    )
 
-        self.idx = (self.idx + 1) % self.capacity
+        self.idx = (self.idx + insert_len) % self.capacity
         self.full = self.full or self.idx == 0
+
+    def insert(self, obs, next_obs, reward, done, infos, ac_info):
+        action = ac_info.take_action
+        masks, bad_masks = self.compute_masks(done, infos)
+        self.last_seen = {
+            "obs": next_obs,
+            "masks": masks,
+            "hxs": ac_info.hxs,
+        }
+        insert_len = len(obs)
+        if self.idx + insert_len > self.capacity:
+            overflow = True
+            insert_len = self.capacity - self.idx
+        else:
+            overflow = False
+
+        if overflow:
+            self._insert_range(
+                obs[:insert_len],
+                next_obs[:insert_len],
+                reward[:insert_len],
+                masks[:insert_len],
+                bad_masks[:insert_len],
+                infos[:insert_len],
+                action[:insert_len],
+            )
+            assert self.idx == 0
+            self._insert_range(
+                obs[insert_len + 1 :],
+                next_obs[insert_len + 1 :],
+                reward[insert_len + 1 :],
+                masks[insert_len + 1 :],
+                bad_masks[insert_len + 1 :],
+                infos[insert_len + 1 :],
+                action[insert_len + 1 :],
+            )
+        else:
+            self._insert_range(obs, next_obs, reward, masks, bad_masks, infos, action)
 
     def set_modify_reward_fn(self, modify_reward_fn):
         self._modify_reward_fn = modify_reward_fn
@@ -103,7 +144,10 @@ class ReplayBuffer(BaseStorage):
         actions = torch.as_tensor(self.actions[idxs], device=self.device)
         rewards = torch.as_tensor(self.rewards[idxs], device=self.device)
         next_obses = torch.as_tensor(self.next_obses[idxs], device=self.device).float()
-        not_dones = torch.as_tensor(self.not_dones[idxs], device=self.device)
+        if self._use_bad_mask:
+            not_dones = torch.as_tensor(self.not_dones_no_max[idxs], device=self.device)
+        else:
+            not_dones = torch.as_tensor(self.not_dones[idxs], device=self.device)
         not_dones_no_max = torch.as_tensor(
             self.not_dones_no_max[idxs], device=self.device
         )

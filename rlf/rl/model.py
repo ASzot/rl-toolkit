@@ -343,8 +343,8 @@ class DoubleQCritic(BaseNet):
             no_last_act=True,
         )
 
-        # Apply the weight init exactly the same way as @denisyarats
-        self.apply(no_bias_weight_init)
+        ## Apply the weight init exactly the same way as @denisyarats
+        # self.apply(no_bias_weight_init)
 
     @property
     def output_shape(self):

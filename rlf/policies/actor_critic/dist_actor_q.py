@@ -57,7 +57,8 @@ class DistActorQ(BaseNetPolicy):
             obs_shape=obs_shape,
             in_shape=self._get_base_out_shape(),
             action_space=action_space,
-            hidden_dim=self.args.dist_q_hidden_dim,
+            hidden_dim=self.args.policy_hidden_dim,
+            depth=self.args.policy_hidden_depth,
         )
 
         log_std_bounds = [float(x) for x in self.args.log_std_bounds.split(",")]
@@ -67,7 +68,8 @@ class DistActorQ(BaseNetPolicy):
             i_shape=self._get_base_out_shape(),
             action_space=action_space,
             log_std_bounds=log_std_bounds,
-            hidden_dim=self.args.dist_q_hidden_dim,
+            hidden_dim=self.args.policy_hidden_dim,
+            depth=self.args.policy_hidden_depth,
         )
 
         self.ac_low_bound = torch.tensor(self.action_space.low).to(args.device).min()
@@ -114,11 +116,3 @@ class DistActorQ(BaseNetPolicy):
         super().get_add_args(parser)
         parser.add_argument("--n-rnd-steps", type=int, default=10000)
         parser.add_argument("--log-std-bounds", type=str, default="-5,2")
-        parser.add_argument(
-            "--dist-q-hidden-dim",
-            type=int,
-            default=128,
-            help="""The
-        neural network hidden dimension for the actor and critic.
-        """,
-        )

@@ -30,7 +30,7 @@ class SAC(OffPolicy):
             self.policy.obs_space,
             self.policy._get_base_out_shape(),
             self.policy.action_space,
-            self.args.dist_q_hidden_dim,
+            self.args.policy_hidden_dim,
         )
         self.target_critic = self.target_critic.to(self.args.device)
         autils.hard_update(self.policy.critic, self.target_critic)
@@ -64,7 +64,6 @@ class SAC(OffPolicy):
 
     def update_critic(self, state, n_state, action, reward, not_done):
         dist = self.policy(n_state, None, None, None)
-        # not_done = n_add_info["masks"]
         n_action = dist.rsample()
         log_prob = dist.log_prob(n_action).sum(-1, keepdim=True)
 
@@ -158,8 +157,8 @@ class SAC(OffPolicy):
 
     def get_add_args(self, parser):
         super().get_add_args(parser)
-        parser.add_argument("--sac-update-freq", type=int, default=1)
         parser.add_argument("--critic-target-update-freq", type=int, default=2)
+        parser.add_argument("--sac-update-freq", type=int, default=1)
         parser.add_argument("--sac-update-epochs", type=int, default=1)
 
         parser.add_argument(f"--{self.arg_prefix}critic-lr", type=float, default=1e-4)

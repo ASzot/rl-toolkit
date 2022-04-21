@@ -35,12 +35,30 @@ class EnvInterface(object):
     def mod_render_frames(self, cur_frame, **kwargs):
         return cur_frame
 
-    def create_from_id(self, env_id):
+    def create_from_id(self, env_id: str) -> gym.Env:
         """
         Return the environment object. By default, the standard gym.make is
         used. This will work with any environments that are registered.
         """
-        return gym.make(env_id)
+        pass_args = self.args.env_custom_args.split(",")
+        pass_kwargs = {}
+        for pass_arg in pass_args:
+            if pass_arg == "":
+                continue
+            arg_name, assign_val = pass_arg.split("=")
+            if assign_val.lower() == "false":
+                assign_val = False
+            elif assign_val.lower() == "true":
+                assign_val = True
+            else:
+                try:
+                    assign_val = float(assign_val)
+                except:
+                    pass
+
+            pass_kwargs[arg_name] = assign_val
+
+        return gym.make(env_id, **pass_kwargs)
 
     def get_setup_multiproc_fn(
         self,
@@ -64,7 +82,7 @@ class EnvInterface(object):
         Add additional command line arguments which will be available in
         `env_trans_fn`
         """
-        pass
+        parser.add_argument("--env-custom-args", type=str, default="")
 
 
 class EnvInterfaceWrapper(EnvInterface):

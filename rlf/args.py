@@ -125,7 +125,7 @@ def add_args(parser):
 
     parser.add_argument(
         "--use-proper-time-limits",
-        action="store_true",
+        type=str2bool,
         default=False,
         help="compute returns taking into account time limits",
     )
