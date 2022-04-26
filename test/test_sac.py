@@ -26,7 +26,7 @@ class SacRunSettings(RunSettings):
 def test_sac_cont_train():
     TEST_ENV = "Pendulum-v1"
     run_settings = SacRunSettings(
-        f"--prefix 'sac-test' --use-proper-time-limits --linear-lr-decay True --lr 3e-4 --num-env-steps {NUM_ENV_SAMPLES} --num-steps {NUM_STEPS} --env-name {TEST_ENV} --eval-interval -1 --log-smooth-len 10 --save-interval -1 --num-processes 1 --cuda False --n-rnd-steps 10"
+        f"--prefix 'sac-test' --use-proper-time-limits True --linear-lr-decay True --lr 3e-4 --num-env-steps {NUM_ENV_SAMPLES} --num-steps {NUM_STEPS} --env-name {TEST_ENV} --eval-interval -1 --log-smooth-len 10 --save-interval -1 --num-processes 1 --cuda False --n-rnd-steps 10"
     )
     run_policy(run_settings)
 

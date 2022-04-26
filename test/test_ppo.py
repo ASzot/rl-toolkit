@@ -27,7 +27,7 @@ class PPORunSettings(RunSettings):
 def test_cont_train():
     TEST_ENV = "Pendulum-v1"
     run_settings = PPORunSettings(
-        f"--prefix 'ppo-test' --use-proper-time-limits --linear-lr-decay True --lr 3e-4 --entropy-coef 0 --num-env-steps {NUM_ENV_SAMPLES} --num-mini-batch 32 --num-epochs 10 --num-steps {NUM_STEPS} --env-name {TEST_ENV} --eval-interval -1 --log-smooth-len 10 --save-interval -1 --num-processes {NUM_PROCS} --cuda False"
+        f"--prefix 'ppo-test' --use-proper-time-limits True --linear-lr-decay True --lr 3e-4 --entropy-coef 0 --num-env-steps {NUM_ENV_SAMPLES} --num-mini-batch 32 --num-epochs 10 --num-steps {NUM_STEPS} --env-name {TEST_ENV} --eval-interval -1 --log-smooth-len 10 --save-interval -1 --num-processes {NUM_PROCS} --cuda False"
     )
     run_policy(run_settings)
 
@@ -35,7 +35,7 @@ def test_cont_train():
 def test_disc_train():
     TEST_ENV = "Acrobot-v1"
     run_settings = PPORunSettings(
-        f"--prefix 'ppo-test' --use-proper-time-limits --linear-lr-decay True --lr 3e-4 --entropy-coef 0 --num-env-steps {NUM_ENV_SAMPLES} --num-mini-batch 32 --num-epochs 10 --num-steps {NUM_STEPS} --env-name {TEST_ENV} --eval-interval -1 --log-smooth-len 10 --save-interval -1 --num-processes {NUM_PROCS} --cuda False"
+        f"--prefix 'ppo-test' --use-proper-time-limits True --linear-lr-decay True --lr 3e-4 --entropy-coef 0 --num-env-steps {NUM_ENV_SAMPLES} --num-mini-batch 32 --num-epochs 10 --num-steps {NUM_STEPS} --env-name {TEST_ENV} --eval-interval -1 --log-smooth-len 10 --save-interval -1 --num-processes {NUM_PROCS} --cuda False"
     )
     run_policy(run_settings)
 
