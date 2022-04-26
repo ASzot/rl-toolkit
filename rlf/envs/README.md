@@ -10,7 +10,7 @@ class NewEnvInterface(EnvInterface):
         # Add wrappers to Gym env here.
         return env
 
-    def create_from_id(self, env_id):
+    def create_from_id(self, env_id, local_seed):
         # If you want another way to create environments other than gym.make
         return YourCustomGymEnv()
 

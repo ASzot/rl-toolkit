@@ -48,7 +48,8 @@ def make_env(
     """
 
     def _thunk():
-        env = env_interface.create_from_id(env_id)
+        local_seed = seed + rank
+        env = env_interface.create_from_id(env_id, local_seed)
 
         is_atari = hasattr(gym.envs, "atari") and isinstance(
             env.unwrapped, gym.envs.atari.atari_env.AtariEnv
@@ -61,9 +62,9 @@ def make_env(
         if str(env.__class__.__name__).find("TimeLimit") >= 0:
             env = TimeLimitMask(env)
 
-        env.seed(seed + rank)
+        env.seed(local_seed)
         if hasattr(env.action_space, "seed"):
-            env.action_space.seed(seed + rank)
+            env.action_space.seed(local_seed)
 
         env = Monitor(env, None, allow_early_resets=allow_early_resets)
 

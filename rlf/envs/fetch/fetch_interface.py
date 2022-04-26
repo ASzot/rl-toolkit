@@ -83,7 +83,7 @@ class BlockGripperActionWrapper(gym.Wrapper):
 
 
 class GymFetchInterface(EnvInterface):
-    def create_from_id(self, env_id):
+    def create_from_id(self, env_id, seed):
         if self.args.gf_dense:
             reward_type = "dense"
         else:

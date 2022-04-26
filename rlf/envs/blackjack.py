@@ -1,6 +1,7 @@
 import gym
 from rlf.envs.env_interface import EnvInterface, register_env_interface
-BIT_FLIP_ID = 'BitFlip-v0'
+
+BIT_FLIP_ID = "BitFlip-v0"
 
 
 class BlackJackWrapper(gym.ObservationWrapper):
@@ -13,9 +14,10 @@ class BlackJackWrapper(gym.ObservationWrapper):
 
 
 class BlackJackInterface(EnvInterface):
-    def create_from_id(self, env_id):
-        env = super().create_from_id(env_id)
+    def create_from_id(self, env_id, seed):
+        env = super().create_from_id(env_id, seed)
         return BlackJackWrapper(env)
 
+
 # Match any version
-register_env_interface('Blackjack', BlackJackInterface)
+register_env_interface("Blackjack", BlackJackInterface)

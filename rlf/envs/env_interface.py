@@ -35,7 +35,7 @@ class EnvInterface(object):
     def mod_render_frames(self, cur_frame, **kwargs):
         return cur_frame
 
-    def create_from_id(self, env_id: str) -> gym.Env:
+    def create_from_id(self, env_id: str, local_seed: int) -> gym.Env:
         """
         Return the environment object. By default, the standard gym.make is
         used. This will work with any environments that are registered.
@@ -109,8 +109,8 @@ class EnvInterfaceWrapper(EnvInterface):
     def mod_render_frames(self, cur_frame, **kwargs):
         return self.env_int.mod_render_frames(cur_frame, **kwargs)
 
-    def create_from_id(self, env_id):
-        return self.env_int.create_from_id(env_id)
+    def create_from_id(self, env_id, seed):
+        return self.env_int.create_from_id(env_id, seed)
 
     def get_setup_multiproc_fn(
         self,
